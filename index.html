@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v22.0GAS - Dev. Hernando Sanoja</title>
+    <title>SegmentApp v23 GAS - Dev. Hernando Sanoja</title>
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
     
@@ -184,7 +184,7 @@
             </div>
             <div class="flex flex-col justify-center">
                 <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v22.0 • Dev. Hernando Sanoja •</span>
+                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v23 GAS • Dev. Hernando Sanoja •</span>
             </div>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
@@ -2611,21 +2611,15 @@
         document.getElementById('evalDocId').value = normalizeKey(docId); 
         safeSetText('evalModalDocName', docName);
         
-        // Llenar el select de mercados únicos para este médico
-        const markets = [...new Set(doc.rows.map(r => r.market).filter(x => x))].sort();
+        // El desplegable ahora usa TODOS los mercados disponibles globalmente en el archivo
+        const globalMarkets = FILTER_OPTIONS['Market'] || [];
         const marketSelect = document.getElementById('evalMarketSelect');
         marketSelect.innerHTML = '<option value="">Seleccione un mercado...</option>';
-        markets.forEach(m => {
+        globalMarkets.forEach(m => {
             marketSelect.innerHTML += `<option value="${m}">${m}</option>`;
         });
 
-        // Seleccionar automáticamente si solo hay un mercado
-        if (markets.length === 1) {
-            marketSelect.value = markets[0];
-        } else {
-            marketSelect.value = "";
-        }
-
+        marketSelect.value = "";
         loadEvalForMarket();
         document.getElementById('evalModal').classList.remove('hidden');
     }
