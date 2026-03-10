@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v20.2 (Encuestas + Admin) - Dev. Hernando Sanoja</title>
+    <title>SegmentApp v21 - Dev. Hernando Sanoja</title>
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
     
@@ -184,7 +184,7 @@
             </div>
             <div class="flex flex-col justify-center">
                 <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">v20.2 (Encuestas) • Dev. Hernando Sanoja • iPad</span>
+                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v21 • Dev. Hernando Sanoja •</span>
             </div>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
@@ -299,6 +299,16 @@
                 </button>
             </div>
         </div>
+
+        <div class="flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-2">
+            <span class="material-symbols-outlined text-slate-500 bg-slate-100 p-2 rounded-full">manage_accounts</span>
+            <div class="flex flex-col w-full sm:w-80">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Filtrar por Gerente de Distrito</span>
+                <select id="adminManagerFilter" class="filter-select text-sm py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" onchange="renderAdminDashboard()">
+                    <option value="all">Todos los Gerentes</option>
+                </select>
+            </div>
+        </div>
         
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Progreso de Visitadores -->
@@ -322,7 +332,7 @@
                     </h4>
                     <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200" id="discCountBadge">0</span>
                 </div>
-                <p class="text-[10px] text-slate-500 mb-3 bg-rose-50 p-2 rounded-lg border border-rose-100">Muestra médicos con un choque crítico entre la categorización de Recetas (Rx) vs la Evaluación del Asesor (Ej: Rx Bajo = C vs Subj Alto = A).</p>
+                <p class="text-[10px] text-slate-500 mb-3 bg-rose-50 p-2 rounded-lg border border-rose-100">Muestra médicos con un cambio de clasificación crítica en POTENCIAL (Letra) entre la Matriz Objetiva vs Subjetiva.</p>
                 <div class="flex-1 overflow-y-auto max-h-[250px] pr-2" id="adminDiscrepancyTable">
                     <!-- Dinámico -->
                 </div>
@@ -381,9 +391,9 @@
             </div>
 
             <div>
-                <div class="filter-group-label">FICHADO</div>
+                <div class="filter-group-label">CRUZADOS</div>
                 <select class="filter-select" id="filterStatus" onchange="applyFilters()">
-                    <option value="all">Todos</option><option value="fichados">Solo Fichados</option><option value="no_fichados">No Fichados</option>
+                    <option value="all">Todos</option><option value="fichados">Solo Cruzados</option><option value="no_fichados">No Cruzados</option>
                 </select>
             </div>
 
@@ -498,7 +508,7 @@
                         <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full transition-all duration-1000" id="visBarCruzados" style="width: 0%"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">3. Evaluados (Matriz 9-Box)</span><span class="text-emerald-600 font-mono text-sm" id="visTotalEvaluados">0 (Paso 3)</span></div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">3. Evaluados (Matriz/Encuesta)</span><span class="text-emerald-600 font-mono text-sm" id="visTotalEvaluados">0 (Paso 3)</span></div>
                         <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-emerald-500 h-2.5 rounded-full transition-all duration-1000" id="visBarEvaluados" style="width: 0%"></div></div>
                     </div>
                 </div>
@@ -1079,34 +1089,19 @@
         <div class="p-6 overflow-y-auto bg-white flex-1 space-y-6">
             <input type="hidden" id="evalDocId">
             
-            <!-- SECCIÓN 1: MATRIZ -->
-            <div>
-                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">grid_view</span> 1. Clasificación en Matriz</h4>
-                <div class="grid grid-cols-3 gap-3" id="evalGrid">
-                    <!-- ROW A: A-, A, A+ -->
-                    <button class="eval-btn relative bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-transparent hover:border-rose-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display mb-1">A-</span><span class="text-[9px] uppercase tracking-wider text-rose-500">Conquista</span></button>
-                    <button class="eval-btn relative bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-transparent hover:border-blue-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display mb-1">A</span><span class="text-[9px] uppercase tracking-wider text-blue-500">Desarrollo</span></button>
-                    <button class="eval-btn relative bg-purple-50 hover:bg-purple-100 text-purple-700 border-2 border-transparent hover:border-purple-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display mb-1">A+</span><span class="text-[9px] uppercase tracking-wider text-purple-500">Defensa</span></button>
-                    
-                    <!-- ROW B: B-, B, B+ -->
-                    <button class="eval-btn relative bg-orange-50 hover:bg-orange-100 text-orange-700 border-2 border-transparent hover:border-orange-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display mb-1">B-</span><span class="text-[9px] uppercase tracking-wider text-orange-500">Mantenim.</span></button>
-                    <button class="eval-btn relative bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-transparent hover:border-slate-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display mb-1">B</span><span class="text-[9px] uppercase tracking-wider text-slate-500">Medio</span></button>
-                    <button class="eval-btn relative bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-2 border-transparent hover:border-indigo-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display mb-1">B+</span><span class="text-[9px] uppercase tracking-wider text-indigo-500">Fidelización</span></button>
-                    
-                    <!-- ROW C: C-, C, C+ -->
-                    <button class="eval-btn relative bg-red-50 hover:bg-red-100 text-red-700 border-2 border-transparent hover:border-red-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display mb-1">C-</span><span class="text-[9px] uppercase tracking-wider text-red-500">Bajo</span></button>
-                    <button class="eval-btn relative bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-2 border-transparent hover:border-yellow-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display mb-1">C</span><span class="text-[9px] uppercase tracking-wider text-yellow-600">Medio</span></button>
-                    <button class="eval-btn relative bg-teal-50 hover:bg-teal-100 text-teal-700 border-2 border-transparent hover:border-teal-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display mb-1">C+</span><span class="text-[9px] uppercase tracking-wider text-teal-500">Alto</span></button>
-                </div>
-                <input type="hidden" id="evalSelectedQuadrant" value="">
+            <!-- PASO 1: SELECCIÓN DE MERCADO (OBLIGATORIO) -->
+            <div class="bg-blue-50 border border-blue-200 p-4 rounded-2xl shadow-sm">
+                <label class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">public</span> 1. Mercado a Evaluar <span class="text-rose-500">*</span></label>
+                <select id="evalMarket" class="w-full px-4 py-3 border border-blue-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-600 outline-none bg-white font-bold text-slate-700 transition shadow-sm" onchange="loadEvalForMarket()">
+                    <option value="">Seleccione el mercado a evaluar...</option>
+                </select>
+                <p class="text-[10px] text-blue-600 mt-2 font-medium">Nota: Puedes realizar diferentes evaluaciones del mismo médico para distintos mercados si es necesario.</p>
             </div>
 
-            <div class="w-full h-px bg-slate-100"></div>
-
-            <!-- SECCIÓN 2: ENCUESTA -->
+            <!-- PASO 2: ENCUESTA -->
             <div>
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">assignment</span> 2. Encuesta de Prescripción</h4>
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">assignment</span> 2. Encuesta de Prescripción <span class="text-rose-500">*</span></h4>
                     <span class="bg-amber-100 text-amber-800 text-[10px] px-3 py-1 rounded-full font-bold flex items-center gap-1 border border-amber-200"><span class="material-symbols-outlined text-[14px]">calendar_month</span> Temporalidad: SEMANAL</span>
                 </div>
                 
@@ -1181,10 +1176,35 @@
 
                 </div>
             </div>
-            
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> Notas Adicionales / Justificación (Opcional)</label>
-                <textarea id="evalNotas" rows="2" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50 hover:bg-white transition" placeholder="Añade contexto adicional aquí..."></textarea>
+
+            <div class="w-full h-px bg-slate-100"></div>
+
+            <!-- PASO 3: MATRIZ SUBJETIVA -->
+            <div>
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">grid_view</span> 3. Clasificación en Matriz <span class="text-rose-500">*</span></h4>
+                <div class="grid grid-cols-3 gap-3" id="evalGrid">
+                    <!-- ROW A: A-, A, A+ -->
+                    <button class="eval-btn relative bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-transparent hover:border-rose-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display mb-1">A-</span><span class="text-[9px] uppercase tracking-wider text-rose-500">Conquistar</span></button>
+                    <button class="eval-btn relative bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-transparent hover:border-blue-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display mb-1">A</span><span class="text-[9px] uppercase tracking-wider text-blue-500">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-purple-50 hover:bg-purple-100 text-purple-700 border-2 border-transparent hover:border-purple-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display mb-1">A+</span><span class="text-[9px] uppercase tracking-wider text-purple-500">Defender</span></button>
+                    
+                    <!-- ROW B: B-, B, B+ -->
+                    <button class="eval-btn relative bg-orange-50 hover:bg-orange-100 text-orange-700 border-2 border-transparent hover:border-orange-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display mb-1">B-</span><span class="text-[9px] uppercase tracking-wider text-orange-500">Conquistar</span></button>
+                    <button class="eval-btn relative bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-transparent hover:border-slate-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display mb-1">B</span><span class="text-[9px] uppercase tracking-wider text-slate-500">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-2 border-transparent hover:border-indigo-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display mb-1">B+</span><span class="text-[9px] uppercase tracking-wider text-indigo-500">Defender</span></button>
+                    
+                    <!-- ROW C: C-, C, C+ -->
+                    <button class="eval-btn relative bg-red-50 hover:bg-red-100 text-red-700 border-2 border-transparent hover:border-red-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display mb-1">C-</span><span class="text-[9px] uppercase tracking-wider text-red-500">Revisar</span></button>
+                    <button class="eval-btn relative bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-2 border-transparent hover:border-yellow-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display mb-1">C</span><span class="text-[9px] uppercase tracking-wider text-yellow-600">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-teal-50 hover:bg-teal-100 text-teal-700 border-2 border-transparent hover:border-teal-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display mb-1">C+</span><span class="text-[9px] uppercase tracking-wider text-teal-500">Defender</span></button>
+                </div>
+                <input type="hidden" id="evalSelectedQuadrant" value="">
+            </div>
+
+            <!-- PASO 4: NOTAS (AHORA OBLIGATORIO) -->
+            <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 shadow-sm">
+                <label class="text-[10px] font-bold text-amber-800 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> 4. Notas / Justificación <span class="text-rose-500">*</span></label>
+                <textarea id="evalNotas" rows="2" class="w-full p-3 border border-amber-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none resize-none bg-white transition" placeholder="Justifica aquí tu clasificación... (Obligatorio)"></textarea>
             </div>
             
         </div>
@@ -1207,7 +1227,7 @@
     let currentVisitadorName = "";
     let isAdmin = false;
     
-    // PASO 3 y 4: Variable para Evaluaciones
+    // PASO 3 y 4: Variable para Evaluaciones (Se indexa por id_medico + mercado)
     let EVALUACIONES_VISITADOR = {}; 
     let ALL_EVALUATIONS = []; // Almacena TODAS las evaluaciones para el Admin
 
@@ -1288,6 +1308,10 @@
     let SHOW_SUMMARIES = false;
     let groupByInstitution = false;
     
+    // Almacenar relación de Asesor y su Gerente
+    let repManagerMap = {};
+    let managersList = new Set();
+    
     let currentPage = 1;
     const ROWS_PER_PAGE = 150;
     
@@ -1351,23 +1375,12 @@
 
     async function fetchFileAsJson(filename) {
         try {
-            // EVITAR ERROR DE CONSOLA EN CANVAS/ENTORNO DE PRUEBAS
-            // Al omitir la búsqueda relativa, evitamos el pantallazo rojo
-            // y permitimos que la app caiga suavemente al Empty State para usar el Admin
-            if (window.location.protocol === 'blob:' || window.location.protocol === 'data:') {
-                console.log(`[Canvas/Pruebas] Omitiendo búsqueda automática de ${filename}. Utiliza el modo Admin para cargar datos manualmente.`);
-                return null;
-            }
-
             const response = await fetch(filename);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const arrayBuffer = await response.arrayBuffer();
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             return XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
-        } catch (error) { 
-            console.warn(`Aviso de carga para ${filename}:`, error.message); 
-            return null; 
-        }
+        } catch (error) { console.warn(`Error cargando ${filename}:`, error); return null; }
     }
 
     async function loadRepoData() {
@@ -1381,18 +1394,13 @@
             if (ficheroData) { parseFicheroData(ficheroData); }
             if (auditData && auditData.length > 0) { parseAuditData(auditData); dataLoaded = true; }
 
-            if (dataLoaded) { 
-                await processData(true); 
-                showToast("Datos cargados desde el servidor exitosamente"); 
-            } else { 
-                document.getElementById('restoringSession').classList.add('hidden'); 
-                document.getElementById('emptyState').classList.remove('hidden'); 
-            }
+            if (dataLoaded) { await processData(true); showToast("Datos cargados desde GitHub exitosamente"); } 
+            else { document.getElementById('restoringSession').classList.add('hidden'); document.getElementById('emptyState').classList.remove('hidden'); }
         } catch (error) {
             console.error("Error en carga automática:", error);
             document.getElementById('restoringSession').classList.add('hidden');
             document.getElementById('emptyState').classList.remove('hidden');
-            showToast("No se encontraron archivos base");
+            showToast("Error conectando con el repositorio local");
         }
     }
 
@@ -1451,7 +1459,10 @@
                 EVALUACIONES_VISITADOR = {};
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (data.visitador === currentVisitadorName) { EVALUACIONES_VISITADOR[data.medico_id] = data; }
+                    if (data.visitador === currentVisitadorName) {
+                        const market = data.mercado || "General / Todos los Mercados";
+                        EVALUACIONES_VISITADOR[`${data.medico_id}_${market}`] = data; 
+                    }
                 });
             } catch(e) { console.error("Error cargando evaluaciones:", e); }
         }
@@ -1475,11 +1486,11 @@
     }
 
     function getEvaluationsForDoc(docId) {
+        const normId = normalizeKey(docId);
         if (currentUserRole === 'visitador') {
-            const ev = EVALUACIONES_VISITADOR[normalizeKey(docId)];
-            return ev ? [ev] : [];
+            return Object.values(EVALUACIONES_VISITADOR).filter(ev => normalizeKey(ev.medico_id) === normId);
         } else {
-            return ALL_EVALUATIONS.filter(e => normalizeKey(e.medico_id) === normalizeKey(docId));
+            return ALL_EVALUATIONS.filter(e => normalizeKey(e.medico_id) === normId);
         }
     }
 
@@ -1504,12 +1515,22 @@
     }
 
     function exportAdminEvaluationsExcel() {
-        if (!ALL_EVALUATIONS || ALL_EVALUATIONS.length === 0) {
-            showToast("No hay evaluaciones registradas para exportar.");
+        const selectedManager = document.getElementById('adminManagerFilter').value;
+        let evalsToExport = ALL_EVALUATIONS;
+
+        if (selectedManager !== 'all') {
+            evalsToExport = evalsToExport.filter(ev => {
+                const repName = String(ev.visitador).toUpperCase();
+                return repManagerMap[repName] === selectedManager;
+            });
+        }
+
+        if (!evalsToExport || evalsToExport.length === 0) {
+            showToast("No hay evaluaciones registradas en este filtro para exportar.");
             return;
         }
 
-        const exportData = ALL_EVALUATIONS.map(ev => {
+        const exportData = evalsToExport.map(ev => {
             const docIdNorm = normalizeKey(ev.medico_id);
             const docObj = PROCESSED_DATA.find(d => normalizeKey(d.id) === docIdNorm);
             
@@ -1522,9 +1543,11 @@
 
             return {
                 "Asesor Consultivo": ev.visitador || "-",
+                "Gerente de Distrito": repManagerMap[String(ev.visitador).toUpperCase()] || "SIN ASIGNAR",
                 "Médico": ev.medico_name || (docObj ? docObj.name : "-"),
                 "Matrícula": ev.medico_id || "-",
                 "Especialidad": spec,
+                "Mercado Evaluado": ev.mercado || "General / Todos los Mercados",
                 "Clasificación Final (CloseUp)": matrixLabel,
                 "Clasificación Asesor": ev.cuadrante || "-",
                 "P1: Pacientes Total/Semana": ev.survey?.q1 || "-",
@@ -1543,10 +1566,6 @@
         showToast("Reporte de Evaluaciones descargado exitosamente.");
     }
 
-    // ==========================================
-    // NUEVAS FUNCIONES DE LIMPIEZA DE DATOS (ADMIN)
-    // ==========================================
-
     function confirmClearAllEvals() { document.getElementById('confirmClearAllModal').classList.remove('hidden'); }
     
     async function executeClearAllEvals() {
@@ -1556,7 +1575,6 @@
         btn.disabled = true; btn.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Limpiando...';
         try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-            // Borrar uno por uno
             for (let ev of ALL_EVALUATIONS) {
                 if(ev.firebaseId) {
                     const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', ev.firebaseId);
@@ -1565,7 +1583,7 @@
             }
             showToast("¡Todas las evaluaciones han sido borradas!");
             document.getElementById('confirmClearAllModal').classList.add('hidden');
-            fetchAllEvaluacionesAdmin(); // Refrescar vista
+            fetchAllEvaluacionesAdmin(); 
         } catch(e) {
             console.error("Error masivo de borrado", e); showToast("Ocurrió un error al limpiar datos.");
         } finally {
@@ -1588,7 +1606,7 @@
         
         try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-            const repEvals = ALL_EVALUATIONS.filter(e => e.visitador === repName);
+            const repEvals = ALL_EVALUATIONS.filter(e => String(e.visitador).toUpperCase() === repName);
             
             for (let ev of repEvals) {
                 if(ev.firebaseId) {
@@ -1598,7 +1616,7 @@
             }
             showToast(`Evaluaciones de ${repName} borradas con éxito.`);
             document.getElementById('confirmClearRepModal').classList.add('hidden');
-            fetchAllEvaluacionesAdmin(); // Refrescar vista
+            fetchAllEvaluacionesAdmin();
         } catch(e) {
             console.error("Error borrando datos del asesor", e); showToast("Ocurrió un error al limpiar datos.");
         } finally {
@@ -1606,15 +1624,14 @@
         }
     }
 
-
     function generateMatrixGridHTML() {
         const container = document.getElementById('matrixContainer');
         if(!container) return;
         
         const cellIds = [
-            {id: 'cell_A_C', label: 'A-', title: 'Conquista'}, {id: 'cell_A_B', label: 'A', title: 'Desarrollo'}, {id: 'cell_A_A', label: 'A+', title: 'Defensa'},
-            {id: 'cell_B_C', label: 'B-', title: 'Mantenimiento'}, {id: 'cell_B_B', label: 'B', title: 'Medio'}, {id: 'cell_B_A', label: 'B+', title: 'Fidelización'},
-            {id: 'cell_C_C', label: 'C-', title: 'Bajo'}, {id: 'cell_C_B', label: 'C', title: 'Medio'}, {id: 'cell_C_A', label: 'C+', title: 'Alto'}
+            {id: 'cell_A_C', label: 'A-', title: 'Conquistar'}, {id: 'cell_A_B', label: 'A', title: 'Desarrollar'}, {id: 'cell_A_A', label: 'A+', title: 'Defender'},
+            {id: 'cell_B_C', label: 'B-', title: 'Conquistar'}, {id: 'cell_B_B', label: 'B', title: 'Desarrollar'}, {id: 'cell_B_A', label: 'B+', title: 'Defender'},
+            {id: 'cell_C_C', label: 'C-', title: 'Revisar'}, {id: 'cell_C_B', label: 'C', title: 'Desarrollar'}, {id: 'cell_C_A', label: 'C+', title: 'Defender'}
         ];
 
         let html = '';
@@ -1797,9 +1814,8 @@
 
             if (selectedCols.includes('col_matrix')) rowObj["Clasificación Final (Rx)"] = d.matrixLabel;
             
-            // PASO 4: Exportar Evaluaciones Y ENCUESTA
             if (selectedCols.includes('col_eval')) {
-                rowObj["Evaluación Asesor"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${e.cuadrante}`).join(' | ') : 'Pendiente';
+                rowObj["Evaluación Asesor"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador} (${e.mercado}): ${e.cuadrante}`).join(' | ') : 'Pendiente';
             }
             if (selectedCols.includes('col_sur_q1')) rowObj["Pacientes/Sem (Total)"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${e.survey?.q1||'-'}`).join(' | ') : '';
             if (selectedCols.includes('col_sur_q2')) rowObj["Pacientes/Sem (Patología)"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${e.survey?.q2||'-'}`).join(' | ') : '';
@@ -1847,7 +1863,6 @@
                 return selectedCols.map(c => {
                     if (c.id === 'col_matrix') return d.matrixLabel; 
                     if (c.id === 'col_eval') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>e.cuadrante).join(', ') : 'Pend.';
-                    // No pondremos todas las preguntas de la encuesta en el PDF por espacio, devolvemos un resumen si las piden
                     if (c.id.startsWith('col_sur_')) return evalsForDoc.length > 0 ? "En Excel" : "-";
                     
                     if (c.id === 'col_eval_notes') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>e.notas||'').join(' ') : '';
@@ -1985,10 +2000,22 @@
         fillGenericDropdown('Product', getUnique('prod').filter(p => isPhq(p)));
         
         let repSet = new Set();
+        repManagerMap = {};
+        managersList = new Set();
+
         FICHERO_MAP.forEach(rows => {
             rows.forEach(r => { 
                 const repKey = getFicheroRepKey(r);
-                if(repKey && r[repKey]) repSet.add(String(r[repKey]).trim().toUpperCase()); 
+                const mgrKey = Object.keys(r).find(k => k.toLowerCase().trim() === 'nome_ger_dis' || k.toLowerCase().includes('gerente') || k.toLowerCase().includes('ger_dis'));
+                
+                if(repKey && r[repKey]) { 
+                    const repName = String(r[repKey]).trim().toUpperCase();
+                    repSet.add(repName);
+                    
+                    const mgrName = (mgrKey && r[mgrKey]) ? String(r[mgrKey]).trim().toUpperCase() : 'SIN ASIGNAR';
+                    repManagerMap[repName] = mgrName;
+                    managersList.add(mgrName);
+                } 
             });
         });
         fillGenericDropdown('Rep', Array.from(repSet).sort()); fillGenericDropdown('Region', getUnique('region')); fillGenericDropdown('Spec', getUnique('spec'));
@@ -1996,6 +2023,13 @@
 
         const genericsList = getUnique('generic'); const genericSel = document.getElementById('filterGeneric');
         genericSel.innerHTML = `<option value="all">Todos</option>`; genericsList.forEach(v => genericSel.innerHTML += `<option value="${v}">${v}</option>`);
+
+        // Poblar filtro de gerentes en Admin
+        const mgrSelect = document.getElementById('adminManagerFilter');
+        if(mgrSelect) {
+            mgrSelect.innerHTML = '<option value="all">Todos los Gerentes</option>';
+            Array.from(managersList).sort().forEach(m => mgrSelect.innerHTML += `<option value="${m}">${m}</option>`);
+        }
     }
 
     function applyFilters() { resetPaginationAndRender(); aggregateAndCalculate(); }
@@ -2117,6 +2151,8 @@
     // PASO 4: Renderizar el Dashboard del Administrador
     function renderAdminDashboard() {
         if (!isAdmin) return;
+        
+        const selectedManager = document.getElementById('adminManagerFilter').value;
 
         let repStats = {};
         FICHERO_MAP.forEach((rows, docId) => {
@@ -2126,14 +2162,22 @@
                 if(repKey && r[repKey]) repsInDoc.add(String(r[repKey]).trim().toUpperCase());
             });
             repsInDoc.forEach(rep => {
+                if(selectedManager !== 'all' && repManagerMap[rep] !== selectedManager) return;
                 if(!repStats[rep]) repStats[rep] = { name: rep, total: 0, evaluated: 0 };
                 repStats[rep].total++;
             });
         });
 
+        let countedEvals = new Set();
         ALL_EVALUATIONS.forEach(ev => {
             const repName = String(ev.visitador).toUpperCase();
-            if(repStats[repName]) { repStats[repName].evaluated++; }
+            if(repStats[repName]) { 
+                const uniqueKey = `${repName}_${ev.medico_id}`;
+                if (!countedEvals.has(uniqueKey)) {
+                    repStats[repName].evaluated++; 
+                    countedEvals.add(uniqueKey);
+                }
+            }
         });
 
         const progressContainer = document.getElementById('adminProgressTable');
@@ -2152,7 +2196,6 @@
                     <div class="w-1/4 text-right text-[11px] font-mono text-slate-500">
                         <b class="${pct>=100?'text-emerald-600':'text-slate-700'}">${stat.evaluated}</b> / ${stat.total} (<span class="${pct>=100?'text-emerald-600':''}">${pct.toFixed(0)}%</span>)
                     </div>
-                    <!-- NUEVO: Botón papelera -->
                     <div class="w-8 flex justify-end">
                         <button onclick="clearRepEvaluations('${stat.name.replace(/'/g, "\\'")}')" class="text-slate-300 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md transition opacity-0 group-hover:opacity-100" title="Borrar evaluaciones de ${stat.name}">
                             <span class="material-symbols-outlined text-[16px]">delete</span>
@@ -2161,7 +2204,7 @@
                 </div>
             `;
         });
-        if(progressHtml==='') progressHtml = '<div class="p-4 text-center text-xs text-slate-500">No hay datos de asesores en el fichero.</div>';
+        if(progressHtml==='') progressHtml = '<div class="p-4 text-center text-xs text-slate-500">No hay datos de asesores en el filtro actual.</div>';
         if(progressContainer) progressContainer.innerHTML = progressHtml;
 
         const discContainer = document.getElementById('adminDiscrepancyTable');
@@ -2169,18 +2212,21 @@
         let discCount = 0;
         
         ALL_EVALUATIONS.forEach(ev => {
+            const repName = String(ev.visitador).toUpperCase();
+            if(selectedManager !== 'all' && repManagerMap[repName] !== selectedManager) return;
+
             const doc = PROCESSED_DATA.find(d => normalizeKey(d.id) === normalizeKey(ev.medico_id));
             if(doc) {
                 const objPot = doc.catPotency; 
                 const subPot = ev.cuadrante ? ev.cuadrante.charAt(0) : ''; 
                 
-                if (subPot && ((objPot === 'A' && subPot === 'C') || (objPot === 'C' && subPot === 'A'))) {
+                if (subPot && objPot !== subPot) {
                     discCount++;
                     discHtml += `
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 mb-2 bg-white hover:bg-rose-50 rounded-xl border border-rose-100 transition shadow-sm gap-2 group cursor-pointer" onclick="openDoctorModal('${doc.id}')">
                             <div class="flex flex-col">
                                 <span class="text-xs font-bold text-slate-800">${doc.name}</span>
-                                <span class="text-[10px] text-slate-500">Evaluado por: <b class="text-indigo-600">${ev.visitador}</b></span>
+                                <span class="text-[10px] text-slate-500">Eval: <b class="text-indigo-600">${ev.visitador}</b> | <span class="bg-slate-200 px-1 rounded">${ev.mercado || 'General'}</span></span>
                             </div>
                             <div class="flex items-center gap-3 text-[10px] font-bold">
                                 <div class="flex flex-col items-center bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-sm">
@@ -2199,7 +2245,7 @@
             }
         });
         
-        if(discHtml==='') discHtml = '<div class="p-8 text-center text-xs text-emerald-600 flex flex-col items-center gap-2 font-medium bg-emerald-50 rounded-2xl border border-emerald-100"><span class="material-symbols-outlined text-emerald-400 text-4xl">verified</span>No hay discrepancias críticas detectadas.</div>';
+        if(discHtml==='') discHtml = '<div class="p-8 text-center text-xs text-emerald-600 flex flex-col items-center gap-2 font-medium bg-emerald-50 rounded-2xl border border-emerald-100"><span class="material-symbols-outlined text-emerald-400 text-4xl">verified</span>No hay discrepancias críticas de potencial detectadas.</div>';
         if(discContainer) discContainer.innerHTML = discHtml;
         const discBadge = document.getElementById('discCountBadge');
         if(discBadge) {
@@ -2339,17 +2385,16 @@
 
             let evalCellHtml = "";
             if (!d.isInst && (currentUserRole === 'visitador' || currentUserRole === 'admin')) {
+                const evalsForDoc = getEvaluationsForDoc(d.id);
                 if (currentUserRole === 'visitador') {
-                    const isEvaluated = EVALUACIONES_VISITADOR[normalizeKey(d.id)];
-                    if (isEvaluated) {
-                        evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 mx-auto"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">${isEvaluated.cuadrante}</span>${isEvaluated.notas ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</button></td>`;
+                    if (evalsForDoc.length > 0) {
+                        evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); window.openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 mx-auto"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">${evalsForDoc.length} Eval.</span></button></td>`;
                     } else {
-                        evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-white hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-slate-600 hover:text-blue-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1 mx-auto group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`;
+                        evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); window.openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-white hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-slate-600 hover:text-blue-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1 mx-auto group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`;
                     }
                 } else if (currentUserRole === 'admin') {
-                    const evalsForDoc = getEvaluationsForDoc(d.id);
                     if (evalsForDoc.length > 0) {
-                        const evalSummary = evalsForDoc.map(e => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px] font-bold whitespace-nowrap shadow-sm" title="Eval de: ${e.visitador}">${e.cuadrante}</span>`).join(' ');
+                        const evalSummary = evalsForDoc.map(e => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px] font-bold whitespace-nowrap shadow-sm" title="${e.mercado}: ${e.visitador}">${e.cuadrante}</span>`).join(' ');
                         evalCellHtml = `<td class="p-4 text-center"><div class="flex flex-wrap items-center justify-center gap-1">${evalSummary}</div></td>`;
                     } else {
                         evalCellHtml = `<td class="p-4 text-center"><span class="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-1 rounded-md border border-slate-200">Pendiente</span></td>`;
@@ -2550,7 +2595,11 @@
         const pctCruzados = totalFichero > 0 ? (totalCruzados / totalFichero) * 100 : 0;
         document.getElementById('visBarCruzados').style.width = `${pctCruzados}%`;
         
-        const evaluados = Object.keys(EVALUACIONES_VISITADOR).length; 
+        // Count unique evaluated doctors (since they can be evaluated multiple times per market)
+        let uniqueEvaluatedDocs = new Set();
+        Object.values(EVALUACIONES_VISITADOR).forEach(ev => { uniqueEvaluatedDocs.add(normalizeKey(ev.medico_id)); });
+        const evaluados = uniqueEvaluatedDocs.size;
+        
         safeSetText('visTotalEvaluados', formatNumber(evaluados));
         
         const pctEvaluados = totalFichero > 0 ? (evaluados / totalFichero) * 100 : 0;
@@ -2558,11 +2607,33 @@
         safeSetText('visPctEvaluados', `${formatNumber(pctEvaluados, 0)}%`);
     }
 
-    function openEvalModal(docId, docName) {
-        document.getElementById('evalDocId').value = normalizeKey(docId); safeSetText('evalModalDocName', docName);
+    window.openEvalModal = function(docId, docName) {
+        document.getElementById('evalDocId').value = normalizeKey(docId); 
+        safeSetText('evalModalDocName', docName);
         document.querySelectorAll('.eval-btn').forEach(btn => { btn.classList.remove('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10'); btn.style.opacity = "1"; });
         
-        // Reset Inputs
+        // 1. Cargar mercados disponibles para este médico
+        const docObj = PROCESSED_DATA.find(d => normalizeKey(d.id) === normalizeKey(docId));
+        let markets = ["General / Todos los Mercados"];
+        if (docObj && docObj.rows) {
+            const uniqueMarkets = [...new Set(docObj.rows.map(r => r.market).filter(Boolean))].sort();
+            if (uniqueMarkets.length > 0) markets = markets.concat(uniqueMarkets);
+        }
+        const mktSelect = document.getElementById('evalMarket');
+        mktSelect.innerHTML = '<option value="">Seleccione el mercado a evaluar...</option>' + markets.map(m => `<option value="${m}">${m}</option>`).join('');
+        
+        // 2. Limpiar campos y forzar selección de mercado
+        mktSelect.value = "";
+        window.loadEvalForMarket();
+        
+        document.getElementById('evalModal').classList.remove('hidden');
+    }
+
+    window.loadEvalForMarket = function() {
+        const docId = document.getElementById('evalDocId').value;
+        const market = document.getElementById('evalMarket').value;
+
+        // Limpiar siempre la UI al cambiar
         document.getElementById('evalSelectedQuadrant').value = ""; 
         document.getElementById('evalNotas').value = "";
         document.getElementById('surveyQ1').value = "";
@@ -2571,145 +2642,218 @@
         document.getElementById('surveyQ4').value = "";
         document.getElementById('surveyQ5').value = "";
 
-        const prevEval = EVALUACIONES_VISITADOR[normalizeKey(docId)];
-        if (prevEval) {
-            document.getElementById('evalNotas').value = prevEval.notas || "";
-            for(let btn of document.querySelectorAll('.eval-btn')) { if(btn.innerText.includes(prevEval.cuadrante)) { selectEvalQuadrant(btn, prevEval.cuadrante); break; } }
+        document.querySelectorAll('.eval-btn').forEach(btn => {
+            btn.classList.remove('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10');
+            btn.style.opacity = "1";
+        });
+
+        if (!market) return; // Si no hay mercado, no buscar en el historial
+
+        const evalKey = `${docId}_${market}`;
+        if (EVALUACIONES_VISITADOR[evalKey]) {
+            const savedData = EVALUACIONES_VISITADOR[evalKey];
             
-            // Llenar encuesta si existe
-            if(prevEval.survey) {
-                document.getElementById('surveyQ1').value = prevEval.survey.q1 || "";
-                document.getElementById('surveyQ2').value = prevEval.survey.q2 || "";
-                document.getElementById('surveyQ3').value = prevEval.survey.q3 || "";
-                document.getElementById('surveyQ4').value = prevEval.survey.q4 || "";
-                document.getElementById('surveyQ5').value = prevEval.survey.q5 || "";
+            // Set matrix
+            if (savedData.cuadrante) {
+                const btn = document.querySelector(`.eval-btn[onclick*="'${savedData.cuadrante}'"]`);
+                if (btn) selectEvalQuadrant(btn, savedData.cuadrante);
+            }
+            
+            // Set notes
+            if (savedData.notas) document.getElementById('evalNotas').value = savedData.notas;
+
+            // Set survey
+            if (savedData.survey) {
+                if (savedData.survey.q1) document.getElementById('surveyQ1').value = savedData.survey.q1;
+                if (savedData.survey.q2) document.getElementById('surveyQ2').value = savedData.survey.q2;
+                if (savedData.survey.q3) document.getElementById('surveyQ3').value = savedData.survey.q3;
+                if (savedData.survey.q4) document.getElementById('surveyQ4').value = savedData.survey.q4;
+                if (savedData.survey.q5) document.getElementById('surveyQ5').value = savedData.survey.q5;
             }
         }
-        document.getElementById('evalModal').classList.remove('hidden');
     }
 
-    function closeEvalModal() { document.getElementById('evalModal').classList.add('hidden'); }
-
-    function selectEvalQuadrant(element, quadrant) {
-        document.getElementById('evalSelectedQuadrant').value = quadrant;
-        document.querySelectorAll('.eval-btn').forEach(btn => { btn.classList.remove('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10'); btn.style.opacity = "0.5"; });
-        element.classList.add('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10'); element.style.opacity = "1";
+    window.selectEvalQuadrant = function(btn, cuadrante) {
+        document.querySelectorAll('.eval-btn').forEach(b => {
+            b.classList.remove('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10');
+            b.style.opacity = "0.5";
+        });
+        btn.classList.add('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10');
+        btn.style.opacity = "1";
+        document.getElementById('evalSelectedQuadrant').value = cuadrante;
     }
 
-    async function saveEvaluation() {
-        const docId = document.getElementById('evalDocId').value; 
-        const quadrant = document.getElementById('evalSelectedQuadrant').value;
-        const notas = document.getElementById('evalNotas').value.trim(); 
+    window.closeEvalModal = function() {
+        document.getElementById('evalModal').classList.add('hidden');
+    }
+
+    window.saveEvaluation = async function() {
+        const docId = document.getElementById('evalDocId').value;
+        const docName = document.getElementById('evalModalDocName').innerText;
+        const market = document.getElementById('evalMarket').value;
+        const cuadrante = document.getElementById('evalSelectedQuadrant').value;
+        const notas = document.getElementById('evalNotas').value.trim();
         
-        // Valores de Encuesta
         const q1 = document.getElementById('surveyQ1').value;
         const q2 = document.getElementById('surveyQ2').value;
         const q3 = document.getElementById('surveyQ3').value;
         const q4 = document.getElementById('surveyQ4').value.trim();
         const q5 = document.getElementById('surveyQ5').value;
 
-        if (!quadrant) { showToast("Selecciona un cuadrante (Paso 1)."); return; }
-        if (!q1 || !q2 || !q3 || !q5) { showToast("Por favor, completa todas las preguntas del paso 2 (Desplegables)."); return; }
-        
-        if (!window.firebaseAuth || !window.firebaseAuth.currentUser) { showToast("Error de conexión a la base de datos."); return; }
+        // Validaciones V21 (Todos los campos obligatorios)
+        if (!market) { showToast("Error: Debes seleccionar un mercado."); return; }
+        if (!q1 || !q2 || !q3 || !q4 || !q5) { showToast("Error: Todos los campos de la encuesta son obligatorios."); return; }
+        if (!cuadrante) { showToast("Error: Debes seleccionar un cuadrante en la matriz."); return; }
+        if (!notas) { showToast("Error: Debes incluir una nota o justificación."); return; }
 
         const btnSave = document.getElementById('btnSaveEval');
-        btnSave.disabled = true; btnSave.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Guardando...';
+        const originalText = btnSave.innerHTML;
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Guardando...';
 
         try {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-            const payload = { 
-                visitador: currentVisitadorName, 
-                medico_id: docId, 
-                medico_name: document.getElementById('evalModalDocName').innerText, 
-                cuadrante: quadrant, 
+            const evalData = {
+                visitador: currentVisitadorName,
+                medico_id: docId,
+                medico_name: docName,
+                mercado: market,
+                cuadrante: cuadrante,
                 notas: notas,
                 survey: { q1, q2, q3, q4, q5 },
-                timestamp: new Date().toISOString() 
+                timestamp: new Date().toISOString()
             };
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
+            const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', `${currentVisitadorName}_${docId}_${market}`);
+            await window.firebaseSetDoc(docRef, evalData);
             
-            await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', `${currentVisitadorName}_${docId}`), payload);
-            EVALUACIONES_VISITADOR[docId] = payload;
-            
-            showToast("Evaluación guardada correctamente"); closeEvalModal();
+            EVALUACIONES_VISITADOR[`${docId}_${market}`] = evalData;
+            showToast("¡Evaluación guardada con éxito!");
+            closeEvalModal();
             resetPaginationAndRender();
-            if(currentUserRole === 'visitador') updateVisitadorDashboard(parseInt(document.getElementById('visTotalFichero').innerText.replace(/\./g,'')), parseInt(document.getElementById('visTotalCruzados').innerText.replace(/\./g,'')));
-        } catch(e) { console.error(e); showToast("Hubo un error al guardar. Revisa tu conexión."); } 
-        finally { btnSave.disabled = false; btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación'; }
-    }
-</script>
-
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    let firebaseConfig;
-    const miConfiguracionFirebase = { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
-
-    if (typeof __firebase_config !== 'undefined') { firebaseConfig = JSON.parse(__firebase_config); } else { firebaseConfig = miConfiguracionFirebase; }
-
-    if (firebaseConfig && firebaseConfig.apiKey) {
-        const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db = getFirestore(app);
-        window.firebaseDb = db; window.firebaseAuth = auth; window.firebaseSetDoc = setDoc; window.firebaseGetDocs = getDocs; window.firebaseGetDoc = getDoc; window.firebaseCollection = collection; window.firebaseDoc = doc; window.firebaseDeleteDoc = deleteDoc;
-
-        async function initAuth() { try { await signInAnonymously(auth); console.log("Conexión segura a Firebase establecida."); } catch(e) { console.error("Error al conectar con Firebase Auth:", e); } }
-        initAuth();
-    }
-</script>
-
-<script>
-    window.openAccessManager = async function() {
-        if (!FICHERO_MAP || FICHERO_MAP.size === 0) { showToast("Debes cargar un Fichero Médico primero."); return; }
-        document.getElementById('accessModal').classList.remove('hidden');
-        const container = document.getElementById('accessListContainer');
-        container.innerHTML = '<div class="text-center py-8 text-indigo-600 flex flex-col items-center gap-3"><span class="material-symbols-outlined animate-spin-reverse text-4xl">sync</span><span class="text-sm font-bold">Conectando con la base de datos...</span></div>';
-
-        let repSet = new Set();
-        FICHERO_MAP.forEach(rows => { rows.forEach(r => { 
-            const repKey = getFicheroRepKey(r);
-            if(repKey && r[repKey]) { repSet.add(String(r[repKey]).trim().toUpperCase()); } 
-        }); });
-        const reps = Array.from(repSet).sort(); document.getElementById('visitadoresCount').innerText = `${reps.length} encontrados`;
-
-        if (reps.length === 0) { container.innerHTML = '<div class="text-center py-8 text-rose-500 font-bold bg-rose-50 rounded-2xl border border-rose-100">No se detectaron visitadores en las columnas del fichero.</div>'; return; }
-
-        let clavesMap = {};
-        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-            try {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-                const colRef = window.firebaseCollection(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'claves_visitadores');
-                const snapshot = await window.firebaseGetDocs(colRef);
-                snapshot.forEach(doc => { clavesMap[doc.id] = doc.data().clave; });
-            } catch(e) { console.error("Error leyendo claves desde Firebase:", e); }
+            aggregateAndCalculate(); // Para actualizar barra de progreso
+        } catch (e) {
+            console.error("Error guardando evaluación:", e);
+            showToast("Error al guardar. Intenta nuevamente.");
+        } finally {
+            btnSave.disabled = false;
+            btnSave.innerHTML = originalText;
         }
+    }
 
-        container.innerHTML = reps.map((rep, idx) => `
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 transition shadow-sm gap-3 group">
-                <span class="text-sm font-bold text-slate-700 truncate flex-1 flex items-center gap-2" title="${rep}"><span class="bg-indigo-100 text-indigo-700 w-6 h-6 flex items-center justify-center rounded-full text-[10px]">${idx+1}</span>${rep}</span>
-                <div class="flex gap-2 items-center w-full sm:w-auto">
-                    <div class="relative w-full sm:w-48">
-                        <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[16px]">lock</span>
-                        <input type="text" id="pwd_input_${idx}" value="${clavesMap[rep] || ''}" placeholder="Asignar clave..." class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-slate-600 bg-slate-50 focus:bg-white transition">
+    // --- MANEJO DE ACCESOS (Para Admin Mode) ---
+    window.openAccessManager = function() {
+        if(!isAdmin) return;
+        document.getElementById('accessModal').classList.remove('hidden');
+        renderAccessManager();
+    }
+
+    async function renderAccessManager() {
+        const container = document.getElementById('accessListContainer');
+        container.innerHTML = '<div class="text-center p-4"><span class="material-symbols-outlined animate-spin-reverse text-indigo-500">sync</span></div>';
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
+        
+        let passwords = {};
+        try {
+            const colRef = window.firebaseCollection(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'claves_visitadores');
+            const snapshot = await window.firebaseGetDocs(colRef);
+            snapshot.forEach(doc => { passwords[doc.id] = doc.data().clave; });
+        } catch(e) { console.error("Error trayendo claves:", e); }
+
+        let html = '';
+        const sortedReps = Array.from(managersList).length > 0 
+            ? Object.keys(repManagerMap).sort() 
+            : FILTER_OPTIONS.Rep.sort(); // Fallback si no hay map de gerentes
+
+        document.getElementById('visitadoresCount').innerText = `${sortedReps.length} encontrados`;
+
+        sortedReps.forEach(rep => {
+            const currentPwd = passwords[rep] || '';
+            const manager = repManagerMap[rep] || 'Sin Gerente';
+            html += `
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center p-3.5 bg-white border border-slate-200 rounded-xl hover:border-indigo-300 transition shadow-sm gap-2">
+                    <div>
+                        <span class="text-sm font-bold text-slate-700 block">${rep}</span>
+                        <span class="text-[10px] text-slate-500 uppercase tracking-widest">${manager}</span>
                     </div>
-                    <button onclick="saveRepPwd('${rep.replace(/'/g, "\\'")}', 'pwd_input_${idx}')" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl shadow-md transition flex-shrink-0 flex items-center group-hover:scale-105" title="Guardar Clave"><span class="material-symbols-outlined text-[18px]">save</span></button>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="pwd_${rep.replace(/[^a-zA-Z0-9]/g, '_')}" value="${currentPwd}" placeholder="Sin clave asignada..." class="w-full sm:w-48 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono">
+                        <button onclick="saveRepPassword('${rep}', '${rep.replace(/[^a-zA-Z0-9]/g, '_')}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 p-2 rounded-lg border border-indigo-200 transition" title="Guardar Clave">
+                            <span class="material-symbols-outlined text-[18px]">save</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
-    };
+            `;
+        });
 
-    window.saveRepPwd = async function(repName, inputId) {
-        const pwd = document.getElementById(inputId).value.trim();
-        if(!pwd) { showToast("La clave no puede estar vacía"); return; }
-        if(!window.firebaseAuth || !window.firebaseAuth.currentUser) { showToast("Error: No estás conectado a la base de datos."); return; }
+        if(html === '') html = '<div class="text-center text-slate-500 text-sm p-4">No se encontraron visitadores en el fichero médico cruzado.</div>';
+        container.innerHTML = html;
+    }
+
+    window.saveRepPassword = async function(repName, inputId) {
+        const pwd = document.getElementById(`pwd_${inputId}`).value.trim();
+        if(!pwd) { showToast("La clave no puede estar vacía."); return; }
+        
         try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
             const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'claves_visitadores', repName);
-            await window.firebaseSetDoc(docRef, { clave: pwd, asignado_en: new Date().toISOString() });
-            showToast(`Clave asignada correctamente a ${repName.substring(0,12)}...`);
-        } catch(e) { console.error("Error guardando clave:", e); showToast("Error crítico al guardar la clave."); }
-    };
-</script>
+            await window.firebaseSetDoc(docRef, { clave: pwd });
+            showToast(`Clave para ${repName} guardada.`);
+        } catch(e) {
+            console.error("Error guardando clave", e);
+            showToast("Error al guardar la clave.");
+        }
+    }
 
+    // Funciones complementarias para modales
+    window.filterInstitutionModal = function() {
+        const search = document.getElementById('instModalSearch').value.toLowerCase();
+        const rows = document.getElementById('instModalTableBody').getElementsByTagName('tr');
+        Array.from(rows).forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(search) ? '' : 'none';
+        });
+    }
+
+    window.openInstitutionModal = function(index) {
+        const instData = CURRENT_TABLE_DATA[index];
+        if(!instData || !instData.isInst) return;
+        safeSetText('instModalName', instData.name);
+        safeSetText('instModalStats', `${instData.docCount} Médicos | ${formatNumber(instData.totalRx)} Rx Totales`);
+        
+        let specData = {};
+        instData.doctors.forEach(d => { specData[d.spec] = (specData[d.spec]||0)+1; });
+        
+        let colors = ['bg-blue-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-purple-500'];
+        let chartHtml = ''; let legendHtml = '';
+        Object.entries(specData).sort((a,b)=>b[1]-a[1]).forEach(([spec, count], idx) => {
+            let c = colors[idx%colors.length];
+            let pct = (count/instData.docCount)*100;
+            chartHtml += `<div class="${c} h-full" style="width: ${pct}%" title="${spec}: ${count}"></div>`;
+            legendHtml += `<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full ${c}"></span><span class="text-[9px] font-bold text-slate-500 uppercase">${spec} (${count})</span></div>`;
+        });
+        document.getElementById('instModalSpecChart').innerHTML = chartHtml;
+        document.getElementById('instModalSpecLegend').innerHTML = legendHtml;
+        
+        const tbody = document.getElementById('instModalTableBody');
+        tbody.innerHTML = '';
+        instData.doctors.forEach(d => {
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer" onclick="openDoctorModal('${d.id}')">
+                    <td class="p-4"><span class="font-bold font-display text-[10px] px-2 py-1 rounded-lg bg-slate-100 text-slate-600">${d.matrixLabel}</span></td>
+                    <td class="p-4 font-bold text-sm text-slate-700">${d.name}</td>
+                    <td class="p-4 text-xs font-medium text-slate-500">${d.spec}</td>
+                    <td class="p-4 text-right font-mono text-sm text-slate-600">${formatNumber(d.totalRx)}</td>
+                    <td class="p-4 text-right font-mono text-sm font-bold text-blue-600">${formatNumber(d.rxPhq)}</td>
+                    <td class="p-4 text-center text-xs font-bold text-slate-700">${formatNumber(d.share, 2)}%</td>
+                </tr>
+            `;
+        });
+        
+        document.getElementById('institutionModal').classList.remove('hidden');
+    }
+
+</script>
 </body>
 </html>
