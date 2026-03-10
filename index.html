@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v20.2.1 - Dev. Hernando Sanoja</title>
+    <title>SegmentApp v22.0 - Dev. Hernando Sanoja GIA</title>
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
     
@@ -184,7 +184,7 @@
             </div>
             <div class="flex flex-col justify-center">
                 <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v20.2 • Dev. Hernando Sanoja •</span>
+                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v22.0 • Dev. Hernando Sanoja •</span>
             </div>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
@@ -307,6 +307,10 @@
                     <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2 uppercase tracking-widest">
                         <span class="material-symbols-outlined text-blue-500">checklist</span> Progreso de Evaluación
                     </h4>
+                    <!-- Filtro por Gerente de Distrito -->
+                    <select id="adminManagerFilter" class="text-xs border border-slate-300 rounded-lg px-2 py-1 outline-none bg-slate-50 text-slate-700 font-bold" onchange="renderAdminDashboard()">
+                        <option value="all">Todos los Gerentes</option>
+                    </select>
                 </div>
                 <div class="flex-1 overflow-y-auto max-h-[300px] pr-2 space-y-2" id="adminProgressTable">
                     <!-- Dinámico -->
@@ -322,7 +326,7 @@
                     </h4>
                     <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200" id="discCountBadge">0</span>
                 </div>
-                <p class="text-[10px] text-slate-500 mb-3 bg-rose-50 p-2 rounded-lg border border-rose-100">Muestra médicos con un choque crítico entre la categorización de Recetas (Rx) vs la Evaluación del Asesor (Ej: Rx Bajo = C vs Subj Alto = A).</p>
+                <p class="text-[10px] text-slate-500 mb-3 bg-rose-50 p-2 rounded-lg border border-rose-100">Muestra médicos con un choque crítico entre la categórica de potencialidad Recetas (Rx) vs la Evaluación del Asesor (Ej: Rx Bajo = C vs Subj Alto = A).</p>
                 <div class="flex-1 overflow-y-auto max-h-[250px] pr-2" id="adminDiscrepancyTable">
                     <!-- Dinámico -->
                 </div>
@@ -381,9 +385,9 @@
             </div>
 
             <div>
-                <div class="filter-group-label">FICHADO</div>
+                <div class="filter-group-label">CRUZADOS</div>
                 <select class="filter-select" id="filterStatus" onchange="applyFilters()">
-                    <option value="all">Todos</option><option value="fichados">Solo Fichados</option><option value="no_fichados">No Fichados</option>
+                    <option value="all">Todos</option><option value="fichados">Cruzados</option><option value="no_fichados">No cruzados</option>
                 </select>
             </div>
 
@@ -1079,34 +1083,20 @@
         <div class="p-6 overflow-y-auto bg-white flex-1 space-y-6">
             <input type="hidden" id="evalDocId">
             
-            <!-- SECCIÓN 1: MATRIZ -->
+            <!-- NUEVO: SECCIÓN MERCADO -->
             <div>
-                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">grid_view</span> 1. Clasificación en Matriz</h4>
-                <div class="grid grid-cols-3 gap-3" id="evalGrid">
-                    <!-- ROW A: A-, A, A+ -->
-                    <button class="eval-btn relative bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-transparent hover:border-rose-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display mb-1">A-</span><span class="text-[9px] uppercase tracking-wider text-rose-500">Conquista</span></button>
-                    <button class="eval-btn relative bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-transparent hover:border-blue-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display mb-1">A</span><span class="text-[9px] uppercase tracking-wider text-blue-500">Desarrollo</span></button>
-                    <button class="eval-btn relative bg-purple-50 hover:bg-purple-100 text-purple-700 border-2 border-transparent hover:border-purple-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display mb-1">A+</span><span class="text-[9px] uppercase tracking-wider text-purple-500">Defensa</span></button>
-                    
-                    <!-- ROW B: B-, B, B+ -->
-                    <button class="eval-btn relative bg-orange-50 hover:bg-orange-100 text-orange-700 border-2 border-transparent hover:border-orange-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display mb-1">B-</span><span class="text-[9px] uppercase tracking-wider text-orange-500">Mantenim.</span></button>
-                    <button class="eval-btn relative bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-transparent hover:border-slate-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display mb-1">B</span><span class="text-[9px] uppercase tracking-wider text-slate-500">Medio</span></button>
-                    <button class="eval-btn relative bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-2 border-transparent hover:border-indigo-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display mb-1">B+</span><span class="text-[9px] uppercase tracking-wider text-indigo-500">Fidelización</span></button>
-                    
-                    <!-- ROW C: C-, C, C+ -->
-                    <button class="eval-btn relative bg-red-50 hover:bg-red-100 text-red-700 border-2 border-transparent hover:border-red-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display mb-1">C-</span><span class="text-[9px] uppercase tracking-wider text-red-500">Bajo</span></button>
-                    <button class="eval-btn relative bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-2 border-transparent hover:border-yellow-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display mb-1">C</span><span class="text-[9px] uppercase tracking-wider text-yellow-600">Medio</span></button>
-                    <button class="eval-btn relative bg-teal-50 hover:bg-teal-100 text-teal-700 border-2 border-transparent hover:border-teal-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display mb-1">C+</span><span class="text-[9px] uppercase tracking-wider text-teal-500">Alto</span></button>
-                </div>
-                <input type="hidden" id="evalSelectedQuadrant" value="">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Mercado a Evaluar</label>
+                <select id="evalMarketSelect" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 font-bold transition shadow-sm" onchange="loadEvalForMarket()">
+                    <option value="">Seleccione un mercado...</option>
+                </select>
             </div>
 
             <div class="w-full h-px bg-slate-100"></div>
 
-            <!-- SECCIÓN 2: ENCUESTA -->
+            <!-- SECCIÓN 1: ENCUESTA -->
             <div>
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">assignment</span> 2. Encuesta de Prescripción</h4>
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">assignment</span> 1. Encuesta de Prescripción</h4>
                     <span class="bg-amber-100 text-amber-800 text-[10px] px-3 py-1 rounded-full font-bold flex items-center gap-1 border border-amber-200"><span class="material-symbols-outlined text-[14px]">calendar_month</span> Temporalidad: SEMANAL</span>
                 </div>
                 
@@ -1181,9 +1171,36 @@
 
                 </div>
             </div>
+
+            <div class="w-full h-px bg-slate-100"></div>
+
+            <!-- SECCIÓN 2: MATRIZ -->
+            <div>
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">grid_view</span> 2. Clasificación en Matriz</h4>
+                <div class="grid grid-cols-3 gap-3" id="evalGrid">
+                    <!-- ROW A: A-, A, A+ -->
+                    <button class="eval-btn relative bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-transparent hover:border-rose-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display mb-1">A-</span><span class="text-[9px] uppercase tracking-wider text-rose-500">Conquistar</span></button>
+                    <button class="eval-btn relative bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-transparent hover:border-blue-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display mb-1">A</span><span class="text-[9px] uppercase tracking-wider text-blue-500">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-purple-50 hover:bg-purple-100 text-purple-700 border-2 border-transparent hover:border-purple-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display mb-1">A+</span><span class="text-[9px] uppercase tracking-wider text-purple-500">Defender</span></button>
+                    
+                    <!-- ROW B: B-, B, B+ -->
+                    <button class="eval-btn relative bg-orange-50 hover:bg-orange-100 text-orange-700 border-2 border-transparent hover:border-orange-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display mb-1">B-</span><span class="text-[9px] uppercase tracking-wider text-orange-500">Conquistar</span></button>
+                    <button class="eval-btn relative bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-transparent hover:border-slate-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display mb-1">B</span><span class="text-[9px] uppercase tracking-wider text-slate-500">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-2 border-transparent hover:border-indigo-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display mb-1">B+</span><span class="text-[9px] uppercase tracking-wider text-indigo-500">Defender</span></button>
+                    
+                    <!-- ROW C: C-, C, C+ -->
+                    <button class="eval-btn relative bg-red-50 hover:bg-red-100 text-red-700 border-2 border-transparent hover:border-red-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display mb-1">C-</span><span class="text-[9px] uppercase tracking-wider text-red-500">Revisar</span></button>
+                    <button class="eval-btn relative bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-2 border-transparent hover:border-yellow-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display mb-1">C</span><span class="text-[9px] uppercase tracking-wider text-yellow-600">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-teal-50 hover:bg-teal-100 text-teal-700 border-2 border-transparent hover:border-teal-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display mb-1">C+</span><span class="text-[9px] uppercase tracking-wider text-teal-500">Defender</span></button>
+                </div>
+                <input type="hidden" id="evalSelectedQuadrant" value="">
+            </div>
+
+            <div class="w-full h-px bg-slate-100"></div>
             
+            <!-- SECCIÓN 3: NOTAS -->
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> Notas Adicionales / Justificación (Opcional)</label>
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> 3. Notas Adicionales / Justificación (Obligatorio)</label>
                 <textarea id="evalNotas" rows="2" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50 hover:bg-white transition" placeholder="Añade contexto adicional aquí..."></textarea>
             </div>
             
@@ -1285,6 +1302,7 @@
     let MATRIX_FILTER = null;
     let CURRENT_COMP_BREAKDOWN = [];
     let FICHERO_MAP = new Map();
+    let REP_MANAGER_MAP = {}; // NUEVO MAPA DE GERENTES
     let SHOW_SUMMARIES = false;
     let groupByInstitution = false;
     
@@ -1299,10 +1317,11 @@
     let FILTER_STATE = { Market: [], Product: [], Rep: [], Region: [], Spec: [], Molecule: [], Class: [], Lab: [] };
     let FILTER_OPTIONS = { Market: [], Product: [], Rep: [], Region: [], Spec: [], Molecule: [], Class: [], Lab: [] };
 
-    // EXPORT COLUMNS ACTUALIZADAS CON ENCUESTA
+    // EXPORT COLUMNS ACTUALIZADAS CON MERCADO Y ENCUESTA
     const EXPORT_COLUMNS = [
         { id: 'col_matrix', label: 'Clasificación Final (Rx)', default: true },
         { id: 'col_eval', label: 'Evaluación del Asesor', default: true },
+        { id: 'col_market_eval', label: 'Mercado Evaluado', default: true },
         { id: 'col_sur_q1', label: 'Pacientes/Sem (Total)', default: true },
         { id: 'col_sur_q2', label: 'Pacientes/Sem (Patología)', default: true },
         { id: 'col_sur_q3', label: 'Pacientes/Sem (Nuestro Prod)', default: true },
@@ -1337,7 +1356,7 @@
             if (savedAudit && savedAudit.length > 0) {
                 safeSetText('loadingText', 'Restaurando sesión...');
                 RAW_DATA = savedAudit;
-                if (savedFichero) { FICHERO_MAP = new Map(savedFichero); }
+                if (savedFichero) { parseStoredFicheroData(savedFichero); }
                 if (savedConfig) { PHQ_PRODUCTS = savedConfig; }
 
                 await processData(true);
@@ -1382,16 +1401,39 @@
 
     function parseFicheroData(fichJson) {
         FICHERO_MAP.clear();
+        REP_MANAGER_MAP = {};
         fichJson.forEach(row => {
             const keys = Object.keys(row);
             let keyCol = keys.find(k => k.toLowerCase().trim() === 'matricula');
             if(!keyCol) keyCol = keys.find(k => k.toLowerCase().includes('matricula') || k.toLowerCase().includes('licencia') || k.toLowerCase().includes('license'));
             
+            let mgrKey = keys.find(k => k.toUpperCase().trim() === 'NOME_GER_DIS');
+            let repKey = getFicheroRepKey(row);
+            
+            if (repKey && row[repKey] && mgrKey && row[mgrKey]) {
+                REP_MANAGER_MAP[String(row[repKey]).trim().toUpperCase()] = String(row[mgrKey]).trim();
+            }
+
             if(keyCol && row[keyCol]) { 
                 const normalizedKey = normalizeKey(row[keyCol]);
                 if(!FICHERO_MAP.has(normalizedKey)) { FICHERO_MAP.set(normalizedKey, []); }
                 FICHERO_MAP.get(normalizedKey).push(row);
             }
+        });
+    }
+
+    function parseStoredFicheroData(savedArray) {
+        FICHERO_MAP = new Map(savedArray);
+        REP_MANAGER_MAP = {};
+        FICHERO_MAP.forEach(rows => {
+            rows.forEach(row => {
+                const keys = Object.keys(row);
+                let mgrKey = keys.find(k => k.toUpperCase().trim() === 'NOME_GER_DIS');
+                let repKey = getFicheroRepKey(row);
+                if (repKey && row[repKey] && mgrKey && row[mgrKey]) {
+                    REP_MANAGER_MAP[String(row[repKey]).trim().toUpperCase()] = String(row[mgrKey]).trim();
+                }
+            });
         });
     }
 
@@ -1435,7 +1477,11 @@
                 EVALUACIONES_VISITADOR = {};
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (data.visitador === currentVisitadorName) { EVALUACIONES_VISITADOR[data.medico_id] = data; }
+                    if (data.visitador === currentVisitadorName) { 
+                        if (!EVALUACIONES_VISITADOR[data.medico_id]) EVALUACIONES_VISITADOR[data.medico_id] = {};
+                        const mkt = data.mercado || 'General';
+                        EVALUACIONES_VISITADOR[data.medico_id][mkt] = data; 
+                    }
                 });
             } catch(e) { console.error("Error cargando evaluaciones:", e); }
         }
@@ -1454,14 +1500,14 @@
                 snapshot.forEach(doc => ALL_EVALUATIONS.push({ firebaseId: doc.id, ...doc.data() }));
             } catch(e) { console.error("Error fetching all evals", e); }
         }
-        renderAdminDashboard();
+        window.renderAdminDashboard();
         resetPaginationAndRender();
     }
 
     function getEvaluationsForDoc(docId) {
         if (currentUserRole === 'visitador') {
-            const ev = EVALUACIONES_VISITADOR[normalizeKey(docId)];
-            return ev ? [ev] : [];
+            const evMap = EVALUACIONES_VISITADOR[normalizeKey(docId)];
+            return evMap ? Object.values(evMap) : [];
         } else {
             return ALL_EVALUATIONS.filter(e => normalizeKey(e.medico_id) === normalizeKey(docId));
         }
@@ -1509,6 +1555,7 @@
                 "Médico": ev.medico_name || (docObj ? docObj.name : "-"),
                 "Matrícula": ev.medico_id || "-",
                 "Especialidad": spec,
+                "Mercado Evaluado": ev.mercado || "General",
                 "Clasificación Final (CloseUp)": matrixLabel,
                 "Clasificación Asesor": ev.cuadrante || "-",
                 "P1: Pacientes Total/Semana": ev.survey?.q1 || "-",
@@ -1526,10 +1573,6 @@
         XLSX.writeFile(wb, "SegmentApp_Evaluaciones_Asesores.xlsx");
         showToast("Reporte de Evaluaciones descargado exitosamente.");
     }
-
-    // ==========================================
-    // NUEVAS FUNCIONES DE LIMPIEZA DE DATOS (ADMIN)
-    // ==========================================
 
     function confirmClearAllEvals() { document.getElementById('confirmClearAllModal').classList.remove('hidden'); }
     
@@ -1590,15 +1633,14 @@
         }
     }
 
-
     function generateMatrixGridHTML() {
         const container = document.getElementById('matrixContainer');
         if(!container) return;
         
         const cellIds = [
-            {id: 'cell_A_C', label: 'A-', title: 'Conquista'}, {id: 'cell_A_B', label: 'A', title: 'Desarrollo'}, {id: 'cell_A_A', label: 'A+', title: 'Defensa'},
-            {id: 'cell_B_C', label: 'B-', title: 'Mantenimiento'}, {id: 'cell_B_B', label: 'B', title: 'Medio'}, {id: 'cell_B_A', label: 'B+', title: 'Fidelización'},
-            {id: 'cell_C_C', label: 'C-', title: 'Bajo'}, {id: 'cell_C_B', label: 'C', title: 'Medio'}, {id: 'cell_C_A', label: 'C+', title: 'Alto'}
+            {id: 'cell_A_C', label: 'A-', title: 'Conquistar'}, {id: 'cell_A_B', label: 'A', title: 'Desarrollar'}, {id: 'cell_A_A', label: 'A+', title: 'Defender'},
+            {id: 'cell_B_C', label: 'B-', title: 'Conquistar'}, {id: 'cell_B_B', label: 'B', title: 'Desarrollar'}, {id: 'cell_B_A', label: 'B+', title: 'Defender'},
+            {id: 'cell_C_C', label: 'C-', title: 'Revisar'}, {id: 'cell_C_B', label: 'C', title: 'Desarrollar'}, {id: 'cell_C_A', label: 'C+', title: 'Defender'}
         ];
 
         let html = '';
@@ -1781,9 +1823,11 @@
 
             if (selectedCols.includes('col_matrix')) rowObj["Clasificación Final (Rx)"] = d.matrixLabel;
             
-            // PASO 4: Exportar Evaluaciones Y ENCUESTA
             if (selectedCols.includes('col_eval')) {
                 rowObj["Evaluación Asesor"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${e.cuadrante}`).join(' | ') : 'Pendiente';
+            }
+            if (selectedCols.includes('col_market_eval')) {
+                rowObj["Mercado Evaluado"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${e.mercado || 'General'}`).join(' | ') : '-';
             }
             if (selectedCols.includes('col_sur_q1')) rowObj["Pacientes/Sem (Total)"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${e.survey?.q1||'-'}`).join(' | ') : '';
             if (selectedCols.includes('col_sur_q2')) rowObj["Pacientes/Sem (Patología)"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${e.survey?.q2||'-'}`).join(' | ') : '';
@@ -1831,7 +1875,7 @@
                 return selectedCols.map(c => {
                     if (c.id === 'col_matrix') return d.matrixLabel; 
                     if (c.id === 'col_eval') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>e.cuadrante).join(', ') : 'Pend.';
-                    // No pondremos todas las preguntas de la encuesta en el PDF por espacio, devolvemos un resumen si las piden
+                    if (c.id === 'col_market_eval') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>e.mercado || 'Gen').join(', ') : '-';
                     if (c.id.startsWith('col_sur_')) return evalsForDoc.length > 0 ? "En Excel" : "-";
                     
                     if (c.id === 'col_eval_notes') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>e.notas||'').join(' ') : '';
@@ -2099,7 +2143,7 @@
     }
 
     // PASO 4: Renderizar el Dashboard del Administrador
-    function renderAdminDashboard() {
+    window.renderAdminDashboard = function() {
         if (!isAdmin) return;
 
         let repStats = {};
@@ -2120,9 +2164,26 @@
             if(repStats[repName]) { repStats[repName].evaluated++; }
         });
 
+        const managerSelect = document.getElementById('adminManagerFilter');
+        if (managerSelect) {
+            const uniqueManagers = [...new Set(Object.values(REP_MANAGER_MAP))].sort();
+            if (managerSelect.options.length <= 1 && uniqueManagers.length > 0) {
+                managerSelect.innerHTML = '<option value="all">Todos los Gerentes</option>';
+                uniqueManagers.forEach(m => {
+                    managerSelect.innerHTML += `<option value="${m}">${m}</option>`;
+                });
+            }
+        }
+        const selectedManager = managerSelect ? managerSelect.value : 'all';
+
+        let filteredStats = Object.values(repStats);
+        if (selectedManager !== 'all') {
+            filteredStats = filteredStats.filter(stat => REP_MANAGER_MAP[stat.name] === selectedManager);
+        }
+
         const progressContainer = document.getElementById('adminProgressTable');
         let progressHtml = '';
-        Object.values(repStats).sort((a,b) => (b.evaluated/b.total) - (a.evaluated/a.total)).forEach(stat => {
+        filteredStats.sort((a,b) => (b.evaluated/b.total) - (a.evaluated/a.total)).forEach(stat => {
             const pct = stat.total > 0 ? (stat.evaluated / stat.total) * 100 : 0;
             let barColor = pct >= 100 ? 'bg-emerald-500' : (pct > 50 ? 'bg-blue-500' : 'bg-amber-400');
             progressHtml += `
@@ -2145,7 +2206,7 @@
                 </div>
             `;
         });
-        if(progressHtml==='') progressHtml = '<div class="p-4 text-center text-xs text-slate-500">No hay datos de asesores en el fichero.</div>';
+        if(progressHtml==='') progressHtml = '<div class="p-4 text-center text-xs text-slate-500">No hay datos de asesores en el filtro.</div>';
         if(progressContainer) progressContainer.innerHTML = progressHtml;
 
         const discContainer = document.getElementById('adminDiscrepancyTable');
@@ -2158,13 +2219,13 @@
                 const objPot = doc.catPotency; 
                 const subPot = ev.cuadrante ? ev.cuadrante.charAt(0) : ''; 
                 
-                if (subPot && ((objPot === 'A' && subPot === 'C') || (objPot === 'C' && subPot === 'A'))) {
+                if (subPot && objPot !== subPot) {
                     discCount++;
                     discHtml += `
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 mb-2 bg-white hover:bg-rose-50 rounded-xl border border-rose-100 transition shadow-sm gap-2 group cursor-pointer" onclick="openDoctorModal('${doc.id}')">
                             <div class="flex flex-col">
                                 <span class="text-xs font-bold text-slate-800">${doc.name}</span>
-                                <span class="text-[10px] text-slate-500">Evaluado por: <b class="text-indigo-600">${ev.visitador}</b></span>
+                                <span class="text-[10px] text-slate-500">Evaluado por: <b class="text-indigo-600">${ev.visitador}</b> en <b class="text-indigo-600">${ev.mercado || 'General'}</b></span>
                             </div>
                             <div class="flex items-center gap-3 text-[10px] font-bold">
                                 <div class="flex flex-col items-center bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-sm">
@@ -2183,7 +2244,7 @@
             }
         });
         
-        if(discHtml==='') discHtml = '<div class="p-8 text-center text-xs text-emerald-600 flex flex-col items-center gap-2 font-medium bg-emerald-50 rounded-2xl border border-emerald-100"><span class="material-symbols-outlined text-emerald-400 text-4xl">verified</span>No hay discrepancias críticas detectadas.</div>';
+        if(discHtml==='') discHtml = '<div class="p-8 text-center text-xs text-emerald-600 flex flex-col items-center gap-2 font-medium bg-emerald-50 rounded-2xl border border-emerald-100"><span class="material-symbols-outlined text-emerald-400 text-4xl">verified</span>No hay discrepancias críticas de potencial detectadas.</div>';
         if(discContainer) discContainer.innerHTML = discHtml;
         const discBadge = document.getElementById('discCountBadge');
         if(discBadge) {
@@ -2324,16 +2385,19 @@
             let evalCellHtml = "";
             if (!d.isInst && (currentUserRole === 'visitador' || currentUserRole === 'admin')) {
                 if (currentUserRole === 'visitador') {
-                    const isEvaluated = EVALUACIONES_VISITADOR[normalizeKey(d.id)];
-                    if (isEvaluated) {
-                        evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 mx-auto"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">${isEvaluated.cuadrante}</span>${isEvaluated.notas ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</button></td>`;
+                    const evalsMap = EVALUACIONES_VISITADOR[normalizeKey(d.id)];
+                    const evalsList = evalsMap ? Object.values(evalsMap) : [];
+                    if (evalsList.length > 0) {
+                        const firstEval = evalsList[0];
+                        const countText = evalsList.length > 1 ? `${evalsList.length} Mercados` : `${evalsList.length} Mercado`;
+                        evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex flex-col items-center justify-center gap-0.5 mx-auto"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">${firstEval.cuadrante}</span>${firstEval.notas ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</div><span class="text-[9px] font-medium text-indigo-500">${countText}</span></button></td>`;
                     } else {
                         evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-white hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-slate-600 hover:text-blue-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1 mx-auto group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`;
                     }
                 } else if (currentUserRole === 'admin') {
                     const evalsForDoc = getEvaluationsForDoc(d.id);
                     if (evalsForDoc.length > 0) {
-                        const evalSummary = evalsForDoc.map(e => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px] font-bold whitespace-nowrap shadow-sm" title="Eval de: ${e.visitador}">${e.cuadrante}</span>`).join(' ');
+                        const evalSummary = evalsForDoc.map(e => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px] font-bold whitespace-nowrap shadow-sm" title="Eval de: ${e.visitador} en ${e.mercado || 'General'}">${e.cuadrante}</span>`).join(' ');
                         evalCellHtml = `<td class="p-4 text-center"><div class="flex flex-wrap items-center justify-center gap-1">${evalSummary}</div></td>`;
                     } else {
                         evalCellHtml = `<td class="p-4 text-center"><span class="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-1 rounded-md border border-slate-200">Pendiente</span></td>`;
@@ -2384,7 +2448,13 @@
         if (doc.gap > 0) {
             gapContainer.className = "bg-rose-50 border border-rose-100 p-3 rounded-xl mb-6 flex justify-between items-center shadow-sm";
             gapContainer.innerHTML = `<div class="flex items-center gap-2"><span class="material-symbols-outlined text-rose-500 bg-rose-100 p-1.5 rounded-full text-[14px]">trending_up</span><span class="text-xs font-bold text-rose-800 font-display">Oportunidad de Crecimiento</span></div><div class="text-xs text-rose-900 font-medium">Faltan <span class="font-display font-black text-sm text-rose-600 bg-white px-2 py-0.5 rounded-lg border border-rose-200 shadow-sm">${formatNumber(doc.gap)} Rx</span></div>`;
-            gapContainer.classList.remove('hidden');
+            gapContainer
+            Aquí tienes la continuación y finalización del código, retomando exactamente donde se cortó. Se incluyen todas las lógicas que solicitaste (mercados, notas obligatorias, actualización del dashboard, etc.). 
+
+Copia este bloque y pégalo justo a continuación de donde se cortó el anterior:
+
+```html
+.classList.remove('hidden');
         } else { gapContainer.classList.add('hidden'); }
 
         const fichDiv = document.getElementById('modalFicheroData'); const fichContainer = document.getElementById('modalFicheroContainer');
@@ -2535,7 +2605,7 @@
         document.getElementById('visBarCruzados').style.width = `${pctCruzados}%`;
         
         const evaluados = Object.keys(EVALUACIONES_VISITADOR).length; 
-        safeSetText('visTotalEvaluados', formatNumber(evaluados));
+        safeSetText('visTotalEvaluados', formatNumber(evaluados) + " (Paso 3)");
         
         const pctEvaluados = totalFichero > 0 ? (evaluados / totalFichero) * 100 : 0;
         document.getElementById('visBarEvaluados').style.width = `${pctEvaluados}%`;
@@ -2543,10 +2613,37 @@
     }
 
     function openEvalModal(docId, docName) {
-        document.getElementById('evalDocId').value = normalizeKey(docId); safeSetText('evalModalDocName', docName);
-        document.querySelectorAll('.eval-btn').forEach(btn => { btn.classList.remove('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10'); btn.style.opacity = "1"; });
+        const doc = PROCESSED_DATA.find(d => normalizeKey(d.id) === normalizeKey(docId));
+        if (!doc) return;
+
+        document.getElementById('evalDocId').value = normalizeKey(docId); 
+        safeSetText('evalModalDocName', docName);
         
+        // Llenar el select de mercados únicos para este médico
+        const markets = [...new Set(doc.rows.map(r => r.market).filter(x => x))].sort();
+        const marketSelect = document.getElementById('evalMarketSelect');
+        marketSelect.innerHTML = '<option value="">Seleccione un mercado...</option>';
+        markets.forEach(m => {
+            marketSelect.innerHTML += `<option value="${m}">${m}</option>`;
+        });
+
+        // Seleccionar automáticamente si solo hay un mercado
+        if (markets.length === 1) {
+            marketSelect.value = markets[0];
+        } else {
+            marketSelect.value = "";
+        }
+
+        loadEvalForMarket();
+        document.getElementById('evalModal').classList.remove('hidden');
+    }
+
+    function loadEvalForMarket() {
+        const docId = document.getElementById('evalDocId').value;
+        const selectedMarket = document.getElementById('evalMarketSelect').value;
+
         // Reset Inputs
+        document.querySelectorAll('.eval-btn').forEach(btn => { btn.classList.remove('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10'); btn.style.opacity = "1"; });
         document.getElementById('evalSelectedQuadrant').value = ""; 
         document.getElementById('evalNotas').value = "";
         document.getElementById('surveyQ1').value = "";
@@ -2555,10 +2652,19 @@
         document.getElementById('surveyQ4').value = "";
         document.getElementById('surveyQ5').value = "";
 
-        const prevEval = EVALUACIONES_VISITADOR[normalizeKey(docId)];
-        if (prevEval) {
+        if (!selectedMarket) return; // Esperar a que el usuario seleccione si hay varios
+
+        const docEvalsMap = EVALUACIONES_VISITADOR[normalizeKey(docId)];
+        if (docEvalsMap && docEvalsMap[selectedMarket]) {
+            const prevEval = docEvalsMap[selectedMarket];
+            
             document.getElementById('evalNotas').value = prevEval.notas || "";
-            for(let btn of document.querySelectorAll('.eval-btn')) { if(btn.innerText.includes(prevEval.cuadrante)) { selectEvalQuadrant(btn, prevEval.cuadrante); break; } }
+            for(let btn of document.querySelectorAll('.eval-btn')) { 
+                if(btn.innerText.includes(prevEval.cuadrante)) { 
+                    selectEvalQuadrant(btn, prevEval.cuadrante); 
+                    break; 
+                } 
+            }
             
             // Llenar encuesta si existe
             if(prevEval.survey) {
@@ -2569,7 +2675,6 @@
                 document.getElementById('surveyQ5').value = prevEval.survey.q5 || "";
             }
         }
-        document.getElementById('evalModal').classList.remove('hidden');
     }
 
     function closeEvalModal() { document.getElementById('evalModal').classList.add('hidden'); }
@@ -2582,6 +2687,7 @@
 
     async function saveEvaluation() {
         const docId = document.getElementById('evalDocId').value; 
+        const selectedMarket = document.getElementById('evalMarketSelect').value;
         const quadrant = document.getElementById('evalSelectedQuadrant').value;
         const notas = document.getElementById('evalNotas').value.trim(); 
         
@@ -2592,8 +2698,10 @@
         const q4 = document.getElementById('surveyQ4').value.trim();
         const q5 = document.getElementById('surveyQ5').value;
 
-        if (!quadrant) { showToast("Selecciona un cuadrante (Paso 1)."); return; }
-        if (!q1 || !q2 || !q3 || !q5) { showToast("Por favor, completa todas las preguntas del paso 2 (Desplegables)."); return; }
+        if (!selectedMarket) { showToast("Por favor, selecciona el mercado a evaluar."); return; }
+        if (!q1 || !q2 || !q3 || !q5) { showToast("Por favor, completa todas las preguntas del paso 1 (Desplegables)."); return; }
+        if (!quadrant) { showToast("Selecciona un cuadrante en la matriz (Paso 2)."); return; }
+        if (!notas) { showToast("Por favor, ingresa una nota o comentario (Paso 3 Obligatorio)."); return; }
         
         if (!window.firebaseAuth || !window.firebaseAuth.currentUser) { showToast("Error de conexión a la base de datos."); return; }
 
@@ -2606,14 +2714,21 @@
                 visitador: currentVisitadorName, 
                 medico_id: docId, 
                 medico_name: document.getElementById('evalModalDocName').innerText, 
+                mercado: selectedMarket,
                 cuadrante: quadrant, 
                 notas: notas,
                 survey: { q1, q2, q3, q4, q5 },
                 timestamp: new Date().toISOString() 
             };
             
-            await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', `${currentVisitadorName}_${docId}`), payload);
-            EVALUACIONES_VISITADOR[docId] = payload;
+            // Llave única para permitir múltiples mercados del mismo médico por el mismo visitador
+            const cleanMarketName = selectedMarket.replace(/[^a-zA-Z0-9]/g, "");
+            const docRefId = `${currentVisitadorName}_${docId}_${cleanMarketName}`;
+            
+            await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', docRefId), payload);
+            
+            if(!EVALUACIONES_VISITADOR[docId]) EVALUACIONES_VISITADOR[docId] = {};
+            EVALUACIONES_VISITADOR[docId][selectedMarket] = payload;
             
             showToast("Evaluación guardada correctamente"); closeEvalModal();
             resetPaginationAndRender();
