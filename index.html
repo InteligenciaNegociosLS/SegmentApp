@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v22.0 - Dev. Hernando Sanoja GIA</title>
+    <title>SegmentApp v22.0GAS - Dev. Hernando Sanoja</title>
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
     
@@ -387,7 +387,7 @@
             <div>
                 <div class="filter-group-label">CRUZADOS</div>
                 <select class="filter-select" id="filterStatus" onchange="applyFilters()">
-                    <option value="all">Todos</option><option value="fichados">Cruzados</option><option value="no_fichados">No cruzados</option>
+                    <option value="all">Todos</option><option value="fichados">Cruzados</option><option value="no_fichados">No Cruzados</option>
                 </select>
             </div>
 
@@ -1583,7 +1583,6 @@
         btn.disabled = true; btn.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Limpiando...';
         try {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-            // Borrar uno por uno
             for (let ev of ALL_EVALUATIONS) {
                 if(ev.firebaseId) {
                     const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', ev.firebaseId);
@@ -1592,7 +1591,7 @@
             }
             showToast("¡Todas las evaluaciones han sido borradas!");
             document.getElementById('confirmClearAllModal').classList.add('hidden');
-            fetchAllEvaluacionesAdmin(); // Refrescar vista
+            fetchAllEvaluacionesAdmin(); 
         } catch(e) {
             console.error("Error masivo de borrado", e); showToast("Ocurrió un error al limpiar datos.");
         } finally {
@@ -1625,7 +1624,7 @@
             }
             showToast(`Evaluaciones de ${repName} borradas con éxito.`);
             document.getElementById('confirmClearRepModal').classList.add('hidden');
-            fetchAllEvaluacionesAdmin(); // Refrescar vista
+            fetchAllEvaluacionesAdmin(); 
         } catch(e) {
             console.error("Error borrando datos del asesor", e); showToast("Ocurrió un error al limpiar datos.");
         } finally {
@@ -2197,7 +2196,6 @@
                     <div class="w-1/4 text-right text-[11px] font-mono text-slate-500">
                         <b class="${pct>=100?'text-emerald-600':'text-slate-700'}">${stat.evaluated}</b> / ${stat.total} (<span class="${pct>=100?'text-emerald-600':''}">${pct.toFixed(0)}%</span>)
                     </div>
-                    <!-- NUEVO: Botón papelera -->
                     <div class="w-8 flex justify-end">
                         <button onclick="clearRepEvaluations('${stat.name.replace(/'/g, "\\'")}')" class="text-slate-300 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md transition opacity-0 group-hover:opacity-100" title="Borrar evaluaciones de ${stat.name}">
                             <span class="material-symbols-outlined text-[16px]">delete</span>
@@ -2448,13 +2446,7 @@
         if (doc.gap > 0) {
             gapContainer.className = "bg-rose-50 border border-rose-100 p-3 rounded-xl mb-6 flex justify-between items-center shadow-sm";
             gapContainer.innerHTML = `<div class="flex items-center gap-2"><span class="material-symbols-outlined text-rose-500 bg-rose-100 p-1.5 rounded-full text-[14px]">trending_up</span><span class="text-xs font-bold text-rose-800 font-display">Oportunidad de Crecimiento</span></div><div class="text-xs text-rose-900 font-medium">Faltan <span class="font-display font-black text-sm text-rose-600 bg-white px-2 py-0.5 rounded-lg border border-rose-200 shadow-sm">${formatNumber(doc.gap)} Rx</span></div>`;
-            gapContainer
-            Aquí tienes la continuación y finalización del código, retomando exactamente donde se cortó. Se incluyen todas las lógicas que solicitaste (mercados, notas obligatorias, actualización del dashboard, etc.). 
-
-Copia este bloque y pégalo justo a continuación de donde se cortó el anterior:
-
-```html
-.classList.remove('hidden');
+            gapContainer.classList.remove('hidden');
         } else { gapContainer.classList.add('hidden'); }
 
         const fichDiv = document.getElementById('modalFicheroData'); const fichContainer = document.getElementById('modalFicheroContainer');
