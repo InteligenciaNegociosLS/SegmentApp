@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v23 GAS - Dev. Hernando Sanoja</title>
+    <title>SegmentApp v24 GAS - Dev. Hernando Sanoja</title>
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
     
@@ -184,7 +184,7 @@
             </div>
             <div class="flex flex-col justify-center">
                 <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v23 GAS • Dev. Hernando Sanoja •</span>
+                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v24 GAS • Dev. Hernando Sanoja •</span>
             </div>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
@@ -1119,7 +1119,7 @@
 
                     <!-- P2 -->
                     <div>
-                        <label class="text-sm font-bold text-slate-700 mb-1.5 block">2) De esos pacientes, ¿a cuántos les prescribe/recomienda esta clase terapéutica (Ej: IBP)?</label>
+                        <label class="text-sm font-bold text-slate-700 mb-1.5 block">2) De esos pacientes, ¿a cuántos les prescribe/recomienda esta clase terapéutica?</label>
                         <select id="surveyQ2" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm">
                             <option value="">Seleccione un rango...</option>
                             <option value="0">0 (Ninguno)</option>
@@ -1135,7 +1135,7 @@
 
                     <!-- P3 -->
                     <div>
-                        <label class="text-sm font-bold text-slate-700 mb-1.5 block">3) De esos pacientes, ¿a cuántos les prescribe nuestro producto (Ej: ESOZ)?</label>
+                        <label class="text-sm font-bold text-slate-700 mb-1.5 block">3) De esos pacientes, ¿a cuántos les prescribe nuestro producto?</label>
                         <select id="surveyQ3" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm border-l-4 border-l-indigo-500">
                             <option value="">Seleccione un rango...</option>
                             <option value="0">0 (Ninguno)</option>
@@ -1151,7 +1151,7 @@
                     <!-- P4 -->
                     <div>
                         <label class="text-sm font-bold text-slate-700 mb-1.5 block">4) Además de nuestro producto, ¿cuáles otros productos usted prescribe o le gusta usar para esta patología?</label>
-                        <input type="text" id="surveyQ4" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm" placeholder="Ej: Ulgarin y Ezolium, o N/A">
+                        <input type="text" id="surveyQ4" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm" placeholder="Indique otros productos, o N/A">
                     </div>
 
                     <!-- P5 -->
@@ -1200,7 +1200,7 @@
             
             <!-- SECCIÓN 3: NOTAS -->
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> 3. Notas Adicionales / Justificación (Obligatorio)</label>
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> 3. Justificación de la selección de la clasificación (Obligatorio)</label>
                 <textarea id="evalNotas" rows="2" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50 hover:bg-white transition" placeholder="Añade contexto adicional aquí..."></textarea>
             </div>
             
@@ -2386,9 +2386,9 @@
                     const evalsMap = EVALUACIONES_VISITADOR[normalizeKey(d.id)];
                     const evalsList = evalsMap ? Object.values(evalsMap) : [];
                     if (evalsList.length > 0) {
-                        const firstEval = evalsList[0];
+                        const hasNotes = evalsList.some(e => e.notas && String(e.notas).trim() !== '');
                         const countText = evalsList.length > 1 ? `${evalsList.length} Mercados` : `${evalsList.length} Mercado`;
-                        evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex flex-col items-center justify-center gap-0.5 mx-auto"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">${firstEval.cuadrante}</span>${firstEval.notas ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</div><span class="text-[9px] font-medium text-indigo-500">${countText}</span></button></td>`;
+                        evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex flex-col items-center justify-center gap-0.5 mx-auto"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">EVALUADO</span>${hasNotes ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</div><span class="text-[9px] font-medium text-indigo-500">${countText}</span></button></td>`;
                     } else {
                         evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')"><button class="bg-white hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-slate-600 hover:text-blue-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1 mx-auto group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`;
                     }
@@ -2615,11 +2615,21 @@
         const globalMarkets = FILTER_OPTIONS['Market'] || [];
         const marketSelect = document.getElementById('evalMarketSelect');
         marketSelect.innerHTML = '<option value="">Seleccione un mercado...</option>';
+        
+        const docEvalsMap = EVALUACIONES_VISITADOR[normalizeKey(docId)] || {};
+
         globalMarkets.forEach(m => {
-            marketSelect.innerHTML += `<option value="${m}">${m}</option>`;
+            const markText = docEvalsMap[m] ? ' ✅ Evaluado' : '';
+            marketSelect.innerHTML += `<option value="${m}">${m}${markText}</option>`;
         });
 
-        marketSelect.value = "";
+        // Seleccionar automáticamente si solo hay un mercado
+        if (globalMarkets.length === 1) {
+            marketSelect.value = globalMarkets[0];
+        } else {
+            marketSelect.value = "";
+        }
+
         loadEvalForMarket();
         document.getElementById('evalModal').classList.remove('hidden');
     }
