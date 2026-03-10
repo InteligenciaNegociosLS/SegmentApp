@@ -494,7 +494,7 @@
                 
                 <div class="space-y-5">
                     <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">1. Médicos en Fichero Asignado</span><span class="text-slate-700 font-mono text-sm" id="visTotalFichero">0</span></div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">1. Médicos del Fichero CRM</span><span class="text-slate-700 font-mono text-sm" id="visTotalFichero">0</span></div>
                         <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-indigo-300 h-2.5 rounded-full" style="width: 100%"></div></div>
                     </div>
                     <div>
@@ -502,7 +502,7 @@
                         <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full transition-all duration-1000" id="visBarCruzados" style="width: 0%"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">3. Evaluados (Matriz 9-Box)</span><span class="text-emerald-600 font-mono text-sm" id="visTotalEvaluados">0 (Paso 3)</span></div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">3. Evaluados/Encuestados</span><span class="text-emerald-600 font-mono text-sm" id="visTotalEvaluados">0 </span></div>
                         <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-emerald-500 h-2.5 rounded-full transition-all duration-1000" id="visBarEvaluados" style="width: 0%"></div></div>
                     </div>
                 </div>
@@ -2597,7 +2597,7 @@
         document.getElementById('visBarCruzados').style.width = `${pctCruzados}%`;
         
         const evaluados = Object.keys(EVALUACIONES_VISITADOR).length; 
-        safeSetText('visTotalEvaluados', formatNumber(evaluados) + " (Paso 3)");
+        safeSetText('visTotalEvaluados', formatNumber(evaluados) + "");
         
         const pctEvaluados = totalFichero > 0 ? (evaluados / totalFichero) * 100 : 0;
         document.getElementById('visBarEvaluados').style.width = `${pctEvaluados}%`;
