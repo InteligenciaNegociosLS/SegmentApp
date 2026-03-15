@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v26 GAS 3 fases - Dev. Hernando Sanoja</title>
+    <title>SegmentApp v27 GAS 3 fases - Dev. Hernando Sanoja</title>
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
     
@@ -184,7 +184,7 @@
             </div>
             <div class="flex flex-col justify-center">
                 <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v26 GAS • Dev. Hernando Sanoja •</span>
+                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v27 GAS • Dev. Hernando Sanoja •</span>
             </div>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
@@ -600,10 +600,14 @@
         <!-- 9-Box Matrix M3 -->
         <div class="mb-10 overflow-x-auto pb-6">
             <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 min-w-[700px]">
-                <h3 class="font-display font-bold text-slate-800 flex items-center gap-2 text-xl">
+                <h3 class="font-display font-bold text-slate-800 flex items-center gap-2 text-xl flex-wrap">
                     <span class="material-symbols-outlined text-blue-600 text-2xl">apps</span>
                     Matriz Estratégica
-                    <span class="text-[10px] font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full ml-3 tracking-widest uppercase">Haz clic para filtrar</span>
+                    <div class="bg-slate-100 p-1 rounded-xl inline-flex text-xs font-bold ml-2 border border-slate-200 shadow-inner">
+                        <button id="btnMatrixCloseUp" onclick="switchMatrixView('closeup')" class="px-4 py-1.5 rounded-lg bg-white shadow-sm text-blue-600 transition">CloseUp (Datos)</button>
+                        <button id="btnMatrixObj" onclick="switchMatrixView('objective')" class="px-4 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">assignment</span> Encuestas (Objetiva)</button>
+                    </div>
+                    <span class="text-[10px] font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full ml-2 tracking-widest uppercase">Filtro Interactivo</span>
                 </h3>
                 <div class="flex gap-2">
                     <button onclick="exportMatrixToPNG()" class="text-slate-500 hover:text-blue-600 hover:bg-blue-50 bg-white border border-slate-200 px-4 py-2.5 rounded-full shadow-sm transition flex items-center justify-center gap-1.5" title="Exportar Matriz como Imagen">
@@ -1149,7 +1153,10 @@
                     
                     <!-- P1 -->
                     <div>
-                        <label class="text-sm font-bold text-slate-700 mb-1.5 block">1) ¿Cuántos pacientes atiende usted por semana?</label>
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <label class="text-sm font-bold text-slate-700">1) ¿Cuántos pacientes atiende usted por semana?</label>
+                            <span class="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase font-bold" title="Este valor es global para el médico">Dato Global</span>
+                        </div>
                         <select id="surveyQ1" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm">
                             <option value="">Seleccione un rango...</option>
                             <option value="Menos de 10">Menos de 10</option>
@@ -1201,7 +1208,10 @@
 
                     <!-- P5 -->
                     <div>
-                        <label class="text-sm font-bold text-slate-700 mb-1.5 block">5) ¿Cuál es el costo estimado de la consulta?</label>
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <label class="text-sm font-bold text-slate-700">5) ¿Cuál es el costo estimado de la consulta?</label>
+                            <span class="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase font-bold" title="Este valor es global para el médico">Dato Global</span>
+                        </div>
                         <select id="surveyQ5" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm">
                             <option value="">Seleccione un rango estimado...</option>
                             <option value="Gratuita / Institucional">Gratuita / Institucional</option>
@@ -1268,6 +1278,7 @@
     let currentUserRole = 'guest'; 
     let currentVisitadorName = "";
     let isAdmin = false;
+    let MATRIX_VIEW_MODE = 'closeup'; // Toggle View State
     
     // Evaluaciones
     let EVALUACIONES_VISITADOR = {}; 
@@ -1294,17 +1305,38 @@
         q5: "5. ¿Costo estimado de consulta?"
     };
 
-    function calculateObjectiveScore(survey) {
-        if(!survey) return "N/A";
+    // Funciones Matemáticas de la Encuesta Objetiva
+    function getObjectiveClassification(survey) {
+        if(!survey) return { pot: null, loy: null, label: "N/A" };
+        
+        // EJE X (Volumen / Letra) - Suma de puntos
         let score = 0;
         if(SURVEY_WEIGHTS.q1 && SURVEY_WEIGHTS.q1[survey.q1]) score += Number(SURVEY_WEIGHTS.q1[survey.q1]);
         if(SURVEY_WEIGHTS.q2 && SURVEY_WEIGHTS.q2[survey.q2]) score += Number(SURVEY_WEIGHTS.q2[survey.q2]);
         if(SURVEY_WEIGHTS.q3 && SURVEY_WEIGHTS.q3[survey.q3]) score += Number(SURVEY_WEIGHTS.q3[survey.q3]);
         if(SURVEY_WEIGHTS.q5 && SURVEY_WEIGHTS.q5[survey.q5]) score += Number(SURVEY_WEIGHTS.q5[survey.q5]);
 
-        if(score >= SURVEY_THRESHOLDS.A) return "A";
-        if(score >= SURVEY_THRESHOLDS.B) return "B";
-        return "C";
+        let pot = "C";
+        if(score >= SURVEY_THRESHOLDS.A) pot = "A";
+        else if(score >= SURVEY_THRESHOLDS.B) pot = "B";
+
+        // EJE Y (Fidelidad / Signo) - Cálculo de Ratio (P3 vs P2)
+        const valMap = {
+            "0": 0, "1 a 5": 3, "6 a 10": 8, "11 a 15": 13, 
+            "16 a 20": 18, "21 a 30": 25, "31 a 40": 35, 
+            "Más de 30": 40, "Más de 40": 50, "Más de 70": 80
+        };
+        
+        let p2Val = valMap[survey.q2] || 0;
+        let p3Val = valMap[survey.q3] || 0;
+        let ratio = p2Val > 0 ? (p3Val / p2Val) * 100 : 0;
+        
+        let loy = "C";
+        let sign = "-";
+        if(ratio >= TH_LOY_HIGH) { loy = "A"; sign = "+"; }
+        else if(ratio > TH_LOY_LOW) { loy = "B"; sign = ""; }
+
+        return { pot, loy, label: pot + sign };
     }
 
     // Funciones para UI de Configuración de Encuesta
@@ -1753,7 +1785,7 @@
             if (docObj) { spec = docObj.spec; matrixLabel = docObj.matrixLabel; } 
             else { const raw = RAW_DATA.find(r => normalizeKey(r.license) === docIdNorm); if(raw) spec = raw.spec; }
 
-            const objScoreClass = calculateObjectiveScore(ev.survey);
+            const objScoreClass = getObjectiveClassification(ev.survey).label;
             const mktClass = getDoctorMarketClassification(ev.medico_id, ev.mercado);
 
             let dateStr = "N/A";
@@ -2100,7 +2132,7 @@
             }
 
             if (selectedCols.includes('col_obj_eval')) {
-                rowObj["Clasificación Objetiva (Encuesta)"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${calculateObjectiveScore(e.survey)}`).join(' | ') : '-';
+                rowObj["Clasificación Objetiva (Encuesta)"] = evalsForDoc.length > 0 ? evalsForDoc.map(e => `${e.visitador}: ${getObjectiveClassification(e.survey).label}`).join(' | ') : '-';
             }
 
             if (selectedCols.includes('col_market_eval')) {
@@ -2154,7 +2186,7 @@
                     if (c.id === 'col_matrix') return d.matrixLabel; 
                     if (c.id === 'col_market_closeup') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>getDoctorMarketClassification(d.id, e.mercado)).join(', ') : '-';
                     if (c.id === 'col_eval') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>e.cuadrante).join(', ') : 'Pend.';
-                    if (c.id === 'col_obj_eval') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>calculateObjectiveScore(e.survey)).join(', ') : '-';
+                    if (c.id === 'col_obj_eval') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>getObjectiveClassification(e.survey).label).join(', ') : '-';
                     if (c.id === 'col_market_eval') return evalsForDoc.length > 0 ? evalsForDoc.map(e=>e.mercado || 'Gen').join(', ') : '-';
                     if (c.id.startsWith('col_sur_')) return evalsForDoc.length > 0 ? "En Excel" : "-";
                     
@@ -2338,6 +2370,20 @@
         document.getElementById('simImpactRx').innerText = `+${formatNumber(rxGain)} Rx`;
     }
 
+    window.switchMatrixView = function(mode) {
+        MATRIX_VIEW_MODE = mode;
+        const btnC = document.getElementById('btnMatrixCloseUp');
+        const btnO = document.getElementById('btnMatrixObj');
+        if(mode === 'closeup') {
+            btnC.className = "px-4 py-1.5 rounded-lg bg-white shadow-sm text-blue-600 transition";
+            btnO.className = "px-4 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition flex items-center gap-1";
+        } else {
+            btnO.className = "px-4 py-1.5 rounded-lg bg-white shadow-sm text-emerald-600 transition flex items-center gap-1";
+            btnC.className = "px-4 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition";
+        }
+        renderMatrixCellsOnly();
+    }
+
     function aggregateAndCalculate() {
         const fStatus = document.getElementById('filterStatus').value; const fGeneric = document.getElementById('filterGeneric').value;
 
@@ -2368,7 +2414,27 @@
             else if (share < TH_LOY_HIGH) { gap = Math.ceil(denominator * (TH_LOY_HIGH/100)) - d.rxPhq; targetLabel = `para ser A (${TH_LOY_HIGH}%)`; }
             if (gap < 0) gap = 0;
 
-            return { ...d, totalRx: denominator, share, catLoyalty, gap, targetLabel, ficheroData: FICHERO_MAP.get(normalizeKey(d.id)) || [], isZeroRx: false };
+            // Mapeo Objetivo de Encuesta
+            const evalsForDoc = getEvaluationsForDoc(d.id);
+            let activeSurvey = null;
+            if (evalsForDoc.length > 0) {
+                if (FILTER_STATE.Market.length === 1) {
+                    const mktEval = evalsForDoc.find(e => e.mercado === FILTER_STATE.Market[0]);
+                    if (mktEval) activeSurvey = mktEval.survey;
+                }
+                if (!activeSurvey) {
+                    const genEval = evalsForDoc.find(e => e.mercado === 'General');
+                    activeSurvey = genEval ? genEval.survey : evalsForDoc[0].survey;
+                }
+            }
+            
+            const objClass = getObjectiveClassification(activeSurvey);
+
+            return { 
+                ...d, totalRx: denominator, share, catLoyalty, gap, targetLabel, 
+                ficheroData: FICHERO_MAP.get(normalizeKey(d.id)) || [], isZeroRx: false,
+                objPotency: objClass.pot, objLoyalty: objClass.loy, objectiveLabel: objClass.label, hasSurvey: !!activeSurvey
+            };
         });
 
         let visTotalFichero = 0; let visTotalCruzados = 0;
@@ -2402,7 +2468,8 @@
                         name: (nameKey && baseRow[nameKey]) ? String(baseRow[nameKey]).trim() : `Médico no mapeado (${docId})`, 
                         spec: (specKey && baseRow[specKey]) ? String(baseRow[specKey]).trim() : "S/E", 
                         address: (addrKey && baseRow[addrKey]) ? String(baseRow[addrKey]).trim() : "",
-                        rxPhq: 0, totalRx: 0, rxTotalSum: 0, share: 0, catLoyalty: 'C', gap: 0, targetLabel: "", ficheroData: rows, rows: [], isZeroRx: true
+                        rxPhq: 0, totalRx: 0, rxTotalSum: 0, share: 0, catLoyalty: 'C', gap: 0, targetLabel: "", ficheroData: rows, rows: [], isZeroRx: true,
+                        objPotency: null, objLoyalty: null, objectiveLabel: "N/A", hasSurvey: false
                     });
                 }
             });
@@ -2434,10 +2501,67 @@
         const competitorsOnly = CURRENT_COMP_BREAKDOWN.filter(c => c.type === 'Comp');
         if (competitorsOnly.length > 0) { topCompName = competitorsOnly[0].prod; topCompRx = competitorsOnly[0].rx; }
         
-        renderDashboard(grandTotalRx, topCompName, topCompRx);
-        updateImpactSimulator(doctors);
+        // Actualizar KPIs globales una sola vez
+        safeSetText('statTotalDocs', formatNumber(doctors.filter(d => !d.isZeroRx).length)); 
+        safeSetText('statTotalMkt', formatNumber(grandTotalRx));
+        const totalMyRx = doctors.filter(d => !d.isZeroRx).reduce((s, d) => s + d.rxPhq, 0); 
+        safeSetText('statMyRx', formatNumber(totalMyRx));
+        safeSetText('statShare', formatNumber(grandTotalRx > 0 ? (totalMyRx / grandTotalRx) * 100 : 0, 2) + "%");
+        safeSetText('topCompName', topCompName); safeSetText('topCompRx', formatNumber(topCompRx));
+        document.getElementById('compCardTitle').innerText = `Principal Competidor`;
 
+        const restRx = grandTotalRx - totalMyRx - topCompRx;
+        const pctPhq = grandTotalRx > 0 ? (totalMyRx/grandTotalRx)*100 : 0; const pctComp = grandTotalRx > 0 ? (topCompRx/grandTotalRx)*100 : 0; const pctRest = grandTotalRx > 0 ? (restRx/grandTotalRx)*100 : 0;
+
+        const elBarPhq = document.getElementById('barPhq'); if(elBarPhq) elBarPhq.style.width = pctPhq + "%";
+        const elBarComp = document.getElementById('barComp'); if(elBarComp) elBarComp.style.width = pctComp + "%";
+        const elBarRest = document.getElementById('barRest'); if(elBarRest) elBarRest.style.width = pctRest + "%";
+
+        safeSetText('labelPhq', `PHQ: ${formatNumber(pctPhq, 2)}%`); safeSetText('labelComp', `${topCompName.substring(0,8)}..: ${formatNumber(pctComp, 2)}%`); safeSetText('labelRest', `Resto: ${formatNumber(pctRest, 2)}%`);
+
+        updateImpactSimulator(doctors);
         if (currentUserRole === 'visitador') { updateVisitadorDashboard(visTotalFichero, visTotalCruzados); }
+        
+        renderMatrixCellsOnly();
+        resetPaginationAndRender();
+    }
+
+    function renderMatrixCellsOnly() {
+        const cruzadosData = PROCESSED_DATA.filter(d => !d.isZeroRx);
+        const summaries = { row_A: { rx:0, phq:0, count:0 }, row_B: { rx:0, phq:0, count:0 }, row_C: { rx:0, phq:0, count:0 }, col_C: { rx:0, phq:0, count:0 }, col_B: { rx:0, phq:0, count:0 }, col_A: { rx:0, phq:0, count:0 } };
+
+        ['A_C', 'A_B', 'A_A', 'B_C', 'B_B', 'B_A', 'C_C', 'C_B', 'C_A'].forEach(key => {
+            const [pot, loy] = key.split('_');
+            
+            let subset = [];
+            if (MATRIX_VIEW_MODE === 'closeup') {
+                subset = cruzadosData.filter(d => d.catPotency === pot && d.catLoyalty === loy);
+            } else {
+                subset = cruzadosData.filter(d => d.hasSurvey && d.objPotency === pot && d.objLoyalty === loy);
+            }
+
+            const count = subset.length; const sumRx = subset.reduce((s,d) => s + d.totalRx, 0); const sumPhq = subset.reduce((s,d) => s + d.rxPhq, 0);
+
+            safeSetText(`count_${key}`, formatNumber(count)); safeSetText(`rx_${key}`, compactNum(sumRx)); safeSetText(`phq_${key}`, compactNum(sumPhq));
+            safeSetText(`ms_${key}`, formatNumber(sumRx > 0 ? (sumPhq / sumRx) * 100 : 0, 2) + '%');
+            safeSetText(`avg_tot_${key}`, formatNumber(count > 0 ? Math.round(sumRx / count) : 0)); safeSetText(`avg_phq_${key}`, formatNumber(count > 0 ? Math.round(sumPhq / count) : 0));
+            safeSetText(`pct_drs_${key}`, formatNumber(cruzadosData.length > 0 ? (count / cruzadosData.length) * 100 : 0, 2) + '%');
+
+            const tooltip = document.getElementById(`tooltip_${key}`);
+            if(count > 0) {
+                const topDoc = subset.reduce((prev, current) => { if (prev.totalRx > current.totalRx) return prev; if (current.totalRx > prev.totalRx) return current; return (prev.rxPhq >= current.rxPhq) ? prev : current; });
+                tooltip.innerHTML = `<span class="text-blue-300">Top Doc:</span><br><b>${topDoc.name.substring(0,18)}</b><br>Rx Mercado: ${formatNumber(topDoc.totalRx)}<br>Rx Lab: ${formatNumber(topDoc.rxPhq)}`;
+            } else { tooltip.innerHTML = `Sin datos`; }
+
+            if(summaries[`row_${pot}`]) { summaries[`row_${pot}`].rx += sumRx; summaries[`row_${pot}`].phq += sumPhq; summaries[`row_${pot}`].count += count; }
+            if(summaries[`col_${loy}`]) { summaries[`col_${loy}`].rx += sumRx; summaries[`col_${loy}`].phq += sumPhq; summaries[`col_${loy}`].count += count; }
+        });
+
+        Object.keys(summaries).forEach(k => {
+            const s = summaries[k]; const share = s.rx > 0 ? (s.phq / s.rx)*100 : 0;
+            safeSetText(`${k}_rx`, compactNum(s.rx)); safeSetText(`${k}_phq`, compactNum(s.phq));
+            safeSetText(`${k}_count`, formatNumber(s.count)); safeSetText(`${k}_share`, formatNumber(share, 2)+'%');
+        });
     }
 
     window.renderAdminDashboard = function() {
@@ -2592,58 +2716,6 @@
         }
     }
 
-    function renderDashboard(grandTotal, topCompName, topCompRx) {
-        const cruzadosData = PROCESSED_DATA.filter(d => !d.isZeroRx);
-        
-        safeSetText('statTotalDocs', formatNumber(cruzadosData.length)); 
-        safeSetText('statTotalMkt', formatNumber(grandTotal));
-        const totalMyRx = cruzadosData.reduce((s, d) => s + d.rxPhq, 0); 
-        safeSetText('statMyRx', formatNumber(totalMyRx));
-        safeSetText('statShare', formatNumber(grandTotal > 0 ? (totalMyRx / grandTotal) * 100 : 0, 2) + "%");
-        safeSetText('topCompName', topCompName); safeSetText('topCompRx', formatNumber(topCompRx));
-        document.getElementById('compCardTitle').innerText = `Principal Competidor`;
-
-        const restRx = grandTotal - totalMyRx - topCompRx;
-        const pctPhq = grandTotal > 0 ? (totalMyRx/grandTotal)*100 : 0; const pctComp = grandTotal > 0 ? (topCompRx/grandTotal)*100 : 0; const pctRest = grandTotal > 0 ? (restRx/grandTotal)*100 : 0;
-
-        const elBarPhq = document.getElementById('barPhq'); if(elBarPhq) elBarPhq.style.width = pctPhq + "%";
-        const elBarComp = document.getElementById('barComp'); if(elBarComp) elBarComp.style.width = pctComp + "%";
-        const elBarRest = document.getElementById('barRest'); if(elBarRest) elBarRest.style.width = pctRest + "%";
-
-        safeSetText('labelPhq', `PHQ: ${formatNumber(pctPhq, 2)}%`); safeSetText('labelComp', `${topCompName.substring(0,8)}..: ${formatNumber(pctComp, 2)}%`); safeSetText('labelRest', `Resto: ${formatNumber(pctRest, 2)}%`);
-
-        const summaries = { row_A: { rx:0, phq:0, count:0 }, row_B: { rx:0, phq:0, count:0 }, row_C: { rx:0, phq:0, count:0 }, col_C: { rx:0, phq:0, count:0 }, col_B: { rx:0, phq:0, count:0 }, col_A: { rx:0, phq:0, count:0 } };
-
-        ['A_C', 'A_B', 'A_A', 'B_C', 'B_B', 'B_A', 'C_C', 'C_B', 'C_A'].forEach(key => {
-            const [pot, loy] = key.split('_');
-            const subset = cruzadosData.filter(d => d.catPotency === pot && d.catLoyalty === loy);
-            const count = subset.length; const sumRx = subset.reduce((s,d) => s + d.totalRx, 0); const sumPhq = subset.reduce((s,d) => s + d.rxPhq, 0);
-
-            safeSetText(`count_${key}`, formatNumber(count)); safeSetText(`rx_${key}`, compactNum(sumRx)); safeSetText(`phq_${key}`, compactNum(sumPhq));
-            safeSetText(`ms_${key}`, formatNumber(sumRx > 0 ? (sumPhq / sumRx) * 100 : 0, 2) + '%');
-            safeSetText(`avg_tot_${key}`, formatNumber(count > 0 ? Math.round(sumRx / count) : 0)); safeSetText(`avg_phq_${key}`, formatNumber(count > 0 ? Math.round(sumPhq / count) : 0));
-            safeSetText(`pct_drs_${key}`, formatNumber(cruzadosData.length > 0 ? (count / cruzadosData.length) * 100 : 0, 2) + '%');
-
-            const tooltip = document.getElementById(`tooltip_${key}`);
-            if(count > 0) {
-                const topDoc = subset.reduce((prev, current) => { if (prev.totalRx > current.totalRx) return prev; if (current.totalRx > prev.totalRx) return current; return (prev.rxPhq >= current.rxPhq) ? prev : current; });
-                tooltip.innerHTML = `<span class="text-blue-300">Top Doc:</span><br><b>${topDoc.name.substring(0,18)}</b><br>Rx Mercado: ${formatNumber(topDoc.totalRx)}<br>Rx Lab: ${formatNumber(topDoc.rxPhq)}`;
-            } else { tooltip.innerHTML = `Sin datos`; }
-
-            if(summaries[`row_${pot}`]) { summaries[`row_${pot}`].rx += sumRx; summaries[`row_${pot}`].phq += sumPhq; summaries[`row_${pot}`].count += count; }
-            if(summaries[`col_${loy}`]) { summaries[`col_${loy}`].rx += sumRx; summaries[`col_${loy}`].phq += sumPhq; summaries[`col_${loy}`].count += count; }
-        });
-
-        Object.keys(summaries).forEach(k => {
-            const s = summaries[k]; const share = s.rx > 0 ? (s.phq / s.rx)*100 : 0;
-            safeSetText(`${k}_rx`, compactNum(s.rx)); safeSetText(`${k}_phq`, compactNum(s.phq));
-            safeSetText(`${k}_count`, formatNumber(s.count)); safeSetText(`${k}_share`, formatNumber(share, 2)+'%');
-        });
-        resetPaginationAndRender();
-    }
-
-    function compactNum(num) { if(num >= 1000000) return formatNumber(num/1000000, 1) + 'M'; if(num >= 1000) return formatNumber(num/1000, 1) + 'k'; return formatNumber(num); }
-
     function filterByMatrix(pot, loy) {
         MATRIX_FILTER = { pot, loy };
         document.querySelectorAll('.matrix-cell').forEach(c => c.classList.remove('selected'));
@@ -2667,7 +2739,14 @@
         const searchText = document.getElementById('globalSearch').value.toLowerCase();
         let data = PROCESSED_DATA;
         
-        if(MATRIX_FILTER) { data = data.filter(d => d.catPotency === MATRIX_FILTER.pot && d.catLoyalty === MATRIX_FILTER.loy && !d.isZeroRx); }
+        if(MATRIX_FILTER) { 
+            if(MATRIX_VIEW_MODE === 'closeup') {
+                data = data.filter(d => d.catPotency === MATRIX_FILTER.pot && d.catLoyalty === MATRIX_FILTER.loy && !d.isZeroRx); 
+            } else {
+                data = data.filter(d => d.hasSurvey && d.objPotency === MATRIX_FILTER.pot && d.objLoyalty === MATRIX_FILTER.loy && !d.isZeroRx); 
+            }
+        }
+        
         if(searchText) { data = data.filter(d => d.name.toLowerCase().includes(searchText) || String(d.id).toLowerCase().includes(searchText) || (d.address && d.address.toLowerCase().includes(searchText))); }
 
         if(groupByInstitution) {
@@ -2707,7 +2786,7 @@
             const tr = document.createElement('tr');
             tr.className = `hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer group`;
             const realIndex = startIdx + idxInPage; 
-            tr.onclick = () => d.isInst ? openInstitutionModal(realIndex) : openDoctorModal(d.id); 
+            tr.onclick = () => d.isInst ?openInstitutionModal(realIndex) : openDoctorModal(d.id); 
             
             let colorClass = "bg-slate-100 text-slate-600";
             if(d.catPotency === 'A' || (d.isInst && d.catLoyalty==='A')) colorClass = "bg-purple-100 text-purple-700 border border-purple-200";
@@ -2804,7 +2883,7 @@
 
                 html += `<div class="flex justify-between items-center p-4 border-b border-slate-200 bg-white"><div class="flex items-center gap-2"><span class="bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-purple-200">Asesor #${idx+1}</span></div>${mapBtn}</div>`;
                 
-                // CORRECCIÓN DE ALINEACIÓN Y DISEÑO DE TARJETAS CENTRADAS
+                // Mantiene la corrección de diseño centrado y limpio solicitada en v26
                 html += `<div class="p-5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center">`;
                 Object.entries(repData).forEach(([k,v]) => { 
                     if(v && !k.toUpperCase().includes('GPS')) { 
@@ -3003,9 +3082,24 @@
         document.getElementById('surveyQ4').value = "";
         document.getElementById('surveyQ5').value = "";
 
+        // v27: Precargar variables Globales (P1 y P5) si existen para cualquier otro mercado de este médico
+        const docEvalsMap = EVALUACIONES_VISITADOR[normalizeKey(docId)];
+        let globalQ1 = "";
+        let globalQ5 = "";
+        if (docEvalsMap) {
+            for (let m in docEvalsMap) {
+                if (docEvalsMap[m].survey) {
+                    if (docEvalsMap[m].survey.q1) globalQ1 = docEvalsMap[m].survey.q1;
+                    if (docEvalsMap[m].survey.q5) globalQ5 = docEvalsMap[m].survey.q5;
+                    break;
+                }
+            }
+        }
+        document.getElementById('surveyQ1').value = globalQ1;
+        document.getElementById('surveyQ5').value = globalQ5;
+
         if (!selectedMarket) return; 
 
-        const docEvalsMap = EVALUACIONES_VISITADOR[normalizeKey(docId)];
         if (docEvalsMap && docEvalsMap[selectedMarket]) {
             const prevEval = docEvalsMap[selectedMarket];
             
@@ -3018,11 +3112,12 @@
             }
             
             if(prevEval.survey) {
-                document.getElementById('surveyQ1').value = prevEval.survey.q1 || "";
-                document.getElementById('surveyQ2').value = prevEval.survey.q2 || "";
-                document.getElementById('surveyQ3').value = prevEval.survey.q3 || "";
-                document.getElementById('surveyQ4').value = prevEval.survey.q4 || "";
-                document.getElementById('surveyQ5').value = prevEval.survey.q5 || "";
+                // Sobrescribe todo con los datos de este mercado específico
+                if(prevEval.survey.q1) document.getElementById('surveyQ1').value = prevEval.survey.q1;
+                if(prevEval.survey.q2) document.getElementById('surveyQ2').value = prevEval.survey.q2;
+                if(prevEval.survey.q3) document.getElementById('surveyQ3').value = prevEval.survey.q3;
+                if(prevEval.survey.q4) document.getElementById('surveyQ4').value = prevEval.survey.q4;
+                if(prevEval.survey.q5) document.getElementById('surveyQ5').value = prevEval.survey.q5;
             }
         }
     }
@@ -3096,6 +3191,22 @@
             if(!isAdmin) {
                 if(!EVALUACIONES_VISITADOR[docId]) EVALUACIONES_VISITADOR[docId] = {};
                 EVALUACIONES_VISITADOR[docId][selectedMarket] = payload;
+
+                // v27 Lógica de Sincronización P1 y P5: Actualiza todos los otros mercados del médico para este visitador
+                for (let mkt in EVALUACIONES_VISITADOR[docId]) {
+                    if (mkt !== selectedMarket) {
+                        let mktData = EVALUACIONES_VISITADOR[docId][mkt];
+                        if (mktData.survey && (mktData.survey.q1 !== q1 || mktData.survey.q5 !== q5)) {
+                            mktData.survey.q1 = q1;
+                            mktData.survey.q5 = q5;
+                            const cleanMktName = mkt.replace(/[^a-zA-Z0-9]/g, "");
+                            const mktDocRefId = `${actualRepName}_${docId}_${cleanMktName}`;
+                            
+                            // Guardado silente en Firebase (Fire and Forget)
+                            window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', mktDocRefId), mktData).catch(console.error);
+                        }
+                    }
+                }
             }
             
             showToast("Evaluación guardada correctamente"); 
@@ -3106,6 +3217,7 @@
             } else {
                 resetPaginationAndRender();
                 updateVisitadorDashboard(parseInt(document.getElementById('visTotalFichero').innerText.replace(/\./g,'')), parseInt(document.getElementById('visTotalCruzados').innerText.replace(/\./g,'')));
+                aggregateAndCalculate(); // Forzar recálculo para actualizar la matriz objetiva
             }
         } catch(e) { console.error(e); showToast("Hubo un error al guardar. Revisa tu conexión."); } 
         finally { btnSave.disabled = false; btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación'; }
