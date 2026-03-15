@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v25 GAS 3 fases - Dev. Hernando Sanoja</title>
+    <title>SegmentApp v26 GAS 3 fases - Dev. Hernando Sanoja</title>
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
     
@@ -184,7 +184,7 @@
             </div>
             <div class="flex flex-col justify-center">
                 <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v24 GAS • Dev. Hernando Sanoja •</span>
+                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v26 GAS • Dev. Hernando Sanoja •</span>
             </div>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
@@ -257,9 +257,12 @@
                 </div>
 
                 <div class="h-20 w-px bg-slate-200 hidden lg:block"></div>
-                <div class="flex flex-col justify-center gap-2 w-full sm:w-auto h-full mt-2 lg:mt-0">
-                    <button onclick="openAccessManager()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-5 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full">
-                        <span class="material-symbols-outlined text-[20px]">vpn_key</span> Gestionar Claves
+                <div class="flex flex-wrap sm:flex-nowrap justify-center gap-3 w-full sm:w-auto h-full mt-2 lg:mt-0">
+                    <button onclick="openAccessManager()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
+                        <span class="material-symbols-outlined text-[20px]">vpn_key</span> Claves
+                    </button>
+                    <button onclick="openSurveyConfigModal()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
+                        <span class="material-symbols-outlined text-[20px]">tune</span> Ponderación
                     </button>
                 </div>
             </div>
@@ -758,6 +761,35 @@
     </div>
 </div>
 
+<!-- Survey Config Modal M3 -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="surveyConfigModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+            <div>
+                <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-emerald-600">tune</span> Ponderación de Encuesta Objetiva
+                </h3>
+                <p class="text-xs font-medium text-slate-500 mt-1">Ajusta los puntos asignados a cada respuesta y los umbrales para clasificar en A, B o C.</p>
+            </div>
+            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('surveyConfigModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto flex-1 bg-white space-y-6" id="surveyConfigBody">
+            <!-- Dynamically generated via JS -->
+        </div>
+        
+        <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+            <button onclick="restoreDefaultWeights()" class="text-xs font-bold text-slate-500 hover:text-rose-600 transition flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">restart_alt</span> Restaurar Valores por Defecto
+            </button>
+            <div class="flex gap-2">
+                <button class="text-slate-600 hover:bg-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold transition" onclick="document.getElementById('surveyConfigModal').classList.add('hidden')">Cancelar</button>
+                <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="saveSurveyConfig()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Admin Auth Modal -->
 <div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] flex items-center justify-center p-4" id="adminAuthModal">
     <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden">
@@ -1242,26 +1274,120 @@
     let ALL_EVALUATIONS = []; 
     let MARKET_CACHE = {}; // Caché para cálculos de mercado individual
 
-    // Ponderación de Sistema (Scores base para la encuesta)
-    const SURVEY_WEIGHTS = {
+    // Valores por defecto de Ponderación de Sistema
+    const DEFAULT_SURVEY_WEIGHTS = {
         q1: { "Menos de 10": 2, "10 a 20": 4, "21 a 30": 6, "31 a 40": 8, "41 a 50": 10, "51 a 70": 12, "Más de 70": 15 },
         q2: { "0": 0, "1 a 5": 5, "6 a 10": 10, "11 a 15": 15, "16 a 20": 20, "21 a 30": 25, "31 a 40": 30, "Más de 40": 35 },
         q3: { "0": 0, "1 a 5": 5, "6 a 10": 10, "11 a 15": 15, "16 a 20": 20, "21 a 30": 25, "Más de 30": 30 },
         q5: { "Gratuita / Institucional": 2, "Menos de $30": 5, "$30 a $50": 10, "$51 a $80": 15, "$81 a $120": 20, "$121 a $150": 25, "Más de $150": 30 }
     };
+    const DEFAULT_SURVEY_THRESHOLDS = { A: 70, B: 35 };
+
+    // Variables activas de Ponderación
+    let SURVEY_WEIGHTS = JSON.parse(JSON.stringify(DEFAULT_SURVEY_WEIGHTS));
+    let SURVEY_THRESHOLDS = JSON.parse(JSON.stringify(DEFAULT_SURVEY_THRESHOLDS));
+
+    const SURVEY_QUESTION_LABELS = {
+        q1: "1. ¿Cuántos pacientes atiende por semana?",
+        q2: "2. ¿A cuántos prescribe esta clase terapéutica?",
+        q3: "3. ¿A cuántos prescribe nuestro producto?",
+        q5: "5. ¿Costo estimado de consulta?"
+    };
 
     function calculateObjectiveScore(survey) {
         if(!survey) return "N/A";
         let score = 0;
-        if(SURVEY_WEIGHTS.q1[survey.q1]) score += SURVEY_WEIGHTS.q1[survey.q1];
-        if(SURVEY_WEIGHTS.q2[survey.q2]) score += SURVEY_WEIGHTS.q2[survey.q2];
-        if(SURVEY_WEIGHTS.q3[survey.q3]) score += SURVEY_WEIGHTS.q3[survey.q3];
-        if(SURVEY_WEIGHTS.q5[survey.q5]) score += SURVEY_WEIGHTS.q5[survey.q5];
+        if(SURVEY_WEIGHTS.q1 && SURVEY_WEIGHTS.q1[survey.q1]) score += Number(SURVEY_WEIGHTS.q1[survey.q1]);
+        if(SURVEY_WEIGHTS.q2 && SURVEY_WEIGHTS.q2[survey.q2]) score += Number(SURVEY_WEIGHTS.q2[survey.q2]);
+        if(SURVEY_WEIGHTS.q3 && SURVEY_WEIGHTS.q3[survey.q3]) score += Number(SURVEY_WEIGHTS.q3[survey.q3]);
+        if(SURVEY_WEIGHTS.q5 && SURVEY_WEIGHTS.q5[survey.q5]) score += Number(SURVEY_WEIGHTS.q5[survey.q5]);
 
-        // Umbrales de ejemplo para clasificar (Ajustables en el futuro)
-        if(score >= 70) return "A";
-        if(score >= 35) return "B";
+        if(score >= SURVEY_THRESHOLDS.A) return "A";
+        if(score >= SURVEY_THRESHOLDS.B) return "B";
         return "C";
+    }
+
+    // Funciones para UI de Configuración de Encuesta
+    function openSurveyConfigModal() {
+        renderSurveyConfigForm();
+        document.getElementById('surveyConfigModal').classList.remove('hidden');
+    }
+
+    function renderSurveyConfigForm() {
+        const container = document.getElementById('surveyConfigBody');
+        let html = `
+            <div class="bg-blue-50 border border-blue-100 p-5 rounded-2xl mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div>
+                    <h4 class="font-bold text-blue-800 text-sm flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">rule</span> Umbrales de Clasificación</h4>
+                    <p class="text-xs text-blue-600 mt-1">Define el puntaje mínimo requerido para alcanzar cada categoría. (C = Menor al umbral de B)</p>
+                </div>
+                <div class="flex gap-4 shrink-0">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Puntaje para A (+)</label>
+                        <input type="number" id="th_A" value="${SURVEY_THRESHOLDS.A}" class="w-24 px-3 py-2 border border-blue-200 rounded-xl text-sm font-bold text-center focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Puntaje para B</label>
+                        <input type="number" id="th_B" value="${SURVEY_THRESHOLDS.B}" class="w-24 px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-center focus:ring-2 focus:ring-slate-500 outline-none">
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        `;
+
+        for (const [qKey, qLabel] of Object.entries(SURVEY_QUESTION_LABELS)) {
+            html += `<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition"><h4 class="font-bold text-slate-700 text-xs mb-3 truncate" title="${qLabel}">${qLabel}</h4><div class="space-y-2">`;
+            for (const [option, score] of Object.entries(SURVEY_WEIGHTS[qKey])) {
+                const safeId = `w_${qKey}_${option.replace(/[^a-zA-Z0-9]/g, "_")}`;
+                html += `
+                    <div class="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm hover:border-blue-300 transition">
+                        <span class="text-xs font-medium text-slate-600 truncate mr-2" title="${option}">${option}</span>
+                        <input type="number" id="${safeId}" data-q="${qKey}" data-opt="${option}" value="${score}" class="w-16 px-2 py-1 border border-slate-200 rounded-lg text-xs font-mono text-center focus:ring-1 focus:ring-emerald-500 outline-none transition">
+                    </div>
+                `;
+            }
+            html += `</div></div>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+
+    function saveSurveyConfig() {
+        const thA = parseInt(document.getElementById('th_A').value) || 70;
+        const thB = parseInt(document.getElementById('th_B').value) || 35;
+        
+        if(thB >= thA) {
+            showToast("Error: El puntaje para A debe ser mayor al de B.");
+            return;
+        }
+
+        SURVEY_THRESHOLDS.A = thA;
+        SURVEY_THRESHOLDS.B = thB;
+
+        const inputs = document.querySelectorAll('#surveyConfigBody input[data-q]');
+        inputs.forEach(input => {
+            const q = input.getAttribute('data-q');
+            const opt = input.getAttribute('data-opt');
+            const val = parseInt(input.value) || 0;
+            if(SURVEY_WEIGHTS[q] && SURVEY_WEIGHTS[q][opt] !== undefined) {
+                SURVEY_WEIGHTS[q][opt] = val;
+            }
+        });
+
+        saveSession();
+        document.getElementById('surveyConfigModal').classList.add('hidden');
+        showToast("Configuración de encuesta guardada correctamente.");
+        
+        if(isAdmin) fetchAllEvaluacionesAdmin();
+    }
+
+    function restoreDefaultWeights() {
+        if(confirm("¿Estás seguro de restaurar los valores por defecto? Se perderán los cambios actuales.")) {
+            SURVEY_WEIGHTS = JSON.parse(JSON.stringify(DEFAULT_SURVEY_WEIGHTS));
+            SURVEY_THRESHOLDS = JSON.parse(JSON.stringify(DEFAULT_SURVEY_THRESHOLDS));
+            renderSurveyConfigForm();
+            showToast("Valores restaurados. No olvides guardar.");
+        }
     }
 
     // Calcula la matriz CloseUp específica para UN mercado
@@ -1387,7 +1513,7 @@
     let FILTER_STATE = { Market: [], Product: [], Rep: [], Region: [], Spec: [], Molecule: [], Class: [], Lab: [] };
     let FILTER_OPTIONS = { Market: [], Product: [], Rep: [], Region: [], Spec: [], Molecule: [], Class: [], Lab: [] };
 
-    // EXPORT COLUMNS ACTUALIZADAS CON OBJETIVIDAD Y CLOSEUP DE MERCADO
+    // EXPORT COLUMNS ACTUALIZADAS
     const EXPORT_COLUMNS = [
         { id: 'col_matrix', label: 'Clasificación Final (CloseUp General)', default: true },
         { id: 'col_market_closeup', label: 'Clasificación (CloseUp) Mercado Evaluado', default: true },
@@ -1424,6 +1550,12 @@
             const savedAudit = await localforage.getItem('RAW_DATA');
             const savedFichero = await localforage.getItem('FICHERO_DATA'); 
             const savedConfig = await localforage.getItem('PHQ_PRODUCTS');
+            
+            const savedWeights = await localforage.getItem('SURVEY_WEIGHTS');
+            const savedThresholds = await localforage.getItem('SURVEY_THRESHOLDS');
+            
+            if (savedWeights) SURVEY_WEIGHTS = savedWeights;
+            if (savedThresholds) SURVEY_THRESHOLDS = savedThresholds;
 
             if (savedAudit && savedAudit.length > 0) {
                 safeSetText('loadingText', 'Restaurando sesión...');
@@ -1530,6 +1662,8 @@
             await localforage.setItem('RAW_DATA', RAW_DATA);
             await localforage.setItem('FICHERO_DATA', Array.from(FICHERO_MAP.entries())); 
             await localforage.setItem('PHQ_PRODUCTS', PHQ_PRODUCTS);
+            await localforage.setItem('SURVEY_WEIGHTS', SURVEY_WEIGHTS);
+            await localforage.setItem('SURVEY_THRESHOLDS', SURVEY_THRESHOLDS);
         } catch (e) { console.error("Save Error:", e); }
     }
 
@@ -2669,10 +2803,19 @@
                 if(lat && lon) { mapBtn = `<a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="flex items-center gap-1 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:text-blue-600 hover:border-blue-300 transition shadow-sm"><span class="material-symbols-outlined text-[16px] text-rose-500">location_on</span> Ver Ubicación</a>`; }
 
                 html += `<div class="flex justify-between items-center p-4 border-b border-slate-200 bg-white"><div class="flex items-center gap-2"><span class="bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-purple-200">Asesor #${idx+1}</span></div>${mapBtn}</div>`;
-                html += `<div class="p-5 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">`;
-                    html += `<div class="p-5 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">`;
-                Object.entries(repData).forEach(([k,v]) => { if(v && !k.toUpperCase().includes('GPS')) { html += `<div><span class="block text-slate-400 font-mono uppercase text-[9px] tracking-widest truncate mb-1" title="${k}">${k}</span><span class="font-semibold text-slate-700 break-words text-sm">${v}</span></div>`; } });
-                html += `</div></div>`; fichContainer.innerHTML += html;
+                
+                // CORRECCIÓN DE ALINEACIÓN Y DISEÑO DE TARJETAS CENTRADAS
+                html += `<div class="p-5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center">`;
+                Object.entries(repData).forEach(([k,v]) => { 
+                    if(v && !k.toUpperCase().includes('GPS')) { 
+                        html += `<div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center transition hover:border-purple-200">
+                                    <span class="block text-slate-400 font-mono uppercase text-[9px] tracking-widest truncate w-full mb-1" title="${k}">${k}</span>
+                                    <span class="font-semibold text-slate-700 break-words text-sm text-center">${v}</span>
+                                 </div>`; 
+                    } 
+                });
+                html += `</div></div>`; 
+                fichContainer.innerHTML += html;
             });
             fichDiv.querySelector('details').open = false; 
         } else { fichDiv.classList.add('hidden'); }
