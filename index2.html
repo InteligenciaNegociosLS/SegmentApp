@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<meta name="theme-color" content="#f8fafc">
+<title>SegmentApp v24 GAS - Dev. Hernando Sanoja</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<style>
+body{font-family:'Inter',sans-serif;background-color:#F0F4F8;user-select:none;-webkit-user-select:none;}
+h1,h2,h3,h4,.font-display{font-family:'Outfit',sans-serif;}
+.matrix-grid{display:grid;grid-template-columns:auto minmax(200px,1fr) minmax(200px,1fr) minmax(200px,1fr);grid-template-rows:auto 1fr 1fr 1fr;gap:16px;transition:all 0.3s ease;}
+.matrix-grid.expanded{grid-template-columns:auto minmax(200px,1fr) minmax(200px,1fr) minmax(200px,1fr) 200px;grid-template-rows:auto 1fr 1fr 1fr auto;}
+.matrix-header-col{text-align:center;font-weight:600;color:#44474E;padding-bottom:8px;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.5px;}
+.matrix-header-row{display:flex;align-items:center;justify-content:center;font-weight:600;color:#44474E;writing-mode:vertical-rl;transform:rotate(180deg);font-size:0.85rem;text-transform:uppercase;gap:4px;letter-spacing:0.5px;}
+.summary-header-title{font-weight:800;color:#44474E;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;text-align:center;padding:8px;display:flex;align-items:flex-end;justify-content:center;height:100%;}
+.matrix-cell{border-radius:24px;padding:16px;display:flex;flex-direction:column;cursor:pointer;position:relative;min-height:220px;overflow:visible;box-sizing:border-box;opacity:0;transition:transform 0.3s cubic-bezier(0.2,0,0,1),box-shadow 0.3s cubic-bezier(0.2,0,0,1),filter 0.3s;animation:fadePopIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;border:none;box-shadow:0 4px 8px -2px rgba(0,0,0,0.05),0 2px 4px -2px rgba(0,0,0,0.03);background-color:white;}
+.cell-A_A{background-color:#C4EED0;color:#003915;}.cell-A_B{background-color:#FFDDB3;color:#2E1500;}.cell-A_C{background-color:#FFDAD6;color:#410002;}.cell-B_A{background-color:#D3E3FD;color:#001C3B;}.cell-B_B{background-color:#FDECA6;color:#221B00;}.cell-B_C{background-color:#FEE4E2;color:#3B090E;}.cell-C_A{background-color:#E8DEF8;color:#1D192B;}.cell-C_B{background-color:#E0E2EC;color:#191C20;}.cell-C_C{background-color:#F3F4F9;color:#191C20;}
+@keyframes fadePopIn{0%{opacity:0;transform:scale(0.9) translateY(10px);}100%{opacity:1;transform:scale(1) translateY(0);}}
+.matrix-cell:hover{transform:translateY(-4px) scale(1.02)!important;box-shadow:0 12px 24px -4px rgba(0,0,0,0.12);z-index:20;filter:brightness(0.97);}
+.matrix-cell.selected{box-shadow:0 0 0 4px #0A56D1,0 12px 24px -4px rgba(0,0,0,0.12);transform:scale(1.02);z-index:25;}
+.cell-tooltip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%) translateY(-10px);background:#1D192B;color:#F4EFF4;padding:8px 16px;border-radius:12px;font-size:0.75rem;width:max-content;max-width:200px;pointer-events:none;opacity:0;transition:opacity 0.2s,transform 0.2s;z-index:50;box-shadow:0 10px 15px -3px rgba(0,0,0,0.2);font-family:'Inter',sans-serif;}
+.cell-tooltip::after{content:'';position:absolute;top:100%;left:50%;margin-left:-6px;border-width:6px;border-style:solid;border-color:#1D192B transparent transparent transparent;}
+.matrix-cell:hover .cell-tooltip{opacity:1;transform:translateX(-50%) translateY(-5px);}
+.matrix-cell-summary{background:#E0E2EC;border-radius:24px;padding:16px;flex-direction:column;justify-content:center;min-height:220px;color:#44474E;}
+.stats-drawer{max-height:0;overflow:hidden;transition:max-height 0.3s ease-out,opacity 0.3s ease-out;opacity:0;}
+.stats-drawer.open{max-height:50px;opacity:1;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(0,0,0,0.1);}
+.checkbox-item{display:flex;align-items:center;padding:12px;cursor:pointer;border-radius:12px;transition:background 0.2s;}
+.checkbox-item:hover{background-color:#E0E2EC;}
+.checkbox-item input{margin-right:12px;accent-color:#0A56D1;width:22px;height:22px;}
+.modal-badge{padding:4px 8px;border-radius:6px;font-size:0.65rem;font-weight:700;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;letter-spacing:0.5px;}
+.badge-gap{background-color:#FFDAD6;color:#410002;font-family:'Outfit',sans-serif;font-weight:900;font-size:0.75rem;padding:4px 8px;border-radius:8px;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 4px rgba(0,0,0,0.05);}
+input[type=range]{-webkit-appearance:none;width:100%;background:transparent;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:24px;width:24px;border-radius:50%;background:#0A56D1;cursor:pointer;margin-top:-10px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);transition:transform 0.1s;}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+input[type=range]::-webkit-slider-runnable-track{width:100%;height:6px;cursor:pointer;background:#C4C7C5;border-radius:3px;}
+::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:#C4C7C5;border-radius:8px;}::-webkit-scrollbar-track{background:transparent;}
+@media print{.no-print{display:none!important;}body{background:white;}.matrix-cell{border:1px solid #000!important;break-inside:avoid;}#matrixCaptureTarget{background:white!important;}}
+.animate-fade-in{animation:fadeIn 0.5s ease-out;}@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes spin-reverse{from{transform:rotate(360deg);}to{transform:rotate(0deg);}}.animate-spin-reverse{animation:spin-reverse 1.5s linear infinite;}
+.file-drop-area{position:relative;display:flex;align-items:center;padding:24px;border:2px dashed #74777F;border-radius:16px;transition:0.2s;background:#F3F4F9;}
+.file-drop-area:hover{border-color:#0A56D1;background:#E8DEF8;}
+.fake-btn{background:#0A56D1;border-radius:20px;padding:8px 16px;margin-right:15px;font-size:12px;font-weight:bold;text-transform:uppercase;color:#FFFFFF;transition:background 0.2s;}
+.file-drop-area:hover .fake-btn{background:#003915;}
+.file-msg{font-size:13px;color:#44474E;font-weight:500;}
+.file-input{position:absolute;left:0;top:0;height:100%;width:100%;cursor:pointer;opacity:0;}
+.kpi-card{transition:transform 0.2s cubic-bezier(0.2,0,0,1),box-shadow 0.2s;border-radius:24px;border:none;box-shadow:0 4px 8px -2px rgba(0,0,0,0.05);}
+.kpi-card:hover{transform:translateY(-4px);box-shadow:0 12px 20px -4px rgba(0,0,0,0.1);}
+.filter-group-label{font-size:0.7rem;font-weight:700;color:#44474E;text-transform:uppercase;margin-bottom:6px;margin-left:4px;letter-spacing:0.5px;}
+.filter-select{font-size:0.85rem;padding:12px;border-radius:12px;border:1px solid #C4C7C5;width:100%;background-color:#FFFFFF;font-family:'Inter',sans-serif;transition:border-color 0.2s;outline:none;}
+.filter-select:focus{border-color:#0A56D1;box-shadow:0 0 0 2px rgba(10,86,209,0.2);}
+.icon-inline{font-size:14px;vertical-align:middle;margin-right:2px;margin-bottom:2px;}
+.letter-display{font-family:'Outfit',sans-serif;font-weight:900;letter-spacing:-1px;}
+#toast{visibility:hidden;min-width:250px;background-color:#313033;color:#F4EFF4;text-align:center;border-radius:12px;padding:16px;position:fixed;z-index:100;left:50%;bottom:30px;transform:translateX(-50%);font-size:14px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.2);opacity:0;transition:opacity 0.3s,bottom 0.3s;font-family:'Inter',sans-serif;}
+#toast.show{visibility:visible;opacity:1;bottom:50px;}
+.responsive-table-wrapper{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.toggle-switch{position:relative;display:inline-block;width:50px;height:28px;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.slider-toggle{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#C4C7C5;transition:.4s;border-radius:28px;}
+.slider-toggle:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background-color:white;transition:.4s;border-radius:50%;}
+input:checked+.slider-toggle{background-color:#0A56D1;}input:checked+.slider-toggle:before{transform:translateX(22px);}
+.export-cb-label{display:flex;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid #E2E8F0;background:#F8FAFC;cursor:pointer;transition:all 0.2s;}
+.export-cb-label:hover{border-color:#93C5FD;background:#EFF6FF;}
+.export-cb-label input{margin-right:12px;width:18px;height:18px;accent-color:#0A56D1;}
+.export-cb-label.checked-style{border-color:#0A56D1;background:#EFF6FF;}
+.tab-btn{padding:10px 20px;font-weight:700;font-size:12px;color:#74777F;border-bottom:2px solid transparent;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.5px;}
+.tab-btn:hover{color:#0A56D1;background:#F8FAFC;border-radius:8px 8px 0 0;}
+.tab-btn.active{color:#0A56D1;border-bottom:2px solid #0A56D1;}
+.survey-select{appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");background-repeat:no-repeat;background-position:right 1rem center;background-size:1em;}
+</style>
+</head>
+<body class="text-slate-800">
+
+<!-- Top Nav -->
+<nav class="bg-white text-slate-800 shadow-sm fixed w-full z-50 no-print border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-50 text-blue-600 p-2 rounded-xl flex items-center justify-center relative"><span class="material-symbols-outlined text-2xl">apps</span></div>
+            <div class="flex flex-col justify-center">
+                <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
+                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v24 GAS</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 md:gap-4">
+            <div id="navUserInfo" class="hidden flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full shadow-sm">
+                <span class="material-symbols-outlined text-indigo-600 text-[18px]">account_circle</span>
+                <span id="navUserName" class="text-xs font-bold text-indigo-800 hidden sm:inline">Visitador</span>
+                <div class="w-px h-4 bg-indigo-200 mx-1"></div>
+                <button onclick="logoutSession()" class="text-indigo-400 hover:text-rose-500 transition" title="Cerrar Sesión"><span class="material-symbols-outlined text-[16px]">logout</span></button>
+            </div>
+            <div id="btnLoginNavContainer" class="flex items-center">
+                <button class="flex items-center gap-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full text-sm font-bold transition shadow-sm border border-indigo-100" onclick="openLoginModal()" title="Ingresar">
+                    <span class="material-symbols-outlined text-[18px]">login</span> <span class="hidden sm:inline">Ingresar</span>
+                </button>
+            </div>
+            <button class="hidden md:flex items-center gap-1 text-slate-500 hover:text-slate-800 text-sm font-semibold transition p-2" onclick="showConfirmClearModal()">
+                <span class="material-symbols-outlined text-lg">restart_alt</span> <span class="hidden lg:inline">Recargar</span>
+            </button>
+        </div>
+    </div>
+</nav>
+<div id="toast">Notificación</div>
+
+<!-- Main Content -->
+<main class="max-w-7xl mx-auto px-4 pt-24 pb-12">
+    <div id="restoringSession" class="hidden text-center py-12"><span class="material-symbols-outlined text-5xl text-blue-600 animate-spin-reverse">sync</span><p class="text-slate-600 text-sm mt-3 font-medium font-display" id="loadingText">Iniciando sistema...</p></div>
+
+    <!-- Analysis Tools Bar (Admin Mode) -->
+    <div class="bg-white border border-slate-200 p-5 rounded-3xl mb-6 flex flex-wrap gap-8 items-start shadow-sm no-print animate-fade-in hidden" id="analysisTools">
+        <div class="flex flex-col gap-4 w-full">
+            <div class="flex flex-wrap items-center gap-8 border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-2 text-slate-600 mr-2 border-r border-slate-200 pr-6 h-full">
+                    <span class="material-symbols-outlined text-2xl">tune</span>
+                    <span class="text-xs font-bold uppercase tracking-widest">Ajustes<br><span class="text-[9px] text-slate-400 font-normal">Admin Mode</span></span>
+                </div>
+                <div class="flex flex-col gap-2 w-full sm:w-64">
+                    <div class="flex justify-between text-[10px] font-bold text-slate-500 uppercase"><span>Adopción (Fidelidad)</span></div>
+                    <div class="flex justify-between text-[10px] font-bold text-slate-400"><span>Bajo/Medio: <span id="lblThLow" class="text-blue-600">33%</span></span></div>
+                    <input type="range" min="10" max="50" value="33" id="sliderLow" oninput="updateThresholds()">
+                    <div class="flex justify-between text-[10px] font-bold text-slate-400 mt-1"><span>Medio/Alto: <span id="lblThHigh" class="text-green-600">66%</span></span></div>
+                    <input type="range" min="51" max="90" value="66" id="sliderHigh" oninput="updateThresholds()">
+                </div>
+                <div class="h-20 w-px bg-slate-200 hidden sm:block"></div>
+                <div class="flex flex-col gap-2 w-full sm:w-64">
+                    <div class="flex justify-between text-[10px] font-bold text-slate-500 uppercase"><span>Potencialidad (Volumen)</span></div>
+                    <div class="flex justify-between text-[10px] font-bold text-slate-400"><span>Alto/Medio (A/B): <span id="lblPotLow" class="text-purple-600">33%</span></span></div>
+                    <input type="range" min="10" max="50" value="33" id="sliderPotLow" oninput="updateThresholds()">
+                    <div class="flex justify-between text-[10px] font-bold text-slate-400 mt-1"><span>Medio/Bajo (B/C): <span id="lblPotHigh" class="text-slate-600">66%</span></span></div>
+                    <input type="range" min="51" max="90" value="66" id="sliderPotHigh" oninput="updateThresholds()">
+                </div>
+                <div class="h-20 w-px bg-slate-200 hidden lg:block"></div>
+                <div class="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto h-full mt-2 lg:mt-0">
+                    <button onclick="openAccessManager()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">vpn_key</span> Claves</button>
+                    <button onclick="openScoringModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">calculate</span> Ponderación</button>
+                    <button onclick="openProductModal()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">medication</span> Productos</button>
+                    <button onclick="document.getElementById('uploadModal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">upload</span> Cargar Datos</button>
+                </div>
+            </div>
+            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-indigo-500 bg-white p-2 rounded-full shadow-sm text-xl">insights</span>
+                    <div><h4 class="text-xs font-bold text-indigo-900 uppercase tracking-widest">Simulador de Impacto</h4><p class="text-[11px] text-indigo-700">Si lograras llevar a todos tus médicos de <b class="bg-indigo-100 px-1 rounded">Media Adopción (B)</b> a <b class="bg-indigo-100 px-1 rounded">Alta Adopción (A)</b>:</p></div>
+                </div>
+                <div class="bg-white px-6 py-2 rounded-xl border border-indigo-200 shadow-sm flex flex-col items-end">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ganancia Proyectada</span><span class="text-lg font-display font-black text-green-600" id="simImpactRx">+0 Rx</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Administrador -->
+    <div id="adminDashboard" class="hidden mb-8 space-y-6 animate-fade-in no-print">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
+            <h3 class="font-display font-bold text-slate-800 text-xl flex flex-wrap items-center gap-2"><span class="material-symbols-outlined text-indigo-600 bg-indigo-100 p-1.5 rounded-lg text-[22px]">admin_panel_settings</span> Panel de Control del Equipo</h3>
+            <div class="flex items-center gap-2">
+                <button onclick="confirmClearAllEvals()" class="bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">delete_sweep</span> Limpiar Datos</button>
+                <button onclick="exportAdminEvaluationsExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">download_for_offline</span> Descargar</button>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-[2rem] p-6 md:p-8 border border-slate-200 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                    <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2 uppercase tracking-widest"><span class="material-symbols-outlined text-blue-500">checklist</span> Progreso de Evaluación</h4>
+                    <select id="adminManagerFilter" class="text-xs border border-slate-300 rounded-lg px-2 py-1 outline-none bg-slate-50 text-slate-700 font-bold" onchange="renderAdminDashboard()"><option value="all">Todos los Gerentes</option></select>
+                </div>
+                <div id="adminManagerKPIs" class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center"><span class="block text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">Médicos Evaluados</span><div class="text-lg font-display font-bold text-slate-800" id="mgrKpiDocs">0 / 0</div></div>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center"><span class="block text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">Total Encuestas Realizadas</span><div class="text-lg font-display font-bold text-slate-800" id="mgrKpiSurveys">0</div></div>
+                </div>
+                <div class="flex-1 overflow-y-auto max-h-[300px] pr-2 space-y-2" id="adminProgressTable"><div class="p-4 text-center text-xs text-slate-500">Cargando métricas...</div></div>
+            </div>
+            <div class="bg-white rounded-[2rem] p-6 md:p-8 border border-rose-200 shadow-sm relative flex flex-col">
+                <div class="flex items-center justify-between mb-4 border-b border-rose-100 pb-3">
+                    <h4 class="text-sm font-bold text-rose-800 flex items-center gap-2 uppercase tracking-widest"><span class="material-symbols-outlined text-rose-500">warning</span> Alertas de Discrepancia</h4>
+                    <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200" id="discCountBadge">0</span>
+                </div>
+                <p class="text-[10px] text-slate-500 mb-3 bg-rose-50 p-2 rounded-lg border border-rose-100">Muestra médicos con un choque crítico entre la categórica de potencialidad Recetas (Rx) vs la Evaluación del Asesor (Ej: Rx Bajo = C vs Subj Alto = A).</p>
+                <div class="flex-1 overflow-y-auto max-h-[250px] pr-2" id="adminDiscrepancyTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Bar M3 -->
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-8 flex flex-col gap-5 no-print animate-fade-in hidden" id="filterBar">
+        <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-100 pb-4">
+            <div class="flex items-center gap-3 text-slate-700">
+                <div class="bg-slate-100 p-2 rounded-full"><span class="material-symbols-outlined text-xl">filter_list</span></div>
+                <span class="font-display font-bold text-base tracking-wide">Panel de Filtros</span>
+                <button onclick="resetAllFilters()" class="ml-2 text-[11px] text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-full font-bold transition flex items-center gap-1 border border-rose-200"><span class="material-symbols-outlined text-[14px]">restart_alt</span> Restablecer filtros</button>
+            </div>
+            <div class="w-full md:w-80 relative">
+                <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400 text-sm">search</span>
+                <input type="text" id="globalSearch" placeholder="Buscar por Nombre Médico o Matrícula..." class="w-full pl-9 pr-4 py-3 md:py-2 border border-slate-300 rounded-full text-sm focus:ring-2 focus:ring-blue-500 outline-none transition bg-slate-50 hover:bg-white" onkeyup="resetPaginationAndRender()">
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div class="relative filter-dropdown-container">
+                <div class="filter-group-label">Mercados</div>
+                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Market')"><span id="textMarket" class="truncate font-medium">Todos los mercados</span><span class="material-symbols-outlined text-sm">arrow_drop_down</span></button>
+                <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelMarket">
+                    <div class="checkbox-item border-b border-slate-100 mb-2 pb-2"><input checked id="selectAllMarket" onchange="toggleAllGeneric('Market', this.checked)" type="checkbox"><span class="text-sm font-bold text-blue-700">Seleccionar Todos</span></div>
+                    <div class="space-y-1" id="listMarket"></div>
+                </div>
+            </div>
+            <div class="relative filter-dropdown-container">
+                <div class="filter-group-label">Producto (PHQ)</div>
+                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Product')"><span id="textProduct" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm">arrow_drop_down</span></button>
+                <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelProduct"><div class="checkbox-item border-b border-slate-100 mb-2 pb-2"><input checked id="selectAllProduct" onchange="toggleAllGeneric('Product', this.checked)" type="checkbox"><span class="text-sm font-bold text-blue-700">Seleccionar Todos</span></div><div class="space-y-1" id="listProduct"></div></div>
+            </div>
+            <div class="relative filter-dropdown-container">
+                <div class="filter-group-label">Asesor Consultivo</div>
+                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Rep')"><span id="textRep" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm">arrow_drop_down</span></button>
+                <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelRep"><div class="checkbox-item border-b border-slate-100 mb-2 pb-2"><input checked id="selectAllRep" onchange="toggleAllGeneric('Rep', this.checked)" type="checkbox"><span class="text-sm font-bold text-blue-700">Seleccionar Todos</span></div><div class="space-y-1" id="listRep"></div></div>
+            </div>
+            <div>
+                <div class="filter-group-label">CRUZADOS</div>
+                <select class="filter-select" id="filterStatus" onchange="applyFilters()"><option value="all">Todos</option><option value="fichados">Cruzados</option><option value="no_fichados">No Cruzados</option></select>
+            </div>
+            <div class="relative filter-dropdown-container">
+                <div class="filter-group-label">Región</div>
+                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Region')"><span id="textRegion" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm">arrow_drop_down</span></button>
+                <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelRegion"><div class="checkbox-item border-b border-slate-100 mb-2 pb-2"><input checked id="selectAllRegion" onchange="toggleAllGeneric('Region', this.checked)" type="checkbox"><span class="text-sm font-bold text-blue-700">Seleccionar Todas</span></div><div class="space-y-1" id="listRegion"></div></div>
+            </div>
+             <div class="relative filter-dropdown-container">
+                <div class="filter-group-label">Especialidad</div>
+                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Spec')"><span id="textSpec" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm">arrow_drop_down</span></button>
+                <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelSpec"><div class="checkbox-item border-b border-slate-100 mb-2 pb-2"><input checked id="selectAllSpec" onchange="toggleAllGeneric('Spec', this.checked)" type="checkbox"><span class="text-sm font-bold text-blue-700">Seleccionar Todas</span></div><div class="space-y-1" id="listSpec"></div></div>
+            </div>
+            <div class="relative filter-dropdown-container">
+                <div class="filter-group-label">Molécula</div>
+                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Molecule')"><span id="textMolecule" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm">arrow_drop_down</span></button>
+                <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelMolecule"><div class="checkbox-item border-b border-slate-100 mb-2 pb-2"><input checked id="selectAllMolecule" onchange="toggleAllGeneric('Molecule', this.checked)" type="checkbox"><span class="text-sm font-bold text-blue-700">Seleccionar Todas</span></div><div class="space-y-1" id="listMolecule"></div></div>
+            </div>
+            <div class="relative filter-dropdown-container">
+                <div class="filter-group-label">Clase Terapéutica</div>
+                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Class')"><span id="textClass" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm">arrow_drop_down</span></button>
+                <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelClass"><div class="checkbox-item border-b border-slate-100 mb-2 pb-2"><input checked id="selectAllClass" onchange="toggleAllGeneric('Class', this.checked)" type="checkbox"><span class="text-sm font-bold text-blue-700">Seleccionar Todas</span></div><div class="space-y-1" id="listClass"></div></div>
+            </div>
+             <div>
+                <div class="filter-group-label">Genérico</div>
+                <select class="filter-select" id="filterGeneric" onchange="applyFilters()"><option value="all">Todos</option></select>
+            </div>
+            <div class="relative filter-dropdown-container">
+                <div class="filter-group-label">Laboratorio</div>
+                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Lab')"><span id="textLab" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm">arrow_drop_down</span></button>
+                <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelLab"><div class="checkbox-item border-b border-slate-100 mb-2 pb-2"><input checked id="selectAllLab" onchange="toggleAllGeneric('Lab', this.checked)" type="checkbox"><span class="text-sm font-bold text-blue-700">Seleccionar Todos</span></div><div class="space-y-1" id="listLab"></div></div>
+            </div>
+            <div class="flex gap-2 items-end justify-end col-span-1 sm:col-span-2 lg:col-span-4 xl:col-span-5 mt-2">
+                <button class="flex items-center gap-1 px-5 py-3 bg-green-50 text-green-700 hover:bg-green-100 rounded-xl text-sm font-bold transition border border-green-200 justify-center shadow-sm" onclick="showExportModal('excel')"><span class="material-symbols-outlined text-sm">table_view</span> Generar Excel</button>
+                <button class="flex items-center gap-1 px-5 py-3 bg-red-50 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition border border-red-200 justify-center shadow-sm" onclick="showExportModal('pdf')"><span class="material-symbols-outlined text-sm">picture_as_pdf</span> Generar PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State M3 -->
+    <div class="flex flex-col items-center justify-center py-16 text-center" id="emptyState">
+        <div class="bg-white p-12 rounded-[2rem] shadow-sm max-w-lg w-full border border-slate-200">
+            <div class="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6"><span class="material-symbols-outlined text-5xl">cloud_sync</span></div>
+            <h2 class="text-3xl font-display font-bold text-slate-800 mb-3">Matriz Estratégica</h2>
+            <p class="text-slate-500 mb-8 text-sm leading-relaxed">No se encontraron datos en memoria. Intenta recargar para obtenerlos del repositorio o ingresa al modo Admin para cargar archivos manualmente.</p>
+            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="loadRepoData()"><span class="material-symbols-outlined">sync</span> Sincronizar desde Servidor</button>
+            <button class="mt-6 text-sm text-slate-400 hover:text-blue-600 font-medium flex items-center justify-center gap-1 mx-auto" onclick="showAdminAuthModal()"><span class="material-symbols-outlined text-[16px]">admin_panel_settings</span> Activar Modo Admin</button>
+        </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="hidden animate-fade-in" id="dashboardContent">
+        <!-- Dashboard del Visitador -->
+        <div id="visitadorDashboard" class="hidden mb-6 bg-white p-6 md:p-8 rounded-[2rem] border border-indigo-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
+            <div class="flex-1 w-full">
+                <h3 class="font-display font-bold text-indigo-900 text-xl mb-6 flex items-center gap-2"><span class="material-symbols-outlined text-indigo-500">monitoring</span> Tu Progreso de Evaluación</h3>
+                <div class="space-y-5">
+                    <div><div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">1. Médicos en Fichero Asignado</span><span class="text-slate-700 font-mono text-sm" id="visTotalFichero">0</span></div><div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-indigo-300 h-2.5 rounded-full" style="width: 100%"></div></div></div>
+                    <div><div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">2. Cruzados en Panel (CloseUp)</span><span class="text-blue-600 font-mono text-sm" id="visTotalCruzados">0</span></div><div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full transition-all duration-1000" id="visBarCruzados" style="width: 0%"></div></div></div>
+                    <div><div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">3. Evaluados (Matriz 9-Box)</span><span class="text-emerald-600 font-mono text-sm" id="visTotalEvaluados">0 (Paso 3)</span></div><div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-emerald-500 h-2.5 rounded-full transition-all duration-1000" id="visBarEvaluados" style="width: 0%"></div></div></div>
+                </div>
+            </div>
+            <div class="w-full md:w-56 bg-indigo-50/50 rounded-3xl p-6 flex flex-col items-center justify-center text-center border border-indigo-50 shrink-0">
+                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 text-indigo-500"><span class="material-symbols-outlined text-3xl">military_tech</span></div>
+                <span class="text-[10px] font-bold text-indigo-800 uppercase tracking-widest mb-1">Completitud</span><span class="text-4xl font-display font-black text-indigo-600" id="visPctEvaluados">0%</span>
+            </div>
+        </div>
+
+        <!-- INTELLIGENCE ROW (Hidden for Visitador) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="intelligenceRow">
+            <div class="bg-white p-6 rounded-3xl border-l-4 border-rose-500 shadow-sm relative overflow-hidden col-span-1 flex flex-col justify-center">
+                <div class="flex justify-between items-start mb-3"><h3 class="font-bold text-slate-600 text-xs uppercase tracking-widest" id="compCardTitle">Principal Competidor</h3><span class="material-symbols-outlined text-rose-200 text-3xl">warning</span></div>
+                <div id="topCompetitorContainer"><h2 class="text-3xl font-display font-bold text-slate-800" id="topCompName">--</h2><p class="text-sm text-slate-500 mt-2"><span class="font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded" id="topCompRx">0</span> Rx en mercado</p></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm col-span-1 md:col-span-2 flex flex-col justify-center cursor-pointer group hover:border-blue-300 transition" onclick="showMarketDetails()">
+                <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-slate-600 text-xs uppercase tracking-widest">Composición del Mercado</h3><span class="text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full font-semibold opacity-0 group-hover:opacity-100 transition flex items-center gap-1"><span class="material-symbols-outlined text-sm">read_more</span> Ver Ranking</span></div>
+                <div class="w-full h-8 flex rounded-full overflow-hidden mb-3 bg-slate-100 shadow-inner"><div class="bg-blue-600 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" id="barPhq" style="width: 0%">PHQ</div><div class="bg-rose-400 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" id="barComp" style="width: 0%">Top Comp</div><div class="bg-slate-300 h-full flex items-center justify-center text-[10px] font-bold text-slate-600 transition-all duration-1000" id="barRest" style="width: 100%">Resto</div></div>
+                <div class="flex justify-between text-xs font-medium text-slate-500 px-2"><span id="labelPhq" class="text-blue-700">PHQ: 0%</span><span id="labelComp" class="text-rose-600">Competencia: 0%</span><span id="labelRest">Resto: 0%</span></div>
+            </div>
+        </div>
+
+        <!-- Summary Stats M3 -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 text-center kpi-card"><div class="flex items-center justify-center gap-2 mb-2"><span class="material-symbols-outlined text-slate-400">groups</span><p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total Médicos</p></div><p class="text-3xl font-display font-black text-slate-800" id="statTotalDocs">0</p></div>
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 text-center kpi-card"><div class="flex items-center justify-center gap-2 mb-2"><span class="material-symbols-outlined text-slate-400">receipt_long</span><p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Recetas Mercado</p></div><p class="text-3xl font-display font-black text-slate-800" id="statTotalMkt">0</p></div>
+            <div class="bg-blue-50 p-5 rounded-3xl border border-blue-100 text-center kpi-card"><div class="flex items-center justify-center gap-2 mb-2"><span class="material-symbols-outlined text-blue-500">pill</span><p class="text-[10px] text-blue-600 uppercase font-bold tracking-wider">Recetas Lab (PHQ)</p></div><p class="text-3xl font-display font-black text-blue-700" id="statMyRx">0</p></div>
+            <div class="bg-green-50 p-5 rounded-3xl border border-green-100 text-center kpi-card"><div class="flex items-center justify-center gap-2 mb-2"><span class="material-symbols-outlined text-green-600">pie_chart</span><p class="text-[10px] text-green-700 uppercase font-bold tracking-wider">Share Promedio</p></div><p class="text-3xl font-display font-black text-green-800" id="statShare">0%</p></div>
+        </div>
+
+        <!-- 9-Box Matrix M3 -->
+        <div class="mb-10 overflow-x-auto pb-6">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 min-w-[700px]">
+                <h3 class="font-display font-bold text-slate-800 flex items-center gap-2 text-xl"><span class="material-symbols-outlined text-blue-600 text-2xl">apps</span> Matriz Estratégica<span class="text-[10px] font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full ml-3 tracking-widest uppercase">Haz clic para filtrar</span></h3>
+                <div class="flex gap-2">
+                    <button onclick="exportMatrixToPNG()" class="text-slate-500 hover:text-blue-600 hover:bg-blue-50 bg-white border border-slate-200 px-4 py-2.5 rounded-full shadow-sm transition flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[20px]">photo_camera</span><span class="text-xs font-bold">Descargar Matriz</span></button>
+                    <button onclick="toggleSummaryCells()" class="text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-3 rounded-full transition flex items-center gap-2"><span class="material-symbols-outlined text-sm">functions</span><span id="btnSummaryText">Ver Subtotales</span></button>
+                </div>
+            </div>
+            <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200 min-w-[850px]" id="matrixCaptureTarget">
+                <div class="matrix-grid" id="matrixGridElement">
+                    <div></div>
+                    <div class="matrix-header-col"><div class="text-red-400 mb-2"><span class="material-symbols-outlined bg-red-50 p-1 rounded-full">remove</span></div>Baja Adopción (-)<br><span class="text-[10px] font-medium text-slate-400" id="header_label_C">≤ 33%</span></div>
+                    <div class="matrix-header-col"><div class="text-amber-500 mb-2"><span class="material-symbols-outlined bg-amber-50 p-1 rounded-full">drag_handle</span></div>Media Adopción<br><span class="text-[10px] font-medium text-slate-400" id="header_label_B">33% - 66%</span></div>
+                    <div class="matrix-header-col"><div class="text-green-600 mb-2"><span class="material-symbols-outlined bg-green-50 p-1 rounded-full">add</span></div>Alta Adopción (+)<br><span class="text-[10px] font-medium text-slate-400" id="header_label_A">≥ 66%</span></div>
+                    <div class="summary-element hidden flex-col justify-end pb-2 items-center"><span class="summary-header-title">Resumen de Potencialidad</span></div>
+                    <div class="matrix-header-row border-r-2 pr-4 border-slate-100"><span class="text-slate-700 text-center font-bold">Alto Potencial (A)</span><span class="text-[10px] font-medium text-slate-400 mt-2" id="row_label_A">Top 33%</span></div>
+                    <div id="matrixContainer" style="display:contents"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Table -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            <div class="p-5 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-4">
+                <div><h3 class="font-display font-bold text-slate-800 text-lg" id="tableTitle">Directorio Analítico</h3><p class="text-xs font-medium text-slate-500" id="tableSubtitle">Mostrando todos los registros</p></div>
+                <div class="flex items-center gap-4 flex-wrap">
+                    <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm" title="Agrupa médicos que compartan la misma dirección">
+                        <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Vista Institucional</span><label class="toggle-switch"><input type="checkbox" id="instToggle" onchange="toggleInstitutionView()"><span class="slider-toggle"></span></label>
+                    </div>
+                    <button class="hidden text-xs bg-slate-200 hover:bg-slate-300 px-5 py-2.5 rounded-full text-slate-700 font-bold transition flex items-center gap-1" id="clearFilterBtn" onclick="clearMatrixFilter()"><span class="material-symbols-outlined text-[14px]">filter_alt_off</span> Limpiar Filtro</button>
+                </div>
+            </div>
+            <div class="responsive-table-wrapper min-h-[400px]">
+                <table class="w-full text-left border-collapse" id="mainTable">
+                    <thead class="bg-slate-200/60 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                        <tr>
+                            <th class="p-4">Clasificación final</th><th class="p-4" id="thNameCol">Médico / Entidad</th><th class="p-4">Esp.</th><th class="p-4 text-right">Recetas Totales</th><th class="p-4 text-right text-blue-700">Recetas Lab</th><th class="p-4 text-center">Share %</th><th class="p-4 text-center">Oportunidad</th><th class="p-4 text-center hidden" id="thEvalCol">Evaluación Asesor</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm divide-y divide-slate-100" id="dataTable"></tbody>
+                </table>
+            </div>
+            <div class="p-5 border-t border-slate-200 bg-slate-50 flex justify-between items-center rounded-b-[1.5rem]" id="paginationContainer">
+                <span class="text-sm text-slate-600 font-medium" id="pageInfo">Mostrando 0 de 0</span>
+                <div class="flex gap-3">
+                    <button id="btnPrevPage" onclick="prevPage()" class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shadow-sm"><span class="material-symbols-outlined text-[20px]">chevron_left</span> Anterior</button>
+                    <button id="btnNextPage" onclick="nextPage()" class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shadow-sm">Siguiente <span class="material-symbols-outlined text-[20px]">chevron_right</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Scoring Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="scoringModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center"><div><h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-indigo-600">calculate</span> Ponderación Objetiva</h3><p class="text-xs font-medium text-slate-500 mt-1">Asigna un valor numérico a cada pregunta.</p></div><button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm" onclick="document.getElementById('scoringModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button></div>
+        <div class="p-6 overflow-y-auto flex-1 bg-white space-y-4">
+            <div><label class="text-xs font-bold text-slate-700 block mb-1">P1. Pacientes por semana (Volumen)</label><input type="number" id="sc_w1" class="w-full px-4 py-2 border border-slate-300 rounded-xl text-sm outline-none" value="10"></div>
+            <div><label class="text-xs font-bold text-slate-700 block mb-1">P2. Pacientes Patología (Vol específico)</label><input type="number" id="sc_w2" class="w-full px-4 py-2 border border-slate-300 rounded-xl text-sm outline-none" value="20"></div>
+            <div><label class="text-xs font-bold text-slate-700 block mb-1">P3. Pacientes Nuestro Producto (Adopción)</label><input type="number" id="sc_w3" class="w-full px-4 py-2 border border-slate-300 rounded-xl text-sm outline-none" value="30"></div>
+            <div><label class="text-xs font-bold text-slate-700 block mb-1">P5. Costo de Consulta (Poder adquisitivo)</label><input type="number" id="sc_w5" class="w-full px-4 py-2 border border-slate-300 rounded-xl text-sm outline-none" value="10"></div>
+        </div>
+        <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3"><button class="text-slate-600 hover:bg-slate-200 px-6 py-2.5 rounded-full text-sm font-bold" onclick="document.getElementById('scoringModal').classList.add('hidden')">Cancelar</button><button class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md" onclick="saveScoringWeights()">Guardar</button></div>
+    </div>
+</div>
+
+<!-- Rep Detail Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] flex items-center justify-center p-4 transition-opacity" id="repDetailModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center"><div><h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-indigo-600">manage_accounts</span> Detalle de Evaluaciones</h3><p class="text-xs font-medium text-slate-500 mt-1">Visitador: <b id="repDetailNameLabel" class="text-indigo-700"></b></p></div><button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full" onclick="document.getElementById('repDetailModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button></div>
+        <div class="p-0 overflow-y-auto flex-1 bg-white">
+            <table class="w-full text-left border-collapse"><thead class="bg-slate-100/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 shadow-sm z-10"><tr><th class="p-4">Médico</th><th class="p-4">Mercado Evaluado</th><th class="p-4 text-center">Cuadrante VM</th><th class="p-4 text-center">Clasif. Objetiva</th><th class="p-4 text-center">Acciones</th></tr></thead><tbody class="text-sm divide-y divide-slate-100" id="repDetailTableBody"></tbody></table>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Clear Rep Evals Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4" id="confirmClearRepModal">
+    <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden"><div class="p-5 border-b border-rose-100 bg-rose-50"><h3 class="font-display font-bold text-rose-800 flex items-center gap-2"><span class="material-symbols-outlined">delete_forever</span> Borrar Evaluaciones</h3></div><div class="p-5"><p class="text-sm text-slate-600">¿Estás seguro de borrar <b>todas</b> las evaluaciones del visitador <span id="lblRepToDelete" class="font-bold text-rose-600"></span>?</p><input type="hidden" id="hiddenRepToDelete"></div><div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100"><button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold" onclick="document.getElementById('confirmClearRepModal').classList.add('hidden')">Cancelar</button><button class="px-5 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-rose-700 flex items-center gap-1" onclick="executeClearRepEvals()" id="btnConfirmClearRep">Borrar Datos</button></div></div>
+</div>
+
+<!-- Confirm Clear ALL Evals Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4" id="confirmClearAllModal">
+    <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden"><div class="p-5 border-b border-red-100 bg-red-600"><h3 class="font-display font-bold text-white flex items-center gap-2"><span class="material-symbols-outlined">warning</span> Alerta Crítica</h3></div><div class="p-5"><p class="text-sm text-slate-600 mb-3">¿Estás seguro de limpiar <b>TODAS las evaluaciones de TODOS los asesores</b>?</p></div><div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100"><button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold" onclick="document.getElementById('confirmClearAllModal').classList.add('hidden')">Cancelar</button><button class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-red-700 flex items-center gap-1" onclick="executeClearAllEvals()" id="btnConfirmClearAll">Limpiar Todo</button></div></div>
+</div>
+
+<!-- Export Columns Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="exportColumnsModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden"><div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center"><div><h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-green-600">table_chart</span> Opciones Exportación</h3></div><button class="text-slate-600 hover:bg-rose-100 p-2 rounded-full" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button></div><div class="p-6 overflow-y-auto flex-1 bg-white"><div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2"><button class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition bg-blue-50 px-3 py-1 rounded-full" onclick="toggleAllExportCB(true)">Marcar Todas</button></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="exportCheckboxContainer"></div></div><div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end items-center gap-3"><button class="text-slate-600 hover:bg-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')">Cancelar</button><button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md flex items-center gap-2" onclick="executeExport()" id="exportModalActionBtn"><span class="material-symbols-outlined text-[18px]">download</span> Descargar</button></div></div>
+</div>
+
+<!-- Admin Auth Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] flex items-center justify-center p-4" id="adminAuthModal">
+    <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden"><div class="p-5 border-b border-slate-100 bg-slate-50"><h3 class="font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-600">admin_panel_settings</span> Acceso Admin</h3></div><div class="p-5"><input type="password" id="adminPwdInput" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm outline-none mb-2" placeholder="Clave..." onkeypress="if(event.key==='Enter') processAdminAuth()"><p id="adminAuthError" class="text-rose-500 text-xs font-bold hidden">Clave incorrecta.</p></div><div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100"><button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold" onclick="document.getElementById('adminAuthModal').classList.add('hidden')">Cancelar</button><button class="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold" onclick="processAdminAuth()">Acceder</button></div></div>
+</div>
+
+<!-- Confirm Reset Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] flex items-center justify-center p-4" id="confirmResetModal">
+    <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden"><div class="p-5 border-b border-rose-100 bg-rose-50"><h3 class="font-display font-bold text-rose-800 flex items-center gap-2"><span class="material-symbols-outlined">warning</span> ¿Borrar Memoria?</h3></div><div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100"><button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold" onclick="document.getElementById('confirmResetModal').classList.add('hidden')">Cancelar</button><button class="px-5 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-rose-700" onclick="executeClearSession()">Borrar</button></div></div>
+</div>
+
+<!-- Upload Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="uploadModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"><div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-600">database</span> Carga Manual</h3><button class="text-slate-600 hover:bg-rose-100 p-2 rounded-full" onclick="document.getElementById('uploadModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button></div><div class="p-8 overflow-y-auto"><div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6"><div><h4 class="font-bold text-blue-800 mb-3 flex items-center gap-2"><span class="bg-blue-100 p-1.5 rounded-lg text-blue-600 material-symbols-outlined text-sm">table_chart</span> 1. Auditoría</h4><div class="file-drop-area mb-5"><span class="fake-btn">Explorar</span><span class="file-msg" id="auditFileMsg">Archivo aquí</span><input class="file-input" type="file" id="auditFileInput" accept=".csv, .xlsx, .xls" onchange="updateFileLabel('auditFileInput', 'auditFileMsg')"></div><textarea class="w-full h-32 border border-slate-300 rounded-xl p-4 font-mono text-[10px]" id="csvInput" placeholder="Pegar datos..."></textarea></div><div class="bg-slate-50 p-6 rounded-2xl border border-slate-200"><h4 class="font-bold text-slate-700 mb-3 flex items-center gap-2"><span class="bg-purple-100 p-1.5 rounded-lg text-purple-600 material-symbols-outlined text-sm">folder_shared</span> 2. Fichero Médico</h4><div class="file-drop-area bg-white"><span class="fake-btn bg-purple-600">Elegir Fichero</span><span class="file-msg" id="ficheroFileMsg">Archivo aquí</span><input class="file-input" type="file" id="ficheroFileInput" accept=".csv, .xlsx, .xls" onchange="updateFileLabel('ficheroFileInput', 'ficheroFileMsg')"></div></div></div><p class="text-rose-500 text-sm font-bold mt-2 hidden" id="errorMsg"></p></div><div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3"><button class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-md" onclick="processData()"><span class="material-symbols-outlined text-sm">rocket_launch</span> Procesar</button></div></div>
+</div>
+
+<!-- Products Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="productModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden"><div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center"><h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-600">category</span> Productos</h3><button class="text-slate-600 hover:bg-rose-100 p-2 rounded-full" onclick="document.getElementById('productModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button></div><div class="p-6 overflow-y-auto flex-1 bg-white"><input type="file" id="productCsvInput" accept=".csv,.txt" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:bg-blue-50 file:text-blue-700 mb-4"><div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 max-h-64 overflow-y-auto"><div id="productChecklist" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div></div></div><div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center"><button class="bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-bold" onclick="saveProductsConfig()">Guardar</button></div></div>
+</div>
+
+<!-- Institution Detail Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 transition-opacity" id="institutionModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="p-6 border-b border-slate-100 bg-slate-50 flex flex-col gap-4">
+            <div class="flex justify-between items-start">
+                <div><h3 class="text-2xl font-display font-bold text-slate-800" id="instModalName">Clínica</h3><p class="text-sm font-medium text-slate-500 mt-1" id="instModalStats"><span class="bg-white px-2 py-1 rounded border border-slate-200">0 Médicos</span></p></div>
+                <button class="text-slate-600 hover:bg-rose-100 p-2 rounded-full" onclick="document.getElementById('institutionModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            </div>
+        </div>
+        <div class="p-0 overflow-y-auto flex-1 bg-white"><table class="w-full text-left border-collapse"><thead class="bg-slate-100/50 text-[11px] font-bold text-slate-500 uppercase sticky top-0 z-10"><tr><th class="p-4">Matriz</th><th class="p-4">Médico</th><th class="p-4">Especialidad</th><th class="p-4 text-right">Rx Totales</th><th class="p-4 text-right text-blue-700">Rx Lab</th><th class="p-4 text-center">Share %</th></tr></thead><tbody class="text-sm divide-y divide-slate-100" id="instModalTableBody"></tbody></table></div>
+    </div>
+</div>
+
+<!-- Doctor Detail Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4" id="doctorDetailModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="p-6 md:p-8 border-b border-slate-100 bg-slate-50 flex justify-between items-start">
+            <div><div id="modalBadges" class="flex gap-2 mb-3"></div><h3 class="text-2xl font-display font-bold text-slate-800" id="modalDocName">Nombre</h3><div class="flex gap-2 text-[10px] font-medium text-slate-500 mt-2"><span id="modalDocSpec" class="bg-white px-2 py-1 rounded-lg border"></span><span id="modalDocLic" class="bg-white px-2 py-1 rounded-lg border"></span></div></div>
+            <button class="text-slate-600 hover:bg-rose-100 p-2 rounded-full" onclick="document.getElementById('doctorDetailModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+        </div>
+        <div class="bg-slate-50 border-b border-slate-200 px-6 md:px-8 flex gap-2"><button class="tab-btn active" id="tabBtnFichaje" onclick="switchDocTab('fichaje')">Resumen</button><button class="tab-btn" id="tabBtnMercado" onclick="switchDocTab('mercado')">Análisis</button></div>
+        <div class="p-6 md:p-8 overflow-y-auto flex-1 bg-white relative" id="doctorModalBody">
+            <div id="tabContentFichaje" class="block animate-fade-in">
+                <div class="flex flex-col md:flex-row gap-6 mb-8 items-center bg-slate-50 p-6 rounded-3xl border border-slate-100 shadow-sm"><div class="relative w-40 h-40 flex-shrink-0 mx-auto"><canvas id="docShareChart"></canvas></div><div class="flex-1 w-full text-center md:text-left"><h4 class="font-display font-bold text-slate-800 text-lg mb-2">Composición Global</h4><div class="flex flex-wrap justify-center md:justify-start gap-4"><div class="bg-blue-50 px-3 py-2 rounded-xl border border-blue-100"><span class="block text-[10px] text-blue-500">Rx Lab</span><span class="font-mono font-bold text-blue-700 text-lg" id="chartStatPhq">0</span></div><div class="bg-slate-100 px-3 py-2 rounded-xl border border-slate-200"><span class="block text-[10px] text-slate-500">Rx Resto</span><span class="font-mono font-bold text-slate-700 text-lg" id="chartStatRest">0</span></div></div></div></div>
+                <div class="hidden" id="modalGapContainer"></div>
+                <div id="modalFicheroData" class="hidden mb-4"><details class="group border border-purple-200 rounded-2xl bg-purple-50"><summary class="flex justify-between p-4 font-bold text-sm cursor-pointer" id="ficheroSummaryHeader"></summary><div class="p-5 border-t border-purple-100 bg-white" id="modalFicheroContainer"></div></details></div>
+            </div>
+            <div id="tabContentMercado" class="hidden animate-fade-in"><div id="modalContent" class="space-y-6"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Access Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="accessModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center"><h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-indigo-600">admin_panel_settings</span> Accesos</h3><button class="text-slate-600 hover:bg-rose-100 p-2 rounded-full" onclick="document.getElementById('accessModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button></div>
+        <div class="p-6 overflow-y-auto flex-1 bg-white"><div id="accessListContainer" class="space-y-2"></div></div>
+        <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3"><button class="text-slate-600 hover:bg-slate-200 px-6 py-2.5 rounded-full text-sm font-bold" onclick="document.getElementById('accessModal').classList.add('hidden')">Cerrar</button></div>
+    </div>
+</div>
+
+<!-- Login Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 transition-opacity" id="loginModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in relative">
+        <div class="p-8 text-center bg-indigo-600 relative overflow-hidden"><button onclick="document.getElementById('loginModal').classList.add('hidden')" class="absolute top-4 right-4 text-white/70 hover:text-white transition z-20"><span class="material-symbols-outlined">close</span></button><h2 class="text-2xl font-display font-bold text-white mb-1 relative z-10">SegmentApp</h2><p class="text-indigo-100 text-sm relative z-10">Portal Visitadores</p></div>
+        <div class="p-8 bg-slate-50">
+            <div class="mb-5"><select id="visitadorSelect" class="w-full px-4 py-3 border rounded-xl text-sm outline-none font-bold text-slate-700"></select></div>
+            <div class="mb-6"><input type="password" id="visitadorPwd" class="w-full px-4 py-3 border rounded-xl text-sm font-mono" placeholder="Clave..." onkeypress="if(event.key==='Enter') attemptLogin()"></div>
+            <button onclick="attemptLogin()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 mb-6" id="btnLoginBtn"><span class="material-symbols-outlined">login</span> Entrar</button>
+            <div class="text-center pt-4 border-t border-slate-200"><button onclick="document.getElementById('loginModal').classList.add('hidden'); showAdminAuthModal();" class="text-xs font-bold text-slate-400 hover:text-indigo-600">Entrar como Administrador</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- Eval Modal -->
+<div class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 transition-opacity" id="evalModal">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fade-in">
+        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start shrink-0">
+            <div><h3 class="text-xl font-display font-bold text-slate-800" id="evalModalDocName">Médico</h3></div><button class="text-slate-400 hover:bg-rose-100 p-2 rounded-full" onclick="closeEvalModal()"><span class="material-symbols-outlined text-[20px]">close</span></button>
+        </div>
+        <div class="p-6 overflow-y-auto bg-white flex-1 space-y-6">
+            <input type="hidden" id="evalDocId">
+            <div><label class="text-xs font-bold text-slate-500 uppercase block mb-2">Mercado a Evaluar</label><select id="evalMarketSelect" class="w-full px-4 py-3 border rounded-xl text-sm font-bold bg-slate-50" onchange="loadEvalForMarket()"></select></div>
+            <div class="w-full h-px bg-slate-100"></div>
+            <div>
+                <h4 class="text-xs font-bold text-slate-500 uppercase mb-4">1. Encuesta de Prescripción</h4>
+                <div class="bg-slate-50 border rounded-2xl p-5 space-y-5">
+                    <div><label class="text-sm font-bold text-slate-700 block mb-1.5">1) ¿Cuántos pacientes atiende usted por semana?</label><select id="surveyQ1" class="survey-select w-full px-4 py-3 border rounded-xl text-sm"><option value="">Rango...</option><option value="Menos de 10">Menos de 10</option><option value="10 a 20">10 a 20</option><option value="21 a 30">21 a 30</option><option value="31 a 40">31 a 40</option><option value="41 a 50">41 a 50</option><option value="51 a 70">51 a 70</option><option value="Más de 70">Más de 70</option></select></div>
+                    <div><label class="text-sm font-bold text-slate-700 block mb-1.5">2) De esos pacientes, ¿a cuántos les prescribe/recomienda esta clase terapéutica?</label><select id="surveyQ2" class="survey-select w-full px-4 py-3 border rounded-xl text-sm"><option value="">Rango...</option><option value="0">0 (Ninguno)</option><option value="1 a 5">1 a 5</option><option value="6 a 10">6 a 10</option><option value="11 a 15">11 a 15</option><option value="16 a 20">16 a 20</option><option value="21 a 30">21 a 30</option><option value="31 a 40">31 a 40</option><option value="Más de 40">Más de 40</option></select></div>
+                    <div><label class="text-sm font-bold text-slate-700 block mb-1.5">3) De esos pacientes, ¿a cuántos les prescribe nuestro producto?</label><select id="surveyQ3" class="survey-select w-full px-4 py-3 border rounded-xl text-sm border-l-4 border-l-indigo-500"><option value="">Rango...</option><option value="0">0 (Ninguno)</option><option value="1 a 5">1 a 5</option><option value="6 a 10">6 a 10</option><option value="11 a 15">11 a 15</option><option value="16 a 20">16 a 20</option><option value="21 a 30">21 a 30</option><option value="Más de 30">Más de 30</option></select></div>
+                    <div><label class="text-sm font-bold text-slate-700 block mb-1.5">4) Además de nuestro producto, ¿cuáles otros productos usted prescribe o le gusta usar para esta patología?</label><input type="text" id="surveyQ4" class="w-full px-4 py-3 border rounded-xl text-sm" placeholder="Otros productos o N/A"></div>
+                    <div><label class="text-sm font-bold text-slate-700 block mb-1.5">5) ¿Cuál es el costo estimado de la consulta?</label><select id="surveyQ5" class="survey-select w-full px-4 py-3 border rounded-xl text-sm"><option value="">Estimado...</option><option value="Gratuita / Institucional">Gratuita / Institucional</option><option value="Menos de $30">Menos de $30</option><option value="$30 a $50">$30 a $50</option><option value="$51 a $80">$51 a $80</option><option value="$81 a $120">$81 a $120</option><option value="$121 a $150">$121 a $150</option><option value="Más de $150">Más de $150</option></select></div>
+                </div>
+            </div>
+            <div class="w-full h-px bg-slate-100"></div>
+            <div>
+                <h4 class="text-xs font-bold text-slate-500 uppercase mb-3">2. Clasificación en Matriz</h4>
+                <div class="grid grid-cols-3 gap-3" id="evalGrid">
+                    <button class="eval-btn bg-rose-50 text-rose-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display mb-1">A-</span><span class="text-[9px] uppercase">Conquistar</span></button>
+                    <button class="eval-btn bg-blue-50 text-blue-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display mb-1">A</span><span class="text-[9px] uppercase">Desarrollar</span></button>
+                    <button class="eval-btn bg-purple-50 text-purple-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display mb-1">A+</span><span class="text-[9px] uppercase">Defender</span></button>
+                    <button class="eval-btn bg-orange-50 text-orange-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display mb-1">B-</span><span class="text-[9px] uppercase">Conquistar</span></button>
+                    <button class="eval-btn bg-slate-50 text-slate-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display mb-1">B</span><span class="text-[9px] uppercase">Desarrollar</span></button>
+                    <button class="eval-btn bg-indigo-50 text-indigo-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display mb-1">B+</span><span class="text-[9px] uppercase">Defender</span></button>
+                    <button class="eval-btn bg-red-50 text-red-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display mb-1">C-</span><span class="text-[9px] uppercase">Revisar</span></button>
+                    <button class="eval-btn bg-yellow-50 text-yellow-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display mb-1">C</span><span class="text-[9px] uppercase">Desarrollar</span></button>
+                    <button class="eval-btn bg-teal-50 text-teal-700 p-3 rounded-2xl font-bold transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display mb-1">C+</span><span class="text-[9px] uppercase">Defender</span></button>
+                </div>
+                <input type="hidden" id="evalSelectedQuadrant" value="">
+            </div>
+            <div class="w-full h-px bg-slate-100"></div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-2">3. Justificación de la selección de la clasificación (Obligatorio)</label>
+                <textarea id="evalNotas" rows="2" class="w-full p-3 border rounded-xl text-sm resize-none bg-slate-50" placeholder="Justificación..."></textarea>
+            </div>
+        </div>
+        <div class="p-6 border-t bg-slate-50 flex justify-end gap-3 shrink-0">
+            <button class="px-6 py-3 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold" onclick="closeEvalModal()">Cancelar</button>
+            <button class="px-8 py-3 bg-indigo-600 text-white rounded-full text-sm font-bold shadow-md hover:bg-indigo-700" onclick="saveEvaluation()" id="btnSaveEval">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    Chart.register(ChartDataLabels); let docChartInstance = null; 
+    let currentUserRole = 'guest'; let currentVisitadorName = ""; let isAdmin = false;
+    let EVALUACIONES_VISITADOR = {}; let ALL_EVALUATIONS = [];
+    const CONFIG_FILES = { AUDIT: 'datacloseup.csv', FICHERO: 'fichero_medico.csv' };
+    let RAW_DATA = []; let PHQ_PRODUCTS = ["LEPRIT","ESOZ","FLUDIL","TIOCOLFEN","SULAMP","BUMETIN","TIOCOL","MONUKAST","GLUSTAR","CANDETIQUE","OLMETIQUE","XAROX"];
+    let PROCESSED_DATA = []; let CURRENT_TABLE_DATA = []; let MATRIX_FILTER = null; let CURRENT_COMP_BREAKDOWN = [];
+    let FICHERO_MAP = new Map(); let REP_MANAGER_MAP = {}; let SHOW_SUMMARIES = false; let groupByInstitution = false;
+    let currentPage = 1; const ROWS_PER_PAGE = 150;
+    let TH_LOY_LOW = 33; let TH_LOY_HIGH = 66; let TH_POT_LOW = 33; let TH_POT_HIGH = 66;
+    let FILTER_STATE = { Market:[], Product:[], Rep:[], Region:[], Spec:[], Molecule:[], Class:[], Lab:[] };
+    let FILTER_OPTIONS = { Market:[], Product:[], Rep:[], Region:[], Spec:[], Molecule:[], Class:[], Lab:[] };
+
+    const EXPORT_COLUMNS = [
+        { id: 'col_matrix', label: 'Clasificación Final (CloseUp)', default: true },
+        { id: 'col_eval', label: 'Clasificación Asesor', default: true },
+        { id: 'col_market_closeup', label: 'Clasif. Mercado Evaluado (CloseUp)', default: true },
+        { id: 'col_obj_class', label: 'Clasificación Objetiva (Sistema)', default: true },
+        { id: 'col_market_eval', label: 'Mercado Evaluado', default: true },
+        { id: 'col_sur_q1', label: 'P1: Pacientes/Sem (Total)', default: true },
+        { id: 'col_sur_q2', label: 'P2: Pacientes/Sem (Patología)', default: true },
+        { id: 'col_sur_q3', label: 'P3: Pacientes/Sem (Nuestro Prod)', default: true },
+        { id: 'col_sur_q4', label: 'P4: Otros Productos Rx', default: true },
+        { id: 'col_sur_q5', label: 'P5: Costo Consulta', default: true },
+        { id: 'col_eval_notes', label: 'Justificación del Asesor', default: true },
+        { id: 'col_name', label: 'Médico / Institución', default: true },
+        { id: 'col_spec', label: 'Especialidad', default: true },
+        { id: 'col_mat', label: 'Matrícula', default: false },
+        { id: 'col_address', label: 'Dirección', default: false },
+        { id: 'col_city', label: 'Ciudad', default: false },
+        { id: 'col_region', label: 'Región', default: false },
+        { id: 'col_gap', label: 'Oportunidad (Rx Faltantes)', default: true },
+        { id: 'col_rxTot', label: 'Recetas Totales', default: true },
+        { id: 'col_rxPhq', label: 'Recetas Lab', default: true },
+        { id: 'col_share', label: 'Share %', default: true }
+    ];
+    let currentExportTarget = 'excel'; 
+
+    function formatNumber(num, dec = 0) { return new Intl.NumberFormat('es-AR', {minimumFractionDigits: dec, maximumFractionDigits: dec}).format(num); }
+    function safeSetText(id, val) { const e = document.getElementById(id); if (e) e.innerText = val; }
+    function compactNum(num) { if(num>=1000000) return formatNumber(num/1000000, 1)+'M'; if(num>=1000) return formatNumber(num/1000, 1)+'k'; return formatNumber(num); }
+    function normalizeKey(key) { if(!key) return ""; return String(key).trim().replace(/^0+/, ''); }
+    function showToast(msg) { const t=document.getElementById('toast'); t.innerText=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); }
+
+    function getFicheroRepKey(row) {
+        if(!row) return null; const keys = Object.keys(row);
+        let exactMatch = keys.find(k => k.toLowerCase().trim() === 'nombre del sector'); if (exactMatch) return exactMatch;
+        return keys.find(k => {
+            const kL = k.toLowerCase().trim();
+            if (/^(visitador|asesor|representante|contacto|rep|asesor consultivo)$/.test(kL)) return true;
+            if (kL.includes('asesor')||kL.includes('visitador')||kL.includes('representante')||kL.includes('promotor')||kL.includes('rep ')) {
+                if (/(id|cod|código|zona|terr|freq|frec|cuota|num|cant|total)/.test(kL)) return false;
+                if (/^(visitas|visita|visitas mensuales|visitas_totales)$/.test(kL)) return false; return true;
+            } return false;
+        });
+    }
+
+    async function initStorage() {
+        if(!window.localforage) return;
+        localforage.config({name:'PHQ_Matrix_DB', storeName:'session_data'});
+        try {
+            document.getElementById('emptyState').classList.add('hidden'); document.getElementById('restoringSession').classList.remove('hidden');
+            const savedAudit = await localforage.getItem('RAW_DATA');
+            const savedFichero = await localforage.getItem('FICHERO_DATA'); 
+            const savedConfig = await localforage.getItem('PHQ_PRODUCTS');
+            if (savedAudit && savedAudit.length > 0) {
+                safeSetText('loadingText', 'Restaurando sesión...');
+                RAW_DATA = savedAudit;
+                if(savedFichero){ FICHERO_MAP=new Map(savedFichero); REP_MANAGER_MAP={}; FICHERO_MAP.forEach(rows=>rows.forEach(r=>{let mgrK=Object.keys(r).find(k=>k.toUpperCase().trim()==='NOME_GER_DIS');let repK=getFicheroRepKey(r);if(repK&&r[repK]&&mgrK&&r[mgrK]){REP_MANAGER_MAP[String(r[repK]).trim().toUpperCase()]=String(r[mgrK]).trim();}})); }
+                if(savedConfig){ PHQ_PRODUCTS = savedConfig; }
+                await processData(true); showToast("Sesión restaurada");
+            } else { safeSetText('loadingText', 'Buscando datos en servidor...'); loadRepoData(); }
+        } catch (e) { loadRepoData(); }
+    }
+
+    async function fetchFileAsJson(filename) {
+        try {
+            const r = await fetch(filename); if (!r.ok) throw new Error();
+            const ab = await r.arrayBuffer(); const wb = XLSX.read(ab, { type: 'array' });
+            return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+        } catch (e) { return null; }
+    }
+
+    async function loadRepoData() {
+        document.getElementById('emptyState').classList.add('hidden'); document.getElementById('restoringSession').classList.remove('hidden');
+        try {
+            const [audit, fich] = await Promise.all([fetchFileAsJson(CONFIG_FILES.AUDIT), fetchFileAsJson(CONFIG_FILES.FICHERO)]);
+            let loaded = false;
+            if(fich){ FICHERO_MAP.clear(); REP_MANAGER_MAP={}; fich.forEach(r=>{const ks=Object.keys(r);let cK=ks.find(k=>k.toLowerCase().includes('matricula'));let mK=ks.find(k=>k.toUpperCase().trim()==='NOME_GER_DIS');let rK=getFicheroRepKey(r);if(rK&&r[rK]&&mK&&r[mK]) REP_MANAGER_MAP[String(r[rK]).trim().toUpperCase()]=String(r[mK]).trim();if(cK&&r[cK]){let n=normalizeKey(r[cK]);if(!FICHERO_MAP.has(n))FICHERO_MAP.set(n,[]);FICHERO_MAP.get(n).push(r);}}); }
+            if(audit && audit.length>0){ RAW_DATA=[]; audit.forEach(r=>{let v=Object.values(r);if(v.length>=10)RAW_DATA.push({doc:String(v[0]||"").trim(),license:String(v[1]||"").trim(),market:String(v[2]||"").trim(),prod:String(v[3]||"").trim(),rx:parseInt(v[4])||0,address:String(v[6]||"").trim(),zip:String(v[7]||"").trim(),city:String(v[8]||"").trim(),region:String(v[9]||"").trim(),spec:String(v[10]||"").trim(),molecule:String(v[11]||"").trim(),class:String(v[12]||"").trim(),generic:String(v[13]||"").trim(),lab:String(v[14]||"").trim()});}); loaded=true; }
+            if(loaded){ await processData(true); showToast("Datos cargados (GitHub)"); } else throw new Error();
+        } catch(e){ document.getElementById('restoringSession').classList.add('hidden'); document.getElementById('emptyState').classList.remove('hidden'); }
+    }
+
+    function showAdminAuthModal() {
+        if(isAdmin || currentUserRole === 'admin') { logoutSession(); return; }
+        document.getElementById('adminPwdInput').value = ''; document.getElementById('adminAuthError').classList.add('hidden');
+        document.getElementById('adminAuthModal').classList.remove('hidden'); document.getElementById('adminPwdInput').focus();
+    }
+    function processAdminAuth() {
+        if(document.getElementById('adminPwdInput').value === "admin123") { loginSuccess('admin', 'Administrador'); showToast("Modo Admin"); } 
+        else { document.getElementById('adminAuthError').classList.remove('hidden'); }
+    }
+    function showConfirmClearModal() { document.getElementById('confirmResetModal').classList.remove('hidden'); }
+    async function executeClearSession() { if(window.localforage) await localforage.clear(); window.location.reload(); }
+
+    function updateAdminUI() {
+        const tools = document.getElementById('analysisTools'); const intRow = document.getElementById('intelligenceRow');
+        if (isAdmin) { tools.classList.remove('hidden'); if(intRow) intRow.classList.remove('hidden'); } 
+        else { tools.classList.add('hidden'); if(currentUserRole === 'visitador' && intRow) intRow.classList.add('hidden'); }
+    }
+
+    // Ponderación
+    function openScoringModal() { document.getElementById('scoringModal').classList.remove('hidden'); }
+    function saveScoringWeights() {
+        localStorage.setItem('w_q1', document.getElementById('sc_w1').value); localStorage.setItem('w_q2', document.getElementById('sc_w2').value);
+        localStorage.setItem('w_q3', document.getElementById('sc_w3').value); localStorage.setItem('w_q5', document.getElementById('sc_w5').value);
+        document.getElementById('scoringModal').classList.add('hidden'); showToast("Ponderación guardada.");
+    }
+    function getQVal(q,t) {
+        if(!q) return 0;
+        if(t==='q1'){const m={"Menos de 10":1,"10 a 20":2,"21 a 30":3,"31 a 40":4,"41 a 50":5,"51 a 70":6,"Más de 70":7};return m[q]||0;}
+        if(t==='q2'){const m={"0":0,"1 a 5":1,"6 a 10":2,"11 a 15":3,"16 a 20":4,"21 a 30":5,"31 a 40":6,"Más de 40":7};return m[q]||0;}
+        if(t==='q3'){const m={"0":0,"1 a 5":1,"6 a 10":2,"11 a 15":3,"16 a 20":4,"21 a 30":5,"Más de 30":6};return m[q]||0;}
+        if(t==='q5'){const m={"Gratuita / Institucional":1,"Menos de $30":2,"$30 a $50":3,"$51 a $80":4,"$81 a $120":5,"$121 a $150":6,"Más de $150":7};return m[q]||0;} return 0;
+    }
+    function calcObjClass(surv) {
+        if(!surv) return "Pendiente";
+        let w1=parseInt(localStorage.getItem('w_q1'))||10; let w2=parseInt(localStorage.getItem('w_q2'))||20; let w3=parseInt(localStorage.getItem('w_q3'))||30; let w5=parseInt(localStorage.getItem('w_q5'))||10;
+        let s = (getQVal(surv.q1,'q1')*w1)+(getQVal(surv.q2,'q2')*w2)+(getQVal(surv.q3,'q3')*w3)+(getQVal(surv.q5,'q5')*w5);
+        if(s>=350)return"A+"; if(s>=280)return"A"; if(s>=220)return"B+"; if(s>=150)return"B"; if(s>=100)return"C+"; return"C-";
+    }
+    function getMarketClass(id, mkt) {
+        if(!mkt || mkt==='General') return "-";
+        const mRows = RAW_DATA.filter(r=>r.market===mkt); if(mRows.length===0) return "";
+        let dT={}; mRows.forEach(r=>{if(!dT[r.license])dT[r.license]={t:0,p:0}; dT[r.license].t+=r.rx; if(isPhq(r.prod))dT[r.license].p+=r.rx;});
+        if(!dT[id]) return ""; let sh = dT[id].t>0 ? (dT[id].p/dT[id].t)*100 : 0;
+        let loy='C'; if(sh>=TH_LOY_HIGH)loy='A'; else if(sh>TH_LOY_LOW)loy='B';
+        const aD = Object.entries(dT).map(([i,v])=>({i,t:v.t})).sort((a,b)=>b.t-a.t);
+        let gT = aD.reduce((s,d)=>s+d.t,0); let run=0; let pot='C';
+        for(let d of aD){ run+=d.t; let cP = gT>0?(run/gT)*100:100; let cPo = cP<=TH_POT_LOW?'A':(cP<=TH_POT_HIGH?'B':'C'); if(d.i===id){pot=cPo;break;} }
+        return `${pot}${loy==='C'?'-':(loy==='A'?'+':'')}`;
+    }
+
+    async function fetchEvals() {
+        if (currentUserRole === 'visitador' && window.firebaseAuth && window.firebaseAuth.currentUser) {
+            try {
+                const s = await window.firebaseGetDocs(window.firebaseCollection(window.firebaseDb, 'artifacts', __app_id||'segmentapp-local', 'public', 'data', 'evaluaciones_matriz'));
+                EVALUACIONES_VISITADOR = {}; s.forEach(d => { let o=d.data(); if(o.visitador===currentVisitadorName){if(!EVALUACIONES_VISITADOR[o.medico_id])EVALUACIONES_VISITADOR[o.medico_id]={}; EVALUACIONES_VISITADOR[o.medico_id][o.mercado||'General']=o;} });
+            } catch(e){}
+        }
+        resetPaginationAndRender(); aggregateAndCalculate();
+    }
+
+    async function fetchAllEvals() {
+        if(isAdmin && window.firebaseAuth && window.firebaseAuth.currentUser) {
+            try {
+                const s = await window.firebaseGetDocs(window.firebaseCollection(window.firebaseDb, 'artifacts', __app_id||'segmentapp-local', 'public', 'data', 'evaluaciones_matriz'));
+                ALL_EVALUATIONS = []; s.forEach(d => ALL_EVALUATIONS.push({firebaseId:d.id, ...d.data()}));
+            } catch(e){}
+        }
+        window.renderAdminDashboard(); resetPaginationAndRender();
+    }
+
+    function getEvals(id) { return currentUserRole==='visitador' ? (EVALUACIONES_VISITADOR[normalizeKey(id)] ? Object.values(EVALUACIONES_VISITADOR[normalizeKey(id)]) : []) : ALL_EVALUATIONS.filter(e=>normalizeKey(e.medico_id)===normalizeKey(id)); }
+
+    function exportMatrixToPNG() {
+        const t = document.getElementById('matrixCaptureTarget'); showToast("Generando PNG...");
+        const [w, mw, o] = [t.style.width, t.style.minWidth, t.style.overflow];
+        t.style.width = t.scrollWidth+'px'; t.style.minWidth = t.scrollWidth+'px'; t.style.overflow = 'visible';
+        setTimeout(() => {
+            html2canvas(t,{scale:2,backgroundColor:'#fff',useCORS:true}).then(c=>{ t.style.width=w; t.style.minWidth=mw; t.style.overflow=o; const l=document.createElement('a'); l.download='Matriz.png'; l.href=c.toDataURL('image/png'); l.click(); showToast("Descargado"); }).catch(e=>{ t.style.width=w; t.style.minWidth=mw; t.style.overflow=o; showToast("Error PNG"); });
+        }, 200);
+    }
+
+    function exportAdminEvaluationsExcel() {
+        if(!ALL_EVALUATIONS.length){ showToast("No hay evaluaciones"); return; }
+        const ex = ALL_EVALUATIONS.map(e=>{
+            let id = normalizeKey(e.medico_id); let dO = PROCESSED_DATA.find(x=>normalizeKey(x.id)===id);
+            let s="-"; let m="No visible"; if(dO){s=dO.spec;m=dO.matrixLabel;}else{let r=RAW_DATA.find(x=>normalizeKey(x.license)===id);if(r)s=r.spec;}
+            return { "Asesor":e.visitador||"-", "Médico":e.medico_name||(dO?dO.name:"-"), "Matrícula":e.medico_id||"-", "Esp":s, "Mercado":e.mercado||"General", "CloseUp Final":m, "CloseUp Mercado":getMarketClass(id,e.mercado), "Clasif. Asesor":e.cuadrante||"-", "Clasif. Obj.":calcObjClass(e.survey), "P1":e.survey?.q1||"-", "P2":e.survey?.q2||"-", "P3":e.survey?.q3||"-", "P4":e.survey?.q4||"-", "P5":e.survey?.q5||"-", "Justif":e.notas||"", "Fecha":e.timestamp?new Date(e.timestamp).toLocaleString('es-AR'):"N/A" };
+        });
+        const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ex),"Evaluaciones"); XLSX.writeFile(wb,"Evaluaciones.xlsx"); showToast("Descargado");
+    }
+
+    function confirmClearAllEvals() { document.getElementById('confirmClearAllModal').classList.remove('hidden'); }
+    async function executeClearAllEvals() {
+        const btn = document.getElementById('btnConfirmClearAll'); if(!window.firebaseDeleteDoc) return;
+        btn.disabled=true; btn.innerHTML='...';
+        try{ for(let e of ALL_EVALUATIONS){ if(e.firebaseId) await window.firebaseDeleteDoc(window.firebaseDoc(window.firebaseDb,'artifacts',__app_id||'segmentapp-local','public','data','evaluaciones_matriz',e.firebaseId)); } showToast("Borradas"); document.getElementById('confirmClearAllModal').classList.add('hidden'); fetchAllEvals(); }catch(e){}finally{btn.disabled=false;btn.innerHTML='Limpiar Todo';}
+    }
+    function clearRepEvaluations(r) { document.getElementById('lblRepToDelete').innerText=r; document.getElementById('hiddenRepToDelete').value=r; document.getElementById('confirmClearRepModal').classList.remove('hidden'); }
+    async function executeClearRepEvals() {
+        const b = document.getElementById('btnConfirmClearRep'); const r = document.getElementById('hiddenRepToDelete').value; b.disabled=true; b.innerHTML='...';
+        try{ let f=ALL_EVALUATIONS.filter(x=>x.visitador===r); for(let e of f){ if(e.firebaseId) await window.firebaseDeleteDoc(window.firebaseDoc(window.firebaseDb,'artifacts',__app_id||'segmentapp-local','public','data','evaluaciones_matriz',e.firebaseId)); } showToast("Borradas"); document.getElementById('confirmClearRepModal').classList.add('hidden'); fetchAllEvals(); }catch(e){}finally{b.disabled=false;b.innerHTML='Borrar';}
+    }
+
+    window.openRepDetail = function(rep) {
+        document.getElementById('repDetailNameLabel').innerText=rep; const evs=ALL_EVALUATIONS.filter(e=>e.visitador===rep); const tb=document.getElementById('repDetailTableBody'); tb.innerHTML='';
+        if(!evs.length) tb.innerHTML='<tr><td colspan="5" class="p-6 text-center text-slate-400">Sin datos.</td></tr>';
+        else{ evs.forEach(e=>{ tb.innerHTML+=`<tr><td class="p-4 text-xs font-bold text-slate-700">${e.medico_name}<br><span class="text-[9px] font-normal text-slate-400">ID: ${e.medico_id}</span></td><td class="p-4 text-xs text-slate-600">${e.mercado||'General'}</td><td class="p-4 text-center"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg text-xs border font-bold">${e.cuadrante}</span></td><td class="p-4 text-center"><span class="bg-slate-50 text-slate-700 border px-2 py-1 rounded-lg text-xs font-bold">${calcObjClass(e.survey)}</span></td><td class="p-4 text-center"><button onclick="editSurvey('${e.firebaseId}', '${e.medico_id}', '${(e.mercado||'').replace(/'/g,"\\'")}', '${e.medico_name.replace(/'/g,"\\'")}')" class="text-blue-500 hover:bg-blue-50 p-1.5 rounded-lg"><span class="material-symbols-outlined text-[18px]">edit</span></button><button onclick="delSurvey('${e.firebaseId}')" class="text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg"><span class="material-symbols-outlined text-[18px]">delete</span></button></td></tr>`; }); }
+        document.getElementById('repDetailModal').classList.remove('hidden');
+    };
+    window.editSurvey = function(fid, id, mkt, n) { document.getElementById('repDetailModal').classList.add('hidden'); openEvalModal(id, n); setTimeout(()=> {let s=document.getElementById('evalMarketSelect'); if(mkt){s.value=mkt; loadEvalForMarket();}}, 300); };
+    window.delSurvey = async function(fid) { if(!confirm("¿Eliminar?"))return; try{ await window.firebaseDeleteDoc(window.firebaseDoc(window.firebaseDb,'artifacts',__app_id||'segmentapp-local','public','data','evaluaciones_matriz',fid)); showToast("Eliminada"); document.getElementById('repDetailModal').classList.add('hidden'); fetchAllEvals(); }catch(e){} };
+
+    function generateMatrixGridHTML() {
+        const c=document.getElementById('matrixContainer'); if(!c)return;
+        const i=[{id:'cell_A_C',l:'A-',t:'Conquistar'},{id:'cell_A_B',l:'A',t:'Desarrollar'},{id:'cell_A_A',l:'A+',t:'Defender'},{id:'cell_B_C',l:'B-',t:'Conquistar'},{id:'cell_B_B',l:'B',t:'Desarrollar'},{id:'cell_B_A',l:'B+',t:'Defender'},{id:'cell_C_C',l:'C-',t:'Revisar'},{id:'cell_C_B',l:'C',t:'Desarrollar'},{id:'cell_C_A',l:'C+',t:'Defender'}];
+        let h=''; i.slice(0,3).forEach(x=>h+=generateSingleCellHTML(x)); h+=generateSummaryCellHTML('row_A','Potencial A'); h+=`<div class="matrix-header-row border-r-2 pr-4 border-slate-100"><span class="text-blue-700 text-center font-bold">Medio Potencial (B)</span><span class="text-[10px] font-medium text-slate-400 mt-2" id="row_label_B">33% - 66%</span></div>`; i.slice(3,6).forEach(x=>h+=generateSingleCellHTML(x)); h+=generateSummaryCellHTML('row_B','Potencial B'); h+=`<div class="matrix-header-row border-r-2 pr-4 border-slate-100"><span class="text-slate-400 text-center font-bold">Bajo Potencial (C)</span><span class="text-[10px] font-medium text-slate-300 mt-2" id="row_label_C">> 66%</span></div>`; i.slice(6,9).forEach(x=>h+=generateSingleCellHTML(x)); h+=generateSummaryCellHTML('row_C','Potencial C'); h+=`<div class="summary-element hidden items-center justify-end font-bold text-xs text-slate-500 uppercase tracking-wide pr-4">Resumen Adopción</div>`; h+=generateSummaryCellHTML('col_C','Adopción Baja'); h+=generateSummaryCellHTML('col_B','Adopción Media'); h+=generateSummaryCellHTML('col_A','Adopción Alta'); h+=`<div class="summary-element hidden bg-slate-100 rounded-[24px] items-center justify-center text-xs text-slate-500 font-display font-bold uppercase tracking-widest border">Universo<br>Total</div>`; c.innerHTML=h;
+    }
+    function generateSingleCellHTML(c){let k=c.id.replace('cell_',''); return `<div class="matrix-cell group cell-${k}" id="${c.id}" onclick="filterByMatrix('${k.split('_')[0]}','${k.split('_')[1]}')"><div class="cell-tooltip" id="tooltip_${k}">Top</div><div class="flex justify-between items-start mb-2 pointer-events-none"><span class="font-bold text-[11px] uppercase tracking-widest opacity-80">${c.t}</span><button onclick="toggleStats(event,'${k}')" class="pointer-events-auto opacity-40 hover:opacity-100 p-2 -m-2"><span class="material-symbols-outlined text-[18px]">visibility</span></button></div><div class="grid grid-cols-2 gap-y-2 gap-x-2 text-[10px] mb-2 pointer-events-none opacity-90 font-medium"><div><span class="material-symbols-outlined icon-inline opacity-60">receipt_long</span> T: <span class="font-bold font-mono text-[11px]" id="rx_${k}">0</span></div><div class="text-right"><span class="material-symbols-outlined icon-inline opacity-60">pill</span> L: <span class="font-bold font-mono text-[11px]" id="phq_${k}">0</span></div><div class="col-span-2 text-center pt-2 border-t border-black/5"><span class="material-symbols-outlined icon-inline opacity-60">donut_large</span> MS: <span class="font-bold text-[12px]" id="ms_${k}">0%</span></div></div><div class="stats-drawer text-[10px] flex justify-between px-3 bg-black/5 rounded-xl pointer-events-auto" id="drawer_${k}"><div class="flex flex-col items-center py-2 opacity-80"><span class="uppercase tracking-wide text-[8px] font-bold">Media T</span><span class="font-bold text-xs font-mono" id="avg_tot_${k}">0</span></div><div class="flex flex-col items-center py-2 opacity-80"><span class="uppercase tracking-wide text-[8px] font-bold">Media L</span><span class="font-bold text-xs font-mono" id="avg_phq_${k}">0</span></div></div><div class="flex-1 flex flex-col items-center justify-center my-3 pointer-events-none"><div class="text-6xl font-display font-black tracking-tighter letter-display transition-transform duration-300 group-hover:scale-110">${c.l}</div></div><div class="flex items-center justify-center gap-1 text-xl font-display font-bold leading-none mb-1 mt-auto border-t border-black/5 pt-3 pointer-events-none"><span class="material-symbols-outlined opacity-60 text-[22px]">groups</span><span id="count_${k}">0</span></div><div class="text-center pointer-events-none"><div class="text-[11px] font-bold opacity-70"><span id="pct_drs_${k}">0%</span></div></div></div>`;}
+    function generateSummaryCellHTML(i,t){return `<div class="matrix-cell-summary summary-element hidden" id="sum_${i}"><div class="text-center mb-4"><span class="font-bold text-[10px] uppercase tracking-widest text-slate-500 border-b pb-2 block">${t}</span></div><div class="space-y-3 text-xs font-medium"><div class="flex justify-between"><span class="text-slate-500 flex items-center gap-1">Total</span> <span class="font-bold font-mono text-[13px]" id="${i}_rx">0</span></div><div class="flex justify-between"><span class="text-blue-600 flex items-center gap-1">Lab</span> <span class="font-bold text-blue-700 font-mono text-[13px]" id="${i}_phq">0</span></div><div class="flex justify-between"><span class="text-green-600 flex items-center gap-1">Share</span> <span class="font-bold text-green-700 text-[13px]" id="${i}_share">0%</span></div><div class="w-full h-px bg-slate-300 my-3"></div><div class="flex justify-between"><span class="font-bold text-slate-600 uppercase text-[10px]">Médicos</span> <span class="font-display font-black text-xl" id="${i}_count">0</span></div></div></div>`;}
+
+    function toggleSummaryCells() {
+        SHOW_SUMMARIES = !SHOW_SUMMARIES; const el = document.querySelectorAll('.summary-element');
+        document.getElementById('btnSummaryText').innerText = SHOW_SUMMARIES ? "Ocultar Subtotales" : "Ver Subtotales";
+        if(SHOW_SUMMARIES) document.getElementById('matrixGridElement').classList.add('expanded'); else document.getElementById('matrixGridElement').classList.remove('expanded');
+        el.forEach(e => { if(SHOW_SUMMARIES){e.classList.remove('hidden');e.classList.add('flex');} else{e.classList.add('hidden');e.classList.remove('flex');} });
+    }
+    function toggleStats(e,k) { e.stopPropagation(); const o = !document.getElementById(`drawer_${k}`).classList.contains('open'); document.querySelectorAll('.stats-drawer').forEach(d=>{if(o)d.classList.add('open');else d.classList.remove('open');}); }
+
+    window.addEventListener('DOMContentLoaded', () => { generateMatrixGridHTML(); document.getElementById('sliderLow').value=TH_LOY_LOW; document.getElementById('sliderHigh').value=TH_LOY_HIGH; updateThresholds(); initStorage(); document.addEventListener('click', e=>{ document.querySelectorAll('.filter-dropdown-panel').forEach(p=>{ let b=p.previousElementSibling; if(!p.classList.contains('hidden')&&!p.contains(e.target)&&!b.contains(e.target))p.classList.add('hidden'); }); }); });
+
+    function openProductModal() { renderProductCheckboxes(); document.getElementById('productModal').classList.remove('hidden'); document.getElementById('productCsvInput').onchange=e=>{if(!e.target.files.length)return;let r=new FileReader(); r.onload=ev=>{let n=ev.target.result.split(/[\n,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>s); if(n.length>0){PHQ_PRODUCTS=[...new Set([...PHQ_PRODUCTS,...n])];renderProductCheckboxes();showToast(`${n.length} agregados`);}}; r.readAsText(e.target.files[0]);}; }
+    function renderProductCheckboxes() { let c=document.getElementById('productChecklist'); let a=RAW_DATA.length?[...new Set(RAW_DATA.map(d=>d.prod).filter(x=>x))]:[]; let cb=[...new Set([...a,...PHQ_PRODUCTS])].map(p=>p.toUpperCase()).sort(); c.innerHTML=cb.map(p=>`<label class="flex items-center gap-3 p-3 bg-white hover:bg-slate-100 rounded-xl border cursor-pointer"><input type="checkbox" value="${p}" ${PHQ_PRODUCTS.includes(p)?'checked':''} class="phq-prod-cb accent-blue-600 w-5 h-5 rounded"><span class="text-sm font-semibold truncate">${p}</span></label>`).join(''); }
+    function saveProductsConfig() { PHQ_PRODUCTS=Array.from(document.querySelectorAll('.phq-prod-cb:checked')).map(c=>c.value.toUpperCase()); document.getElementById('productModal').classList.add('hidden'); saveSession(); if(RAW_DATA.length)processData(true); }
+    function isPhq(p) { if(!p)return false; return PHQ_PRODUCTS.some(x=>p.toUpperCase().includes(x)); }
+    function updateThresholds() { let l=parseInt(document.getElementById('sliderLow').value); let h=parseInt(document.getElementById('sliderHigh').value); let pl=parseInt(document.getElementById('sliderPotLow').value); let ph=parseInt(document.getElementById('sliderPotHigh').value); if(l>=h||pl>=ph)return; TH_LOY_LOW=l; TH_LOY_HIGH=h; TH_POT_LOW=pl; TH_POT_HIGH=ph; safeSetText('lblThLow',l+'%');safeSetText('lblThHigh',h+'%');safeSetText('lblPotLow',pl+'%');safeSetText('lblPotHigh',ph+'%');safeSetText('header_label_C',`≤ ${l}%`);safeSetText('header_label_B',`${l}% - ${h}%`);safeSetText('header_label_A',`≥ ${h}%`);safeSetText('row_label_A',`Top ${pl}%`);safeSetText('row_label_B',`${pl}% - ${ph}%`);safeSetText('row_label_C',`> ${ph}%`); if(PROCESSED_DATA.length)applyFilters(); }
+
+    function showExportModal(t) { if(!CURRENT_TABLE_DATA.length){showToast("No hay datos");return;} currentExportTarget=t; let b=document.getElementById('exportModalActionBtn'); b.innerHTML=t==='excel'?'<span class="material-symbols-outlined text-[18px]">download</span> Descargar':'<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Descargar PDF'; b.className=t==='excel'?'bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md flex items-center gap-2':'bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md flex items-center gap-2'; let c=document.getElementById('exportCheckboxContainer'); c.innerHTML=''; EXPORT_COLUMNS.forEach(o=>{let ck=o.default?'checked':''; let cl=o.default?'checked-style':''; let l=(groupByInstitution&&o.id==='col_name')?'Institución/Dirección':o.label; c.innerHTML+=`<label class="export-cb-label ${cl}" id="label_${o.id}"><input type="checkbox" id="cb_${o.id}" value="${o.id}" ${ck} onchange="updateCbStyle('label_${o.id}',this.checked)"><span class="text-sm font-medium">${l}</span></label>`;}); document.getElementById('exportColumnsModal').classList.remove('hidden'); }
+    function updateCbStyle(i,c){let l=document.getElementById(i); if(c)l.classList.add('checked-style');else l.classList.remove('checked-style');}
+    function toggleAllExportCB(s){EXPORT_COLUMNS.forEach(c=>{let b=document.getElementById(`cb_${c.id}`);if(b){b.checked=s;updateCbStyle(`label_${c.id}`,s);}});}
+    function executeExport(){if(currentExportTarget==='excel')executeExcelExport();else executePDFExport();}
+
+    function executeExcelExport(){
+        let s=[]; EXPORT_COLUMNS.forEach(c=>{let b=document.getElementById(`cb_${c.id}`);if(b&&b.checked)s.push(c.id);}); if(!s.length){showToast("Elige una columna.");return;}
+        let ex=CURRENT_TABLE_DATA.map(d=>{
+            let r={}; let e=getEvals(d.id);
+            if(s.includes('col_matrix')) r["Clasificación Final (CloseUp)"]=d.matrixLabel;
+            if(s.includes('col_eval')) r["Clasificación Asesor"]=e.length?e.map(x=>`${x.visitador}: ${x.cuadrante}`).join(' | '):'Pendiente';
+            if(s.includes('col_market_closeup')) r["Clasif. Mercado Evaluado (CloseUp)"]=e.length?e.map(x=>`${x.visitador}: ${getMarketClass(d.id,x.mercado)}`).join(' | '):'-';
+            if(s.includes('col_obj_class')) r["Clasificación Objetiva (Sistema)"]=e.length?e.map(x=>`${x.visitador}: ${calcObjClass(x.survey)}`).join(' | '):'-';
+            if(s.includes('col_market_eval')) r["Mercado Evaluado"]=e.length?e.map(x=>`${x.visitador}: ${x.mercado||'General'}`).join(' | '):'-';
+            if(s.includes('col_sur_q1')) r["P1: Pacientes Total/Semana"]=e.length?e.map(x=>`${x.visitador}: ${x.survey?.q1||'-'}`).join(' | '):'';
+            if(s.includes('col_sur_q2')) r["P2: Pacientes Patología/Semana"]=e.length?e.map(x=>`${x.visitador}: ${x.survey?.q2||'-'}`).join(' | '):'';
+            if(s.includes('col_sur_q3')) r["P3: Pacientes Ntro Prod/Semana"]=e.length?e.map(x=>`${x.visitador}: ${x.survey?.q3||'-'}`).join(' | '):'';
+            if(s.includes('col_sur_q4')) r["P4: Otros Productos (Comp)"]=e.length?e.map(x=>`${x.visitador}: ${x.survey?.q4||'-'}`).join(' | '):'';
+            if(s.includes('col_sur_q5')) r["P5: Costo Consulta"]=e.length?e.map(x=>`${x.visitador}: ${x.survey?.q5||'-'}`).join(' | '):'';
+            if(s.includes('col_eval_notes')) r["Justificación del Asesor"]=e.length?e.map(x=>`${x.visitador}: ${x.notas||'-'}`).join(' | '):'';
+            if(s.includes('col_name')) r[groupByInstitution?"Institución":"Médico"]=d.name;
+            if(s.includes('col_spec')) r["Especialidad"]=d.spec||"-"; if(s.includes('col_mat')) r["Matrícula"]=d.id;
+            if(s.includes('col_address')) r["Dirección"]=d.address||"-"; if(s.includes('col_city')) r["Ciudad"]=d.rows[0]?.city||"-"; if(s.includes('col_region')) r["Región"]=d.rows[0]?.region||"-";
+            if(s.includes('col_gap')) r["Rx Faltantes"]=d.gap; if(s.includes('col_rxTot')) r["Recetas Totales"]=d.totalRx; if(s.includes('col_rxPhq')) r["Recetas Lab"]=d.rxPhq; if(s.includes('col_share')) r["Share %"]=parseFloat(d.share.toFixed(2));
+            return r;
+        });
+        const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ex),"Matriz"); XLSX.writeFile(wb,"Data_SegmentApp.xlsx"); document.getElementById('exportColumnsModal').classList.add('hidden'); showToast("Exportado");
+    }
+
+    function executePDFExport(){
+        let s=[]; EXPORT_COLUMNS.forEach(c=>{let b=document.getElementById(`cb_${c.id}`);if(b&&b.checked)s.push(c);}); if(!s.length)return;
+        try{
+            const {jsPDF}=window.jspdf; const d=new jsPDF(s.length>6?'landscape':'portrait'); d.setFontSize(18); d.text("Reporte de Matriz Estratégica", 14, 20); d.setFontSize(10); d.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 28);
+            if(MATRIX_FILTER) d.text(`Filtro: ${MATRIX_FILTER.pot}${MATRIX_FILTER.loy==='C'?'-':(MATRIX_FILTER.loy==='A'?'+':'')}`,14,34); else d.text("Filtro: Todos",14,34);
+            const hd=[s.map(c=>(groupByInstitution&&c.id==='col_name')?'Institución':c.label)];
+            const tb=CURRENT_TABLE_DATA.map(x=>{ let ev=getEvals(x.id); return s.map(c=>{ if(c.id==='col_matrix')return x.matrixLabel; if(c.id==='col_eval')return ev.length?ev.map(e=>e.cuadrante).join(','):'Pend.'; if(c.id==='col_market_eval')return ev.length?ev.map(e=>e.mercado||'Gen').join(','):'-'; if(c.id==='col_market_closeup')return ev.length?ev.map(e=>getMarketClass(x.id,e.mercado)).join(','):'-'; if(c.id==='col_obj_class')return ev.length?ev.map(e=>calcObjClass(e.survey)).join(','):'-'; if(c.id.startsWith('col_sur_'))return ev.length?"En Excel":"-"; if(c.id==='col_eval_notes')return ev.length?ev.map(e=>e.notas||'').join(' '):''; if(c.id==='col_name')return x.name; if(c.id==='col_spec')return x.spec||"-"; if(c.id==='col_mat')return x.id; if(c.id==='col_address')return x.address||"-"; if(c.id==='col_city'||c.id==='col_region')return x.rows[0]?.[c.id.replace('col_','')]||"-"; if(c.id==='col_gap')return x.gap>0?`+${x.gap}`:'-'; if(c.id==='col_rxTot')return formatNumber(x.totalRx); if(c.id==='col_rxPhq')return formatNumber(x.rxPhq); if(c.id==='col_share')return formatNumber(x.share,2)+'%'; return""; }); });
+            let cs={}; s.forEach((c,i)=>{if(c.id==='col_rxTot'||c.id==='col_rxPhq')cs[i]={halign:'right'}; if(c.id==='col_share'||c.id==='col_gap')cs[i]={halign:'center'};});
+            d.autoTable({startY:40,head:hd,body:tb,theme:'grid',headStyles:{fillColor:[10,86,209]},styles:{fontSize:8},columnStyles:cs}); d.save("Reporte.pdf"); document.getElementById('exportColumnsModal').classList.add('hidden');
+        }catch(e){}
+    }
+
+    function updateFileLabel(i,m){let p=document.getElementById(i);let s=document.getElementById(m); if(p.files.length){s.innerText=p.files[0].name;s.style.color="#0A56D1";s.style.fontWeight="bold";}else{s.innerText="Archivo aquí";s.style.color="#44474E";s.style.fontWeight="normal";}}
+
+    function showMarketDetails(){
+        let h=`<div class="mb-4 text-sm text-slate-600">Ranking completo de productos en la selección actual.</div><div class="border rounded-2xl overflow-y-auto max-h-[60vh]"><table class="w-full text-sm text-left"><thead class="bg-slate-100 font-bold text-slate-500 uppercase sticky top-0 text-xs"><tr><th class="p-3">Producto</th><th class="p-3 text-right">Rx</th><th class="p-3 text-center">MS %</th></tr></thead><tbody class="divide-y divide-slate-100">`;
+        let t=CURRENT_COMP_BREAKDOWN.reduce((s,i)=>s+i.rx,0);
+        CURRENT_COMP_BREAKDOWN.forEach((i,x)=>{ let sh=t>0?(i.rx/t)*100:0; let rs="text-slate-600"; let ns=""; let ss="text-slate-500"; if(i.type==='PHQ'){rs="bg-blue-50/50 text-blue-900";ns="font-bold text-blue-700";ss="font-bold text-blue-700";}else if(x===0){rs="bg-rose-50/50 text-rose-900";} h+=`<tr class="${rs}"><td class="p-3 ${ns}">${i.prod} ${i.type==='PHQ'?'<span class="text-[9px] bg-blue-100 px-1 rounded uppercase">PHQ</span>':''}</td><td class="p-3 text-right font-mono">${formatNumber(i.rx)}</td><td class="p-3 text-center ${ss}">${formatNumber(sh,2)}%</td></tr>`; }); h+=`</tbody></table></div>`;
+        safeSetText('modalDocName',"Composición Mercado"); safeSetText('modalDocSpec',"Ranking"); document.getElementById('modalBadges').innerHTML='<span class="material-symbols-outlined text-blue-500 text-3xl">analytics</span>';
+        document.getElementById('tabContentFichaje').classList.add('hidden'); document.getElementById('tabContentMercado').classList.remove('hidden'); document.getElementById('tabBtnFichaje').classList.add('hidden'); document.getElementById('tabBtnMercado').classList.add('hidden'); document.getElementById('modalContent').innerHTML=h; document.getElementById('doctorDetailModal').classList.remove('hidden');
+    }
+
+    function toggleGenericDropdown(k){document.getElementById('Panel'+k).classList.toggle('hidden');}
+    function toggleAllGeneric(k,c){document.querySelectorAll(`#list${k} input[type="checkbox"]`).forEach(x=>x.checked=c);updateGenericSelected(k);}
+    function updateGenericSelected(k){
+        let c=document.querySelectorAll(`#list${k} input[type="checkbox"]`); FILTER_STATE[k]=[]; c.forEach(x=>{if(x.checked)FILTER_STATE[k].push(x.value);});
+        let t=document.getElementById(`text${k}`);
+        if(FILTER_STATE[k].length===FILTER_OPTIONS[k].length){ if(k==='Market')t.innerText="Todos los mercados";else t.innerText="Todos"; document.getElementById(`selectAll${k}`).checked=true; }
+        else if(FILTER_STATE[k].length===0){ t.innerText="Ninguno"; document.getElementById(`selectAll${k}`).checked=false; }
+        else{ if(k==='Market')t.innerText=`${FILTER_STATE[k].length} Mercados: ${FILTER_STATE[k].slice(0,2).join(', ')}${FILTER_STATE[k].length>2?'...':''}`; else t.innerText=`${FILTER_STATE[k].length} Selecc.`; document.getElementById(`selectAll${k}`).checked=false; }
+        applyFilters();
+    }
+    function fillGenericDropdown(k,d){
+        FILTER_OPTIONS[k]=d; let c=document.getElementById('list'+k); c.innerHTML='';
+        d.forEach(i=>{ let cl=i; if(k==='Market')cl=i.replace(/Mercado/i,'').trim()||i; c.innerHTML+=`<div class="checkbox-item"><input type="checkbox" value="${i}" onchange="updateGenericSelected('${k}')"><span class="text-sm font-medium text-slate-700">${cl}</span></div>`; });
+        FILTER_STATE[k]=[...d]; let sa=document.getElementById(`selectAll${k}`); if(sa)sa.checked=true; let txt=document.getElementById(`text${k}`); if(txt){if(k==='Market')txt.innerText="Todos los mercados";else txt.innerText="Todos";}
+    }
+    function resetAllFilters(){ document.getElementById('globalSearch').value=''; document.getElementById('filterStatus').value='all'; document.getElementById('filterGeneric').value='all'; Object.keys(FILTER_OPTIONS).forEach(k=>toggleAllGeneric(k,true)); clearMatrixFilter(); showToast("Filtros restablecidos"); }
+
+    function readFileAsJson(f){ return new Promise((rs,rj)=>{let r=new FileReader(); r.onload=e=>{try{let d=new Uint8Array(e.target.result);let w=XLSX.read(d,{type:'array'});rs(XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{defval:""}));}catch(err){rj(err);}};r.onerror=err=>rj(err);r.readAsArrayBuffer(f);}); }
+    
+    async function processData(isRes=false){
+        const e=document.getElementById('errorMsg'); e.classList.add('hidden');
+        if(!isRes && RAW_DATA.length===0){
+            let t=document.getElementById('csvInput').value; let a=document.getElementById('auditFileInput'); let f=document.getElementById('ficheroFileInput');
+            if(!t.trim() && (!a.files || !a.files.length)){ e.innerText="Selecciona archivo o pega datos."; e.classList.remove('hidden'); return; }
+            try{
+                if(f.files&&f.files.length){let fj=await readFileAsJson(f.files[0]);parseFicheroData(fj);}
+                if(a.files&&a.files.length){let j=await readFileAsJson(a.files[0]);parseAuditData(j);}
+                else if(t.trim()){ RAW_DATA=[]; t.split('\n').forEach(l=>{let r=l.trim();if(!r)return;let p=r.includes('\t')?r.split('\t'):r.split(',');if(p.length>=5)RAW_DATA.push({doc:p[0]?.trim()||"",license:p[1]?.trim()||"",market:p[2]?.trim()||"General",prod:p[3]?.trim()||"",rx:parseInt(p[4])||0,address:p[6]?.trim()||"",zip:p[7]?.trim()||"",city:p[8]?.trim()||"",region:p[9]?.trim()||"",spec:p[10]?.trim()||"GEN",molecule:p[11]?.trim()||"",class:p[12]?.trim()||"",generic:p[13]?.trim()||"",lab:p[14]?.trim()||""});});}
+                saveSession();
+            }catch(err){e.innerText="Error: "+err.message;e.classList.remove('hidden');return;}
+        }
+        if(RAW_DATA.length===0){if(!isRes){e.innerText="Sin datos procesables.";e.classList.remove('hidden');}return;}
+        populateFilters(); aggregateAndCalculate(); document.getElementById('restoringSession').classList.add('hidden'); document.getElementById('uploadModal').classList.add('hidden'); document.getElementById('emptyState').classList.add('hidden');
+        if(!isRes)showToast("Datos listos"); checkAuthentication();
+    }
+
+    function populateFilters(){
+        const u=k=>[...new Set(RAW_DATA.map(d=>d[k]).filter(x=>x))].sort(); fillGenericDropdown('Market',u('market')); fillGenericDropdown('Product',u('prod').filter(p=>isPhq(p)));
+        let rS=new Set(); FICHERO_MAP.forEach(rs=>rs.forEach(r=>{let k=getFicheroRepKey(r);if(k&&r[k])rS.add(String(r[k]).trim().toUpperCase());})); fillGenericDropdown('Rep',Array.from(rS).sort()); fillGenericDropdown('Region',u('region')); fillGenericDropdown('Spec',u('spec')); fillGenericDropdown('Molecule',u('molecule')); fillGenericDropdown('Class',u('class')); fillGenericDropdown('Lab',u('lab'));
+        let gs=u('generic'); let el=document.getElementById('filterGeneric'); el.innerHTML='<option value="all">Todos</option>'; gs.forEach(v=>el.innerHTML+=`<option value="${v}">${v}</option>`);
+    }
+
+    function applyFilters(){resetPaginationAndRender();aggregateAndCalculate();} function resetPaginationAndRender(){currentPage=1;renderTable();}
+    function toggleInstitutionView(){groupByInstitution=document.getElementById('instToggle').checked; safeSetText('thNameCol',groupByInstitution?"Dirección / Institución":"Médico"); resetPaginationAndRender();}
+    function updateImpactSimulator(d){let g=0;let t=TH_LOY_HIGH/100; d.forEach(x=>{if(x.catLoyalty==='B'){let tr=Math.ceil(x.totalRx*t);let gap=tr-x.rxPhq;if(gap>0)g+=gap;}}); document.getElementById('simImpactRx').innerText=`+${formatNumber(g)} Rx`;}
+
+    function aggregateAndCalculate(){
+        let fS=document.getElementById('filterStatus').value; let fG=document.getElementById('filterGeneric').value;
+        let u=RAW_DATA.filter(r=>{if(!FILTER_STATE.Market.includes(r.market))return false;if(!FILTER_STATE.Region.includes(r.region))return false;if(!FILTER_STATE.Spec.includes(r.spec))return false;if(!FILTER_STATE.Molecule.includes(r.molecule))return false;if(!FILTER_STATE.Class.includes(r.class))return false;if(!FILTER_STATE.Lab.includes(r.lab))return false;if(fG!=='all'&&r.generic!==fG)return false;return true;});
+        let dM={}; let aP={};
+        u.forEach(r=>{ let i=r.license; if(!dM[i])dM[i]={id:i,name:r.doc,address:r.address,spec:r.spec,rxPhq:0,rxTotalSum:0,rows:[]}; dM[i].rows.push(r); dM[i].rxTotalSum+=r.rx; aP[r.prod]=(aP[r.prod]||0)+r.rx; if(isPhq(r.prod)&&(FILTER_STATE.Product.length===FILTER_OPTIONS.Product.length||FILTER_STATE.Product.includes(r.prod)))dM[i].rxPhq+=r.rx; });
+        CURRENT_COMP_BREAKDOWN=Object.entries(aP).map(([k,v])=>({prod:k,rx:v,type:isPhq(k)?'PHQ':'Comp'})).sort((a,b)=>b.rx-a.rx);
+        let docs=Object.values(dM).map(d=>{ let de=d.rxTotalSum;let sh=de>0?(d.rxPhq/de)*100:0; let cL='C';if(sh>=TH_LOY_HIGH)cL='A';else if(sh>TH_LOY_LOW)cL='B'; let g=0; if(sh<TH_LOY_LOW)g=Math.ceil(de*(TH_LOY_LOW/100))-d.rxPhq; else if(sh<TH_LOY_HIGH)g=Math.ceil(de*(TH_LOY_HIGH/100))-d.rxPhq; if(g<0)g=0; return{...d,totalRx:de,share:sh,catLoyalty:cL,gap:g,ficheroData:FICHERO_MAP.get(normalizeKey(d.id))||[],isZeroRx:false}; });
+        
+        let tF=0;let tC=0;
+        if(currentUserRole==='visitador'){
+            let aM=new Map(); FICHERO_MAP.forEach((rs,id)=>{let a=rs.some(r=>{let k=getFicheroRepKey(r);return k&&r[k]&&String(r[k]).toUpperCase().trim()===currentVisitadorName.toUpperCase();});if(a){tF++;aM.set(id,rs);}});
+            docs=docs.filter(d=>{let h=aM.has(normalizeKey(d.id));if(h)tC++;return h;});
+            aM.forEach((rs,id)=>{if(!docs.find(d=>normalizeKey(d.id)===id)){let b=rs[0];let nK=Object.keys(b).find(k=>/^(nombre|medico|médico|doctor|doc)$/i.test(k.trim().toLowerCase()))||Object.keys(b).find(k=>/nombre|med|doc/i.test(k)&&!/visit|rep|agente|promotor|asesor/i.test(k));let sK=Object.keys(b).find(k=>/esp|spec/i.test(k));let aK=Object.keys(b).find(k=>/dir|address|inst/i.test(k)); docs.push({id:id,name:(nK&&b[nK])?String(b[nK]).trim():`Médico (${id})`,spec:(sK&&b[sK])?String(b[sK]).trim():"S/E",address:(aK&&b[aK])?String(b[aK]).trim():"",rxPhq:0,totalRx:0,rxTotalSum:0,share:0,catLoyalty:'C',gap:0,ficheroData:rs,rows:[],isZeroRx:true});}});
+        }
+        if(FILTER_STATE.Rep.length<FILTER_OPTIONS.Rep.length && currentUserRole!=='visitador') docs=docs.filter(d=>d.ficheroData.some(r=>{let k=getFicheroRepKey(r);return k&&FILTER_STATE.Rep.includes(String(r[k]).trim().toUpperCase());}));
+        if(fStatus!=='all') docs=docs.filter(d=>{let h=d.ficheroData&&d.ficheroData.length>0; return fStatus==='fichados'?h:!h;});
+        
+        let gT=docs.reduce((s,d)=>s+d.totalRx,0); docs.sort((a,b)=>b.totalRx-a.totalRx); let rT=0;
+        docs=docs.map(d=>{rT+=d.totalRx; let cP=gT>0?(rT/gT):1; let cPo=(cP*100)<=TH_POT_LOW?'A':((cP*100)<=TH_POT_HIGH?'B':'C'); return{...d,catPotency:cPo,matrixLabel:cPo+(d.catLoyalty==='C'?'-':(d.catLoyalty==='A'?'+':''))};});
+        PROCESSED_DATA=docs; let cN="N/A";let cR=0;let cO=CURRENT_COMP_BREAKDOWN.filter(c=>c.type==='Comp');if(cO.length){cN=cO[0].prod;cR=cO[0].rx;} renderDashboard(gT,cN,cR); updateImpactSimulator(docs);
+        if(currentUserRole==='visitador')updateVisitadorDashboard(tF,tC);
+    }
+
+    window.renderAdminDashboard = function() {
+        if (!isAdmin) return;
+        let rS={}; FICHERO_MAP.forEach(rs=>{let repI=new Set();rs.forEach(r=>{let k=getFicheroRepKey(r);if(k&&r[k])repI.add(String(r[k]).trim().toUpperCase());}); repI.forEach(rp=>{if(!rS[rp])rS[rp]={name:rp,total:0,evaluated:0,surveys:0};rS[rp].total++;});});
+        let eDocs={}; ALL_EVALUATIONS.forEach(ev=>{let r=String(ev.visitador).toUpperCase();if(rS[r]){rS[r].surveys++;if(!eDocs[r])eDocs[r]=new Set();eDocs[r].add(ev.medico_id);}}); Object.keys(eDocs).forEach(r=>{if(rS[r])rS[r].evaluated=eDocs[r].size;});
+        
+        let mS=document.getElementById('adminManagerFilter');
+        if(mS){ let uM=[...new Set(Object.values(REP_MANAGER_MAP))].filter(x=>x).sort(); if(mS.options.length<=1&&uM.length){mS.innerHTML='<option value="all">Todos los Gerentes</option>';uM.forEach(m=>mS.innerHTML+=`<option value="${m}">${m}</option>`);} }
+        let sM=mS?mS.value:'all'; let fS=Object.values(rS); if(sM!=='all')fS=fS.filter(s=>REP_MANAGER_MAP[s.name]===sM);
+        let sD=0;let sE=0;let sS=0; fS.forEach(s=>{sD+=s.total;sE+=s.evaluated;sS+=s.surveys;}); safeSetText('mgrKpiDocs',`${formatNumber(sE)} / ${formatNumber(sD)}`); safeSetText('mgrKpiSurveys',formatNumber(sS));
+
+        let pC=document.getElementById('adminProgressTable'); let pH='';
+        fS.sort((a,b)=>(b.evaluated/b.total)-(a.evaluated/a.total)).forEach(s=>{let p=s.total>0?(s.evaluated/s.total)*100:0;let bc=p>=100?'bg-emerald-500':(p>50?'bg-blue-500':'bg-amber-400');pH+=`<div class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border transition group"><div class="w-[28%] truncate text-xs font-bold text-slate-700 cursor-pointer hover:text-indigo-600" onclick="openRepDetail('${s.name.replace(/'/g,"\\'")}')">${s.name}</div><div class="w-[28%] px-2"><div class="w-full bg-slate-200 rounded-full h-2 mb-1"><div class="${bc} h-2 rounded-full" style="width:${p>100?100:p}%"></div></div><div class="text-[9px] text-slate-400 font-bold uppercase text-center">Docs: <b class="${p>=100?'text-emerald-600':'text-slate-600'}">${s.evaluated}</b>/${s.total}</div></div><div class="w-[22%] text-center border-l"><div class="text-[10px] font-mono font-bold text-indigo-600">${s.surveys}</div><div class="text-[8px] text-slate-400 font-bold uppercase">Encuestas</div></div><div class="w-[22%] flex justify-end gap-1"><button onclick="openRepDetail('${s.name.replace(/'/g,"\\'")}')" class="text-slate-400 hover:text-indigo-600 p-1.5"><span class="material-symbols-outlined text-[16px]">visibility</span></button><button onclick="clearRepEvaluations('${s.name.replace(/'/g,"\\'")}')" class="text-slate-300 hover:text-rose-600 p-1.5 opacity-0 group-hover:opacity-100"><span class="material-symbols-outlined text-[16px]">delete</span></button></div></div>`;});
+        if(pH==='')pH='<div class="p-4 text-center text-xs text-slate-500">Sin asesores en filtro.</div>'; if(pC)pC.innerHTML=pH;
+
+        let dC=document.getElementById('adminDiscrepancyTable'); let dH=''; let ct=0;
+        ALL_EVALUATIONS.forEach(ev=>{let d=PROCESSED_DATA.find(x=>normalizeKey(x.id)===normalizeKey(ev.medico_id));if(d){let mCU=getMarketClass(d.id,ev.mercado);let oP=d.catPotency;if(mCU&&mCU.length>=1&&mCU!=="-")oP=mCU.charAt(0);let sP=ev.cuadrante?ev.cuadrante.charAt(0):'';if(sP&&oP!==sP){ct++;dH+=`<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 mb-2 bg-white hover:bg-rose-50 rounded-xl border border-rose-100 transition cursor-pointer" onclick="openDoctorModal('${d.id}')"><div class="flex flex-col"><span class="text-xs font-bold">${d.name}</span><span class="text-[10px] text-slate-500">Eval: <b class="text-indigo-600">${ev.visitador}</b> en <b class="text-indigo-600">${ev.mercado||'General'}</b></span></div><div class="flex items-center gap-3 text-[10px] font-bold"><div class="flex flex-col items-center bg-slate-50 border px-2.5 py-1.5 rounded-lg"><span class="text-slate-400 uppercase text-[8px]">Dato Rx</span><span>${oP}</span></div><span class="material-symbols-outlined text-rose-300 text-[16px]">sync_problem</span><div class="flex flex-col items-center bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-lg"><span class="text-rose-400 uppercase text-[8px]">Subjetivo</span><span class="text-rose-700">${ev.cuadrante}</span></div></div></div>`;}}});
+        if(dH==='')dH='<div class="p-8 text-center text-xs text-emerald-600 flex flex-col items-center gap-2 bg-emerald-50 rounded-2xl border border-emerald-100"><span class="material-symbols-outlined text-4xl">verified</span>Sin discrepancias críticas.</div>'; if(dC)dC.innerHTML=dH;
+        let dB=document.getElementById('discCountBadge'); if(dB){dB.innerText=ct;if(ct>0){dB.classList.replace('bg-slate-100','bg-rose-100');dB.classList.replace('text-slate-600','text-rose-600');}else{dB.classList.replace('bg-rose-100','bg-slate-100');dB.classList.replace('text-rose-600','text-slate-600');}}
+    }
+
+    function renderTable() {
+        const tb=document.getElementById('dataTable'); if(!tb)return; tb.innerHTML='';
+        let sT=document.getElementById('globalSearch').value.toLowerCase(); let data=PROCESSED_DATA;
+        if(MATRIX_FILTER) data=data.filter(d=>d.catPotency===MATRIX_FILTER.pot&&d.catLoyalty===MATRIX_FILTER.loy&&!d.isZeroRx);
+        if(sT) data=data.filter(d=>d.name.toLowerCase().includes(sT)||String(d.id).toLowerCase().includes(sT)||(d.address&&d.address.toLowerCase().includes(sT)));
+        if(groupByInstitution){
+            let g={}; data.forEach(d=>{let a=d.address?String(d.address).trim().toUpperCase():"SIN DIRECCIÓN";if(!g[a])g[a]={name:a,totalRx:0,rxPhq:0,docCount:0,spec:"Múltiple",gapSum:0,doctors:[]};g[a].totalRx+=d.totalRx;g[a].rxPhq+=d.rxPhq;g[a].gapSum+=d.gap;g[a].docCount++;g[a].doctors.push(d);});
+            data=Object.values(g).map(x=>{let sh=x.totalRx>0?(x.rxPhq/x.totalRx)*100:0;let cL='C';if(sh>=TH_LOY_HIGH)cL='A';else if(sh>TH_LOY_LOW)cL='B';return{...x,share:sh,catLoyalty:cL,matrixLabel:`Inst ${cL}`,isInst:true,gap:x.gapSum};}); data.sort((a,b)=>b.totalRx-a.totalRx);
+        }
+        CURRENT_TABLE_DATA=data; let tI=data.length; let tP=Math.ceil(tI/ROWS_PER_PAGE); if(currentPage>tP&&tP>0)currentPage=tP;if(currentPage===0&&tP>0)currentPage=1;
+        let sI=(currentPage-1)*ROWS_PER_PAGE; let pD=data.slice(sI,Math.min(sI+ROWS_PER_PAGE,tI));
+        let eH=document.getElementById('thEvalCol'); if(!groupByInstitution&&(currentUserRole==='visitador'||currentUserRole==='admin')){if(eH)eH.classList.remove('hidden');}else{if(eH)eH.classList.add('hidden');}
+        document.getElementById('pageInfo').innerText=tI>0?`Pág ${currentPage}/${tP} (${formatNumber(tI)} docs)`:"0 de 0"; document.getElementById('btnPrevPage').disabled=currentPage<=1; document.getElementById('btnNextPage').disabled=currentPage>=tP;
+
+        pD.forEach((d,idx)=>{
+            let tr=document.createElement('tr'); tr.className=`hover:bg-slate-50 border-b cursor-pointer group`; tr.onclick=()=>d.isInst?openInstitutionModal(sI+idx):openDoctorModal(d.id);
+            let cC="bg-slate-100 text-slate-600"; if(d.catPotency==='A'||(d.isInst&&d.catLoyalty==='A'))cC="bg-purple-100 text-purple-700 border-purple-200"; if(d.isZeroRx)cC="bg-slate-100 text-slate-400 opacity-70";
+            let gH=d.isZeroRx?`<span class="text-xs text-slate-400 font-bold">-</span>`:(d.gap>0?`<span class="badge-gap">+${formatNumber(d.gap)} Rx</span>`:`<span class="text-xs text-green-600 font-bold flex justify-center items-center"><span class="material-symbols-outlined text-[14px]">task_alt</span> Obj</span>`);
+            let fC=(d.ficheroData&&d.ficheroData.length&&!d.isInst)?"":"opacity-80"; let fI=(d.ficheroData&&d.ficheroData.length&&!d.isInst)?`<span class="bg-blue-100 text-blue-700 text-[10px] px-2 rounded-full font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">how_to_reg</span></span>`:""; let iI=d.isInst?`<span class="bg-indigo-100 text-indigo-700 text-[10px] px-2 rounded-full font-bold ml-2">${d.docCount} Docs</span>`:"";
+            
+            let eC="";
+            if(!d.isInst&&(currentUserRole==='visitador'||currentUserRole==='admin')){
+                if(currentUserRole==='visitador'){
+                    let evs=EVALUACIONES_VISITADOR[normalizeKey(d.id)]?Object.values(EVALUACIONES_VISITADOR[normalizeKey(d.id)]):[];
+                    if(evs.length){ let hN=evs.some(e=>e.notas&&e.notas.trim()!==''); let cT=evs.length>1?`${evs.length} Mercados`:`${evs.length} Mercado`; eC=`<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g,"\\'")}')"><button class="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold px-3 py-1.5 rounded-xl flex flex-col items-center mx-auto"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">EVALUADO</span>${hN?'<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>':''}</div><span class="text-[9px] font-medium text-indigo-500">${cT}</span></button></td>`; }
+                    else{ eC=`<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${d.id}', '${d.name.replace(/'/g,"\\'")}')"><button class="bg-white border hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-xl flex items-center gap-1 mx-auto"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`; }
+                } else {
+                    let es=getEvals(d.id); if(es.length){let su=es.map(e=>`<span class="bg-indigo-50 text-indigo-700 border px-2 py-1 rounded-md text-[10px] font-bold" title="${e.visitador} en ${e.mercado||'Gen'}">${e.cuadrante}</span>`).join(' ');eC=`<td class="p-4 text-center"><div class="flex flex-wrap items-center justify-center gap-1">${su}</div></td>`;}
+                    else eC=`<td class="p-4 text-center"><span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-1 rounded-md border">Pendiente</span></td>`;
+                }
+            }
+            tr.innerHTML=`<td class="p-4 ${fC}"><span class="font-bold font-display text-xs px-2 py-1.5 rounded-lg border ${cC}">${d.isZeroRx?'N/A':d.matrixLabel}</span></td><td class="p-4 ${fC}"><div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 group-hover:text-blue-600"><div class="font-bold text-sm text-slate-700 truncate max-w-[150px] md:max-w-[250px]" title="${d.name}">${d.name}</div><div class="flex items-center">${fI}${iI}</div></div></td><td class="p-4 text-xs text-slate-500 ${fC}">${d.spec}</td><td class="p-4 text-right font-mono text-sm text-slate-600 ${fC}">${d.isZeroRx?'-':formatNumber(d.totalRx)}</td><td class="p-4 text-right font-mono text-sm font-bold text-blue-600 ${fC}">${d.isZeroRx?'-':formatNumber(d.rxPhq)}</td><td class="p-4 text-center text-xs font-bold text-slate-700 ${fC}">${d.isZeroRx?'-':formatNumber(d.share,2)}%</td><td class="p-4 text-center ${fC}">${gH}</td>${eC}`; tbody.appendChild(tr);
+        });
+    }
+
+</script>
+</body>
+</html>
