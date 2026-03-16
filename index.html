@@ -1504,7 +1504,7 @@
 
     async function executeClearSession() { if(window.localforage) { await localforage.clear(); } window.location.reload(); }
 
-    const CONFIG_FILES = { AUDIT: 'datacloseup.csv', FICHERO: 'fichero_medico.csv' };
+    const CONFIG_FILES = { AUDIT: 'datacloseup.xlsx', FICHERO: 'fichero_medico.csv' };
 
     function formatNumber(num, decimals = 0) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(num); }
     function safeSetText(id, value) { const el = document.getElementById(id); if (el) el.innerText = value; }
