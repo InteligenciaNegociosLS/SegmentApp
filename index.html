@@ -1170,7 +1170,7 @@
                             </div>
                             <!-- P5 -->
                             <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">5) ¿Cuál es el costo estimado de la consulta?</label>
+                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">2) ¿Cuál es el costo estimado de la consulta?</label>
                                 <select id="surveyQ5" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm">
                                     <option value="">Seleccione un rango estimado...</option>
                                     <option value="Gratuita / Institucional">Gratuita / Institucional</option>
@@ -1191,7 +1191,7 @@
                         <div class="mt-2 space-y-4">
                             <!-- P2 -->
                             <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">2) De los pacientes semanales, ¿a cuántos les prescribe esta clase terapéutica?</label>
+                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">3) De los pacientes semanales, ¿a cuántos les prescribe esta clase terapéutica?</label>
                                 <select id="surveyQ2" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium transition shadow-sm border-l-4 border-l-emerald-400">
                                     <option value="">Seleccione un rango...</option>
                                     <option value="0">0 (Ninguno)</option>
@@ -1207,7 +1207,7 @@
 
                             <!-- P3 -->
                             <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">3) De esos pacientes, ¿a cuántos les prescribe nuestro producto?</label>
+                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">4) De esos pacientes, ¿a cuántos les prescribe nuestro producto?</label>
                                 <select id="surveyQ3" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium transition shadow-sm border-l-4 border-l-emerald-600">
                                     <option value="">Seleccione un rango...</option>
                                     <option value="0">0 (Ninguno)</option>
@@ -1222,7 +1222,7 @@
 
                             <!-- P4 -->
                             <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">4) Además de nuestro producto, ¿cuáles otros productos usa para esta patología?</label>
+                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">5) Además de nuestro producto, ¿cuáles otros productos usa para esta patología?</label>
                                 <input type="text" id="surveyQ4" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium transition shadow-sm" placeholder="Indique otros productos, o N/A">
                             </div>
                         </div>
@@ -1303,9 +1303,9 @@
 
     const SURVEY_QUESTION_LABELS = {
         q1: "1. ¿Cuántos pacientes atiende por semana en total?",
-        q2: "2. ¿A cuántos prescribe esta clase terapéutica?",
-        q3: "3. ¿A cuántos prescribe nuestro producto?",
-        q5: "5. ¿Costo estimado de consulta?"
+        q3: "3. ¿A cuántos prescribe esta clase terapéutica?",
+        q4: "4. ¿A cuántos prescribe nuestro producto?",
+        q2: "2. ¿Costo estimado de consulta?"
     };
 
     // Helper para convertir el texto de rango en un número promedio para operaciones matemáticas
@@ -1393,7 +1393,7 @@
                 </div>
                 <div class="flex gap-4 shrink-0">
                     <div class="flex flex-col">
-                        <label class="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Puntaje para A (+)</label>
+                        <label class="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Puntaje para A</label>
                         <input type="number" id="th_A" value="${SURVEY_THRESHOLDS.A}" class="w-24 px-3 py-2 border border-blue-200 rounded-xl text-sm font-bold text-center focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col">
