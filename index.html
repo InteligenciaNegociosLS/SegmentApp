@@ -2908,8 +2908,7 @@ const docMap = {};
             } catch(e) { console.error("Error leyendo claves desde Firebase:", e); }
         }
 
-// Generamos la lista de inputs
-        let html = reps.map((rep, idx) => `
+        container.innerHTML = reps.map((rep, idx) => `
             <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 transition shadow-sm gap-3 group">
                 <span class="text-sm font-bold text-slate-700 truncate flex-1 flex items-center gap-2" title="${rep}"><span class="bg-indigo-100 text-indigo-700 w-6 h-6 flex items-center justify-center rounded-full text-[10px]">${idx+1}</span>${rep}</span>
                 <div class="flex gap-2 items-center w-full sm:w-auto">
@@ -2921,20 +2920,7 @@ const docMap = {};
                 </div>
             </div>
         `).join('');
-        
-        // Agregamos un botón para descargar todas las claves al final de la lista
-        html += `
-            <div class="mt-6 text-center">
-                <button onclick="downloadClavesCSV()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-6 py-2.5 rounded-full text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 mx-auto">
-                    <span class="material-symbols-outlined text-[18px]">download</span> Descargar Claves (CSV)
-                </button>
-            </div>
-        `;
-        
-        container.innerHTML = html;
-        
-        // Guardamos el mapa en ventana global temporalmente para poder descargarlo
-        window.tempClavesData = reps.map(rep => ({ visitador: rep, clave: clavesMap[rep] || 'SIN CLAVE ASIGNADA' }));
+    };
 
     window.saveRepPwd = async function(repName, inputId) {
         const pwd = document.getElementById(inputId).value.trim();
@@ -2948,28 +2934,6 @@ const docMap = {};
         } catch(e) { console.error("Error guardando clave:", e); showToast("Error crítico al guardar la clave."); }
     };
 </script>
-window.downloadClavesCSV = function() {
-        if (!window.tempClavesData || window.tempClavesData.length === 0) {
-            showToast("No hay datos para descargar."); return;
-        }
-        
-        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-        csvContent += "Visitador,Clave Asignada\r\n"; // Cabeceras
-        
-        window.tempClavesData.forEach(row => {
-            const safeName = '"' + row.visitador.replace(/"/g, '""') + '"';
-            const safePwd = '"' + row.clave.replace(/"/g, '""') + '"';
-            csvContent += safeName + "," + safePwd + "\r\n";
-        });
-        
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "Claves_Visitadores_SegmentApp.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showToast("Archivo CSV descargado correctamente.");
-    };
+
 </body>
 </html>
