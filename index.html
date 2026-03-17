@@ -1301,11 +1301,11 @@
     let SURVEY_WEIGHTS = JSON.parse(JSON.stringify(DEFAULT_SURVEY_WEIGHTS));
     let SURVEY_THRESHOLDS = JSON.parse(JSON.stringify(DEFAULT_SURVEY_THRESHOLDS));
 
-    const SURVEY_QUESTION_LABELS = {
-        q1: "1. ¿Cuántos pacientes atiende por semana en total?",
-        q3: "3. ¿A cuántos prescribe esta clase terapéutica?",
-        q4: "4. ¿A cuántos prescribe nuestro producto?",
-        q2: "2. ¿Costo estimado de consulta?"
+const SURVEY_QUESTION_LABELS = {
+        q1: "1) Pacientes por semana (Total)",
+        q5: "2) Costo estimado de consulta",
+        q2: "3) Pacientes de la patología",
+        q3: "4) Pacientes con nuestro producto"
     };
 
     // Helper para convertir el texto de rango en un número promedio para operaciones matemáticas
