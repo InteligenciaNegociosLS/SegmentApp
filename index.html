@@ -1890,7 +1890,13 @@
         document.querySelectorAll('.stats-drawer').forEach(drawer => { if (shouldOpen) drawer.classList.add('open'); else drawer.classList.remove('open'); });
     }
 
-    function normalizeKey(key) { if(!key) return ""; let s = String(key).trim(); return s.replace(/^0+/, ''); }
+    function normalizeKey(key) {
+    if(!key) return ""; 
+    // Si la clave ya tiene el formato "MATRICULA_NOMBRE", devuelve la matrícula (la primera parte)
+    let s = String(key).trim();
+    if(s.includes('_')) return s.split('_')[0].replace(/^0+/, ''); 
+    return s.replace(/^0+/, '');
+}
 
     window.addEventListener('DOMContentLoaded', () => { 
         generateMatrixGridHTML(); document.getElementById('sliderLow').value = TH_LOY_LOW; document.getElementById('sliderHigh').value = TH_LOY_HIGH;
@@ -2199,34 +2205,39 @@
             if(fGeneric !== 'all' && row.generic !== fGeneric) return false; return true;
         });
         
-        const docMap = {}; const allProductTotals = {}; 
-        universeRows.forEach(row => {
-            const id = (row.license + "_" + row.doc.trim().toUpperCase()).replace(/\s+/g, '_');
-    if(!docMap[id]) { 
-        docMap[id] = { 
-            id: id, 
+// ... dentro de aggregateAndCalculate ...
+const docMap = {}; 
+
+universeRows.forEach(row => {
+    // ID ÚNICO PARA CÁLCULO (Concatenado)
+    const idUnico = (row.license + "_" + row.doc.trim().toUpperCase()).replace(/\s+/g, '_');
+    
+    if(!docMap[idUnico]) { 
+        docMap[idUnico] = { 
+            id: idUnico,         // Este es el ID nuevo para la matriz
+            originalId: row.license, // GUARDAMOS LA MATRÍCULA ORIGINAL
             name: row.doc, 
             address: row.address, 
             spec: row.spec, 
-            // NUEVO: Un mapa para guardar el valor más reciente de cada producto por médico
-            productosUnicos: {} 
+            productosUnicos: {} // Aquí guardaremos los Rx
         }; 
     }
     
-    // Guardamos el valor de Rx del producto en el mapa del médico.
-    // Si el producto aparece en otro mercado, sobrescribirá el valor (o puedes sumar si es lo que deseas)
-    docMap[id].productosUnicos[row.prod] = row.rx; 
+    // Guardamos el Rx del producto. Si ya existe, lo sumamos (así no duplicamos mercados)
+    docMap[idUnico].productosUnicos[row.prod] = (docMap[idUnico].productosUnicos[row.prod] || 0) + row.rx;
+    
+    // Guardamos las filas originales para no perder el detalle del fichero
+    if(!docMap[idUnico].rows) docMap[idUnico].rows = [];
+    docMap[idUnico].rows.push(row);
 });
-        // Procesar totales únicos después de agrupar todo
-Object.values(docMap).forEach(d => {
+
+        Object.values(docMap).forEach(d => {
     d.totalRx = 0;
     d.rxPhq = 0;
     
-    Object.entries(d.productosUnicos).forEach(([prodName, rxVal]) => {
-        d.totalRx += rxVal; // Suma cada producto una sola vez
-        if (isPhq(prodName)) {
-            d.rxPhq += rxVal; // Suma tu producto una sola vez
-        }
+    Object.entries(d.productosUnicos).forEach(([prod, rx]) => {
+        d.totalRx += rx;
+        if (isPhq(prod)) d.rxPhq += rx;
     });
 });
 
