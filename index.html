@@ -2201,12 +2201,34 @@
         
         const docMap = {}; const allProductTotals = {}; 
         universeRows.forEach(row => {
-            const id = row.license;
-            if(!docMap[id]) { docMap[id] = { id: id, name: row.doc, address: row.address, spec: row.spec, rxPhq: 0, rxTotalSum: 0, rows: [] }; }
-            docMap[id].rows.push(row); docMap[id].rxTotalSum += row.rx;
-            allProductTotals[row.prod] = (allProductTotals[row.prod] || 0) + row.rx;
-            if(isPhq(row.prod) && (FILTER_STATE.Product.length === FILTER_OPTIONS.Product.length || FILTER_STATE.Product.includes(row.prod))) docMap[id].rxPhq += row.rx;
-        });
+            const id = (row.license + "_" + row.doc.trim().toUpperCase()).replace(/\s+/g, '_');
+    if(!docMap[id]) { 
+        docMap[id] = { 
+            id: id, 
+            name: row.doc, 
+            address: row.address, 
+            spec: row.spec, 
+            // NUEVO: Un mapa para guardar el valor más reciente de cada producto por médico
+            productosUnicos: {} 
+        }; 
+    }
+    
+    // Guardamos el valor de Rx del producto en el mapa del médico.
+    // Si el producto aparece en otro mercado, sobrescribirá el valor (o puedes sumar si es lo que deseas)
+    docMap[id].productosUnicos[row.prod] = row.rx; 
+});
+        // Procesar totales únicos después de agrupar todo
+Object.values(docMap).forEach(d => {
+    d.totalRx = 0;
+    d.rxPhq = 0;
+    
+    Object.entries(d.productosUnicos).forEach(([prodName, rxVal]) => {
+        d.totalRx += rxVal; // Suma cada producto una sola vez
+        if (isPhq(prodName)) {
+            d.rxPhq += rxVal; // Suma tu producto una sola vez
+        }
+    });
+});
 
         CURRENT_COMP_BREAKDOWN = Object.entries(allProductTotals).map(([k, v]) => ({ prod: k, rx: v, type: isPhq(k) ? 'PHQ' : 'Comp' })).sort((a,b) => b.rx - a.rx);
 
