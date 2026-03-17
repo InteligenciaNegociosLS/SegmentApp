@@ -1890,7 +1890,13 @@
         document.querySelectorAll('.stats-drawer').forEach(drawer => { if (shouldOpen) drawer.classList.add('open'); else drawer.classList.remove('open'); });
     }
 
-    function normalizeKey(key) { if(!key) return ""; let s = String(key).trim(); return s.replace(/^0+/, ''); }
+  function normalizeKey(key) {
+    if(!key) return ""; 
+    let s = String(key).trim();
+    // Si es un ID compuesto, toma solo la parte de la matrícula (antes del _)
+    if(s.includes('_')) return s.split('_')[0].replace(/^0+/, ''); 
+    return s.replace(/^0+/, '');
+}
 
     window.addEventListener('DOMContentLoaded', () => { 
         generateMatrixGridHTML(); document.getElementById('sliderLow').value = TH_LOY_LOW; document.getElementById('sliderHigh').value = TH_LOY_HIGH;
@@ -2192,66 +2198,68 @@
     }
 
     function aggregateAndCalculate() {
-        const fStatus = document.getElementById('filterStatus').value; const fGeneric = document.getElementById('filterGeneric').value;
-        const universeRows = RAW_DATA.filter(row => {
-            if(!FILTER_STATE.Market.includes(row.market)) return false; if(!FILTER_STATE.Region.includes(row.region)) return false; if(!FILTER_STATE.Spec.includes(row.spec)) return false;
-            if(!FILTER_STATE.Molecule.includes(row.molecule)) return false; if(!FILTER_STATE.Class.includes(row.class)) return false; if(!FILTER_STATE.Lab.includes(row.lab)) return false;
-            if(fGeneric !== 'all' && row.generic !== fGeneric) return false; return true;
-        });
+const fStatus = document.getElementById('filterStatus').value; 
+    const fGeneric = document.getElementById('filterGeneric').value;
+    
+    const universeRows = RAW_DATA.filter(row => {
+        if(!FILTER_STATE.Market.includes(row.market)) return false; 
+        if(!FILTER_STATE.Region.includes(row.region)) return false; 
+        if(!FILTER_STATE.Spec.includes(row.spec)) return false;
+        if(!FILTER_STATE.Molecule.includes(row.molecule)) return false; 
+        if(!FILTER_STATE.Class.includes(row.class)) return false; 
+        if(!FILTER_STATE.Lab.includes(row.lab)) return false;
+        if(fGeneric !== 'all' && row.generic !== fGeneric) return false; 
+        return true;
+    });
+    
+    const docMap = {}; 
+    
+    // 1. Agrupación única por ID compuesto (Matrícula + Nombre)
+    universeRows.forEach(row => {
+        // Concatenamos para asegurar unicidad
+        const idUnico = (row.license + "_" + row.doc.trim().toUpperCase()).replace(/\s+/g, '_');
         
-        const docMap = {}; const allProductTotals = {}; 
-        universeRows.forEach(row => {
-            const id = row.license;
-            if(!docMap[id]) { docMap[id] = { id: id, name: row.doc, address: row.address, spec: row.spec, rxPhq: 0, rxTotalSum: 0, rows: [] }; }
-            docMap[id].rows.push(row); docMap[id].rxTotalSum += row.rx;
-            allProductTotals[row.prod] = (allProductTotals[row.prod] || 0) + row.rx;
-            if(isPhq(row.prod) && (FILTER_STATE.Product.length === FILTER_OPTIONS.Product.length || FILTER_STATE.Product.includes(row.prod))) docMap[id].rxPhq += row.rx;
-        });
-
-        CURRENT_COMP_BREAKDOWN = Object.entries(allProductTotals).map(([k, v]) => ({ prod: k, rx: v, type: isPhq(k) ? 'PHQ' : 'Comp' })).sort((a,b) => b.rx - a.rx);
-
-        let doctors = Object.values(docMap).map(d => {
-            const denominator = d.rxTotalSum; const share = denominator > 0 ? (d.rxPhq / denominator) * 100 : 0;
-            let catLoyalty = 'C'; if (share >= TH_LOY_HIGH) catLoyalty = 'A'; else if (share > TH_LOY_LOW) catLoyalty = 'B';
-            let targetLabel = ""; let gap = 0;
-            if (share < TH_LOY_LOW) { gap = Math.ceil(denominator * (TH_LOY_LOW/100)) - d.rxPhq; targetLabel = `para ser B (${TH_LOY_LOW}%)`; } 
-            else if (share < TH_LOY_HIGH) { gap = Math.ceil(denominator * (TH_LOY_HIGH/100)) - d.rxPhq; targetLabel = `para ser A (${TH_LOY_HIGH}%)`; }
-            if (gap < 0) gap = 0;
-            return { ...d, totalRx: denominator, share, catLoyalty, gap, targetLabel, ficheroData: FICHERO_MAP.get(normalizeKey(d.id)) || [], isZeroRx: false };
-        });
-
-        let visTotalFichero = 0; let visTotalCruzados = 0;
-        if (currentUserRole === 'visitador') {
-            let assignedDocsMap = new Map();
-            FICHERO_MAP.forEach((rows, docId) => {
-                 const isAssigned = rows.some(fRow => {
-                     const repKey = getFicheroRepKey(fRow);
-                     return repKey && fRow[repKey] && String(fRow[repKey]).toUpperCase().trim() === currentVisitadorName.toUpperCase();
-                 });
-                 if (isAssigned) { visTotalFichero++; assignedDocsMap.set(docId, rows); }
-            });
-
-            doctors = doctors.filter(d => {
-                const hasAssigned = assignedDocsMap.has(normalizeKey(d.id));
-                if(hasAssigned) visTotalCruzados++;
-                return hasAssigned;
-            });
-
-            assignedDocsMap.forEach((rows, docId) => {
-                if (!doctors.find(d => normalizeKey(d.id) === docId)) {
-                    const baseRow = rows[0];
-                    let nameKey = Object.keys(baseRow).find(k => /^(nombre|medico|médico|doctor|doc)$/i.test(k.trim().toLowerCase()));
-                    if (!nameKey) nameKey = Object.keys(baseRow).find(k => /nombre|med|doc/i.test(k) && !/visit|rep|agente|promotor|asesor/i.test(k));
-                    const specKey = Object.keys(baseRow).find(k => /esp|spec/i.test(k)); const addrKey = Object.keys(baseRow).find(k => /dir|address|inst/i.test(k));
-                    
-                    doctors.push({
-                        id: docId, name: (nameKey && baseRow[nameKey]) ? String(baseRow[nameKey]).trim() : `Médico no mapeado (${docId})`, 
-                        spec: (specKey && baseRow[specKey]) ? String(baseRow[specKey]).trim() : "S/E", address: (addrKey && baseRow[addrKey]) ? String(baseRow[addrKey]).trim() : "",
-                        rxPhq: 0, totalRx: 0, rxTotalSum: 0, share: 0, catLoyalty: 'C', gap: 0, targetLabel: "", ficheroData: rows, rows: [], isZeroRx: true
-                    });
-                }
-            });
+        if(!docMap[idUnico]) { 
+            docMap[idUnico] = { 
+                id: idUnico, 
+                originalId: row.license, // Guardamos la matrícula para Firebase/Fichero
+                name: row.doc, 
+                address: row.address, 
+                spec: row.spec, 
+                productosUnicos: {}, // Mapa para no duplicar productos
+                rows: [] 
+            }; 
         }
+        
+        docMap[idUnico].rows.push(row);
+        // Guardamos el Rx del producto. Si ya existe, se suma (para consolidar mercados)
+        docMap[idUnico].productosUnicos[row.prod] = (docMap[idUnico].productosUnicos[row.prod] || 0) + row.rx;
+    });
+
+    // 2. Cálculo de totales limpios
+    let doctors = Object.values(docMap).map(d => {
+        d.totalRx = 0;
+        d.rxPhq = 0;
+        
+        Object.entries(d.productosUnicos).forEach(([prod, rx]) => {
+            d.totalRx += rx;
+            if (isPhq(prod)) d.rxPhq += rx;
+        });
+
+        const share = d.totalRx > 0 ? (d.rxPhq / d.totalRx) * 100 : 0;
+        let catLoyalty = 'C'; if (share >= TH_LOY_HIGH) catLoyalty = 'A'; else if (share > TH_LOY_LOW) catLoyalty = 'B';
+        
+        let gap = 0;
+        if (share < TH_LOY_LOW) gap = Math.ceil(d.totalRx * (TH_LOY_LOW/100)) - d.rxPhq;
+        else if (share < TH_LOY_HIGH) gap = Math.ceil(d.totalRx * (TH_LOY_HIGH/100)) - d.rxPhq;
+        
+        return { 
+            ...d, 
+            share, catLoyalty, gap: gap < 0 ? 0 : gap, 
+            ficheroData: FICHERO_MAP.get(normalizeKey(d.originalId)) || [], 
+            isZeroRx: false 
+        };
+    });
 
         if (FILTER_STATE.Rep.length < FILTER_OPTIONS.Rep.length && currentUserRole !== 'visitador') {
             doctors = doctors.filter(d => d.ficheroData.some(row => { 
