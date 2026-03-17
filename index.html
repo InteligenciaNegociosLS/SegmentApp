@@ -1893,6 +1893,7 @@
     function normalizeKey(key) { 
     if(!key) return ""; 
     let s = String(key).trim(); 
+    if(s.includes('_')) s = s.split('_')[0]; // Magia: Si tiene nombre, lo quita y deja solo la matrícula
     return s.replace(/^0+/, ''); 
 }
 
@@ -2204,58 +2205,34 @@
         });
         
 const docMap = {}; 
-        const allProductTotals = {}; 
-        
         universeRows.forEach(row => {
-            // Mantenemos la matrícula como ID para que el Fichero y Firebase sigan funcionando
-            const id = normalizeKey(row.license); 
+            // 1. ID único imaginario (Matrícula + Nombre) para no mezclar médicos
+            const cleanLicense = row.license ? String(row.license).trim().replace(/^0+/, '') : "";
+            const id = cleanLicense + "_" + row.doc.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
             
             if(!docMap[id]) { 
-                docMap[id] = { 
-                    id: id, 
-                    name: row.doc, 
-                    address: row.address, 
-                    spec: row.spec, 
-                    rows: [],
-                    // Mapa temporal para consolidar productos únicos por médico
-                    tempProductos: {} 
-                }; 
+                docMap[id] = { id: id, name: row.doc, address: row.address, spec: row.spec, rxPhq: 0, rxTotalSum: 0, rows: [], uniqueProds: {} }; 
             }
+            docMap[id].rows.push(row); 
             
-            docMap[id].rows.push(row);
-            // Consolidamos recetas del producto sin duplicar
-            docMap[id].tempProductos[row.prod] = (docMap[id].tempProductos[row.prod] || 0) + row.rx;
-            
-            // Consolidamos total de mercado
-            allProductTotals[row.prod] = (allProductTotals[row.prod] || 0) + row.rx;
+            // 2. Guardamos el producto una sola vez por médico (tomamos el valor más alto si difiere entre mercados)
+            docMap[id].uniqueProds[row.prod] = Math.max(docMap[id].uniqueProds[row.prod] || 0, row.rx);
         });
 
-        CURRENT_COMP_BREAKDOWN = Object.entries(allProductTotals).map(([k, v]) => ({ prod: k, rx: v, type: isPhq(k) ? 'PHQ' : 'Comp' })).sort((a,b) => b.rx - a.rx);
-
-        let doctors = Object.values(docMap).map(d => {
-            d.totalRx = 0;
-            d.rxPhq = 0;
-            Object.entries(d.tempProductos).forEach(([prod, rx]) => {
-                d.totalRx += rx;
-                if (isPhq(prod)) d.rxPhq += rx;
+        const realProductTotals = {};
+        Object.values(docMap).forEach(d => {
+            Object.entries(d.uniqueProds).forEach(([prod, rx]) => {
+                // Sumamos al total del médico sin duplicar
+                d.rxTotalSum += rx;
+                if(isPhq(prod) && (FILTER_STATE.Product.length === FILTER_OPTIONS.Product.length || FILTER_STATE.Product.includes(prod))) {
+                    d.rxPhq += rx;
+                }
+                // Sumamos al total global para arreglar la tarjeta del Competidor
+                realProductTotals[prod] = (realProductTotals[prod] || 0) + rx;
             });
-
-            const share = d.totalRx > 0 ? (d.rxPhq / d.totalRx) * 100 : 0;
-            let catLoyalty = 'C'; if (share >= TH_LOY_HIGH) catLoyalty = 'A'; else if (share > TH_LOY_LOW) catLoyalty = 'B';
-            
-            let gap = 0;
-            if (share < TH_LOY_LOW) gap = Math.ceil(d.totalRx * (TH_LOY_LOW/100)) - d.rxPhq;
-            else if (share < TH_LOY_HIGH) gap = Math.ceil(d.totalRx * (TH_LOY_HIGH/100)) - d.rxPhq;
-            
-            return { 
-                ...d, 
-                share, catLoyalty, gap: gap < 0 ? 0 : gap, 
-                ficheroData: FICHERO_MAP.get(normalizeKey(d.id)) || [], 
-                isZeroRx: false 
-            };
         });
 
-        CURRENT_COMP_BREAKDOWN = Object.entries(allProductTotals).map(([k, v]) => ({ prod: k, rx: v, type: isPhq(k) ? 'PHQ' : 'Comp' })).sort((a,b) => b.rx - a.rx);
+        CURRENT_COMP_BREAKDOWN = Object.entries(realProductTotals).map(([k, v]) => ({ prod: k, rx: v, type: isPhq(k) ? 'PHQ' : 'Comp' })).sort((a,b) => b.rx - a.rx);
 
         let doctors = Object.values(docMap).map(d => {
             const denominator = d.rxTotalSum; const share = denominator > 0 ? (d.rxPhq / denominator) * 100 : 0;
