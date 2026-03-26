@@ -5,7 +5,7 @@
     <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v27 GAS- Dev. Hernando Sanoja</title>
+    <title>SegmentApp v28</title>
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
     
@@ -13,14 +13,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
     
-    <!-- Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+<!-- Libraries -->
+    <!-- Core Libraries (Cargadas al inicio) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <!-- Las herramientas de exportación (Excel, PDF, Imágenes) se cargarán dinámicamente -->
 
     <style>
         /* M3 Typography & Base */
@@ -182,12 +180,12 @@
                 <span class="material-symbols-outlined text-2xl">apps</span>
             </div>
             <div class="flex flex-col justify-center">
-                <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v27 GAS estable • Dev. Hernando Sanoja</span>
-            </div>
+                <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp v28</h1>
+<span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • Dev. Hernando Sanoja</span>            </div>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
             
+            <div id="offlineIndicator" class="hidden bg-rose-50 border border-rose-200 text-rose-600 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm items-center gap-1 animate-pulse"><span class="material-symbols-outlined text-[16px]">wifi_off</span> <span class="hidden sm:inline">Sin Conexión</span></div>
             <div id="navUserInfo" class="hidden flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full shadow-sm">
                 <span class="material-symbols-outlined text-indigo-600 text-[18px]">account_circle</span>
                 <span id="navUserName" class="text-xs font-bold text-indigo-800 hidden sm:inline">Visitador</span>
@@ -223,9 +221,15 @@
 <!-- Main Content -->
 <main class="max-w-7xl mx-auto px-4 pt-24 pb-12">
     
-    <div id="restoringSession" class="hidden text-center py-12">
+<div id="restoringSession" class="hidden text-center py-12">
         <span class="material-symbols-outlined text-5xl text-blue-600 animate-spin-reverse">sync</span>
         <p class="text-slate-600 text-sm mt-3 font-medium font-display" id="loadingText">Iniciando sistema...</p>
+        
+        <!-- NUEVA BARRA DE PROGRESO -->
+        <div class="w-64 max-w-full mx-auto mt-4 bg-slate-200 rounded-full h-2 overflow-hidden hidden shadow-inner" id="loadingBarContainer">
+            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" id="loadingBarFill" style="width: 0%"></div>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-1 font-mono font-bold hidden tracking-widest uppercase" id="loadingBytes">0 MB / 0 MB</p>
     </div>
 
     <!-- Analysis Tools Bar (Admin Mode) -->
@@ -1283,6 +1287,26 @@
     let currentVisitadorName = "";
     let isAdmin = false;
     let currentMatrixMode = 'closeup'; // Toggle para Matriz CloseUp o Matriz Encuesta
+
+    // --- SISTEMA DE LAZY LOADING PARA LIBRERÍAS PESADAS ---
+    const LIBRARIES = {
+        xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+        jspdf: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+        autotable: "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js",
+        html2canvas: "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+    };
+
+    async function loadLibrary(name) {
+        if (window[name] || (name === 'jspdf' && window.jspdf) || (name === 'xlsx' && window.XLSX)) return true;
+        return new Promise((resolve, reject) => {
+            showToast(`Descargando herramienta para exportar...`);
+            const script = document.createElement('script');
+            script.src = LIBRARIES[name];
+            script.onload = () => resolve(true);
+            script.onerror = () => { showToast("Error al cargar la herramienta. Revisa tu conexión."); reject(false); };
+            document.head.appendChild(script);
+        });
+    }
     
     // Evaluaciones
     let EVALUACIONES_VISITADOR = {}; 
@@ -1483,10 +1507,53 @@ const SURVEY_QUESTION_LABELS = {
         document.getElementById('adminAuthModal').classList.remove('hidden'); document.getElementById('adminPwdInput').focus();
     }
 
-    function processAdminAuth() {
-        const pwd = document.getElementById('adminPwdInput').value;
-        if(pwd === "admin123") { loginSuccess('admin', 'Administrador'); showToast("Modo Administrador activado"); } 
-        else { document.getElementById('adminAuthError').classList.remove('hidden'); }
+  async function processAdminAuth() {
+        const pwdInput = document.getElementById('adminPwdInput');
+        const pwd = pwdInput.value.trim();
+        const errorEl = document.getElementById('adminAuthError');
+        const btnAcceder = document.querySelector('#adminAuthModal button.bg-blue-600');
+        
+        if(!pwd) { errorEl.innerText = "Ingresa una clave."; errorEl.classList.remove('hidden'); return; }
+        
+        // Efecto visual de carga
+        const oldBtnText = btnAcceder.innerHTML;
+        btnAcceder.disabled = true;
+        btnAcceder.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse text-[18px]">sync</span> Verificando...';
+        errorEl.classList.add('hidden');
+
+        try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
+            
+            // Buscamos en Firebase el documento 'admin_settings'
+            const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'config', 'admin_settings');
+            const docSnap = await window.firebaseGetDoc(docRef);
+            
+            let realPwd = "admin_seguro_2024"; // Fallback por si no existe el doc en Firebase
+            
+            if (docSnap.exists() && docSnap.data().clave) {
+                realPwd = docSnap.data().clave;
+            } else {
+                // Si el documento no existe en Firebase, lo creamos con una clave por defecto (Solo la primera vez)
+                await window.firebaseSetDoc(docRef, { clave: realPwd, creado_en: new Date().toISOString() });
+                console.log("Se creó la clave admin por defecto en Firebase.");
+            }
+
+            if(pwd === realPwd) { 
+                loginSuccess('admin', 'Administrador'); 
+                showToast("Modo Administrador activado"); 
+                pwdInput.value = ''; // Limpiar input por seguridad
+            } else { 
+                errorEl.innerText = "Clave incorrecta. Intenta de nuevo.";
+                errorEl.classList.remove('hidden'); 
+            }
+        } catch(e) { 
+            console.error("Error validando admin", e); 
+            errorEl.innerText = "Error de conexión con el servidor.";
+            errorEl.classList.remove('hidden');
+        } finally {
+            btnAcceder.disabled = false;
+            btnAcceder.innerHTML = oldBtnText;
+        }
     }
 
     function updateAdminUI() {
@@ -1504,7 +1571,7 @@ const SURVEY_QUESTION_LABELS = {
 
     async function executeClearSession() { if(window.localforage) { await localforage.clear(); } window.location.reload(); }
 
-    const CONFIG_FILES = { AUDIT: 'datacloseup.xlsx', FICHERO: 'fichero_medico.csv' };
+    const CONFIG_FILES = { AUDIT: 'datacloseup.csv.gz', FICHERO: 'fichero_medico.csv.gz' };
 
     function formatNumber(num, decimals = 0) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(num); }
     function safeSetText(id, value) { const el = document.getElementById(id); if (el) el.innerText = value; }
@@ -1536,7 +1603,7 @@ const SURVEY_QUESTION_LABELS = {
     let SHOW_SUMMARIES = false;
     let groupByInstitution = false;
     
-    let currentPage = 1; const ROWS_PER_PAGE = 150;
+   let currentPage = 1; const ROWS_PER_PAGE = 50; // Reducido de 150 a 50 para evitar OOM (Crashes) en iPad
     
     let TH_LOY_LOW = 33; let TH_LOY_HIGH = 66; let TH_POT_LOW = 33; let TH_POT_HIGH = 66;
 
@@ -1594,14 +1661,108 @@ const SURVEY_QUESTION_LABELS = {
         } catch (err) { console.error("Storage Error:", err); loadRepoData(); }
     }
 
+ // Función extractora de CSV de alto rendimiento
+    function parseCSVFast(str) {
+        const delim = str.indexOf('\t') !== -1 ? '\t' : (str.indexOf(';') !== -1 ? ';' : ',');
+        const regex = new RegExp(`(\\${delim}|\\r?\\n|\\r|^)(?:"([^"]*(?:""[^"]*)*)"|([^"\\${delim}\\r\\n]*))`, 'gi');
+        let result = [[]]; let matches = null;
+        while (matches = regex.exec(str)) {
+            let m1 = matches[1]; if (m1.length && m1 !== delim) result.push([]);
+            let val = matches[2] ? matches[2].replace(/""/g, '"') : matches[3];
+            result[result.length - 1].push(val);
+        }
+        const headers = result[0].map(h => h ? h.trim() : "");
+        const json = [];
+        for(let i=1; i<result.length; i++) {
+            if(result[i].length === 1 && !result[i][0]) continue;
+            let obj = {};
+            for(let j=0; j<headers.length; j++) { obj[headers[j] || `col_${j}`] = result[i][j] ? result[i][j].trim() : ""; }
+            json.push(obj);
+        }
+        return json;
+    }
+
+    // Función de descarga con Stream, Descompresión y Barra de Progreso
     async function fetchFileAsJson(filename) {
         try {
-            const response = await fetch(filename);
+            safeSetText('loadingText', `Conectando con Servidor...`);
+            const response = await fetch(filename, { cache: "force-cache" });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            return XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
-        } catch (error) { console.warn(`Error cargando ${filename}:`, error); return null; }
+            
+            const contentLength = response.headers.get('content-length');
+            const total = contentLength ? parseInt(contentLength, 10) : 0;
+            let loaded = 0;
+
+            const reader = response.body.getReader();
+            const chunks = [];
+            const barContainer = document.getElementById('loadingBarContainer');
+            const barFill = document.getElementById('loadingBarFill');
+            const bytesText = document.getElementById('loadingBytes');
+            
+            barContainer.classList.remove('hidden'); bytesText.classList.remove('hidden');
+
+            safeSetText('loadingText', `Descargando ${filename.split('/').pop()}...`);
+
+            // Leer archivo en fragmentos (Chunks) para animar la barra
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                loaded += value.length;
+                
+                if (total > 0) {
+                    const percent = Math.round((loaded / total) * 100);
+                    barFill.style.width = percent + '%';
+                    bytesText.innerText = `${(loaded / 1048576).toFixed(2)} MB / ${(total / 1048576).toFixed(2)} MB`;
+                } else {
+                    barFill.style.width = '100%'; barFill.classList.add('animate-pulse');
+                    bytesText.innerText = `${(loaded / 1048576).toFixed(2)} MB obtenidos...`;
+                }
+            }
+
+            safeSetText('loadingText', `Procesando base de datos...`);
+            
+            const combined = new Uint8Array(loaded);
+            let position = 0;
+            for(let chunk of chunks) { combined.set(chunk, position); position += chunk.length; }
+
+            let text = "";
+            // Si es un archivo GZIP, intentamos descomprimirlo nativamente
+            if (filename.endsWith('.gz')) {
+                try {
+                    const ds = new DecompressionStream('gzip');
+                    const writer = ds.writable.getWriter();
+                    writer.write(combined); writer.close();
+                    
+                    const output = []; const resReader = ds.readable.getReader();
+                    while(true) {
+                        const {done, value} = await resReader.read();
+                        if(done) break; output.push(value);
+                    }
+                    const decCombined = new Uint8Array(output.reduce((acc, val) => acc + val.length, 0));
+                    let offset = 0;
+                    for(let chunk of output) { decCombined.set(chunk, offset); offset += chunk.length; }
+                    text = new TextDecoder('utf-8').decode(decCombined);
+                } catch(e) {
+                    // Si falla, significa que Vercel/GitHub ya lo descomprimió automáticamente en el envío
+                    text = new TextDecoder('utf-8').decode(combined);
+                }
+            } else if (filename.includes('.csv')) {
+                text = new TextDecoder('utf-8').decode(combined);
+            } else {
+                // Fallback para archivos Excel antiguos
+                const workbook = XLSX.read(combined.buffer, { type: 'array' });
+                return XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+            }
+
+            return parseCSVFast(text);
+
+        } catch (error) { 
+            console.warn(`Error cargando ${filename}:`, error); 
+            return null; 
+        } finally {
+            document.getElementById('loadingBarFill').classList.remove('animate-pulse');
+        }
     }
 
     async function loadRepoData() {
@@ -1718,7 +1879,8 @@ const SURVEY_QUESTION_LABELS = {
         }
     }
 
-    function exportMatrixToPNG() {
+async function exportMatrixToPNG() {
+        await loadLibrary('html2canvas');
         const target = document.getElementById('matrixCaptureTarget'); showToast("Generando imagen de la matriz...");
         const origWidth = target.style.width; const origMinWidth = target.style.minWidth; const origOverflow = target.style.overflow;
         target.style.width = target.scrollWidth + 'px'; target.style.minWidth = target.scrollWidth + 'px'; target.style.overflow = 'visible';
@@ -1734,8 +1896,10 @@ const SURVEY_QUESTION_LABELS = {
         }, 200);
     }
 
-    function exportAdminEvaluationsExcel() {
+async function exportAdminEvaluationsExcel() {
         if (!ALL_EVALUATIONS || ALL_EVALUATIONS.length === 0) { showToast("No hay evaluaciones registradas para exportar."); return; }
+        await loadLibrary('xlsx');
+        
         const exportData = ALL_EVALUATIONS.map(ev => {
             const docIdNorm = normalizeKey(ev.medico_id); const docObj = PROCESSED_DATA.find(d => normalizeKey(d.id) === docIdNorm);
             let spec = "-"; let matrixLabel = "No visible (Fuera de filtro)";
@@ -1972,9 +2136,11 @@ const SURVEY_QUESTION_LABELS = {
     function toggleAllExportCB(state) { EXPORT_COLUMNS.forEach(col => { const cb = document.getElementById(`cb_${col.id}`); if (cb) { cb.checked = state; updateCbStyle(`label_${col.id}`, state); } }); }
     function executeExport() { if (currentExportTarget === 'excel') executeExcelExport(); else executePDFExport(); }
 
-    function executeExcelExport() {
+async function executeExcelExport() {
         const selectedCols = []; EXPORT_COLUMNS.forEach(col => { const cb = document.getElementById(`cb_${col.id}`); if (cb && cb.checked) selectedCols.push(col.id); });
         if (selectedCols.length === 0) { showToast("Debes seleccionar al menos una columna."); return; }
+
+        await loadLibrary('xlsx');
 
         let exportData = CURRENT_TABLE_DATA.map(d => {
             let rowObj = {}; const baseRow = d.rows && d.rows.length > 0 ? d.rows[0] : {};
@@ -2019,9 +2185,12 @@ const SURVEY_QUESTION_LABELS = {
         document.getElementById('exportColumnsModal').classList.add('hidden'); showToast("Excel exportado correctamente.");
     }
 
-    function executePDFExport() {
+async function executePDFExport() {
         const selectedCols = []; EXPORT_COLUMNS.forEach(col => { const cb = document.getElementById(`cb_${col.id}`); if (cb && cb.checked) selectedCols.push(col); });
         if (selectedCols.length === 0) { showToast("Debes seleccionar al menos una columna."); return; }
+
+        await loadLibrary('jspdf');
+        await loadLibrary('autotable');
 
         try {
             const { jsPDF } = window.jspdf; const doc = new jsPDF(selectedCols.length > 6 ? 'landscape' : 'portrait');
@@ -2317,6 +2486,9 @@ const docMap = {};
         });
 
         PROCESSED_DATA = doctors;
+
+        // Limpieza explícita para forzar al Garbage Collector (Safari/iPad)
+        Object.keys(docMap).forEach(k => delete docMap[k]); 
         
         let topCompName = "N/A"; let topCompRx = 0;
         const competitorsOnly = CURRENT_COMP_BREAKDOWN.filter(c => c.type === 'Comp');
@@ -2488,6 +2660,15 @@ const docMap = {};
         document.getElementById('clearFilterBtn').classList.add('hidden'); safeSetText('tableSubtitle', "Mostrando todos los registros"); resetPaginationAndRender();
     }
 
+    // Función global para manejar el clic optimizado en las filas sin sobrecargar la memoria
+    window.handleRowClick = function(isInst, realIndex, docId) {
+        if(isInst === 'true' || isInst === true) {
+            if(typeof openInstitutionModal === 'function') openInstitutionModal(realIndex);
+        } else {
+            openDoctorModal(docId);
+        }
+    };
+
     function prevPage() { if(currentPage > 1) { currentPage--; renderTable(); } }
     function nextPage() { const totalItems = CURRENT_TABLE_DATA.length; if(currentPage * ROWS_PER_PAGE < totalItems) { currentPage++; renderTable(); } }
 
@@ -2525,9 +2706,12 @@ const docMap = {};
         document.getElementById('pageInfo').innerText = totalItems > 0 ? `Página ${currentPage} de ${totalPages} (${formatNumber(totalItems)} médicos)` : "Mostrando 0 de 0";
         document.getElementById('btnPrevPage').disabled = currentPage <= 1; document.getElementById('btnNextPage').disabled = currentPage >= totalPages;
 
+      // Uso de un Array Buffer para construir el HTML de la tabla. 
+        // Evita fugas de memoria y bloqueos de renderizado en iOS/Safari.
+        const htmlBuffer = [];
+
         pageData.forEach((d, idxInPage) => {
-            const tr = document.createElement('tr'); tr.className = `hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer group`;
-            const realIndex = startIdx + idxInPage; tr.onclick = () => d.isInst ? openInstitutionModal(realIndex) : openDoctorModal(d.id); 
+            const realIndex = startIdx + idxInPage; 
             
             let colorClass = "bg-slate-100 text-slate-600";
             if(d.catPotency === 'A' || (d.isInst && d.catLoyalty==='A')) colorClass = "bg-purple-100 text-purple-700 border border-purple-200";
@@ -2557,21 +2741,26 @@ const docMap = {};
                 }
             }
 
-            // Aquí se muestra la etiqueta según la vista activa (CloseUp o Encuesta)
             let renderLabel = d.matrixLabel;
             if (currentMatrixMode === 'survey' && !d.isInst) { renderLabel = d.surveyLabel; }
 
-            tr.innerHTML = `
-                <td class="p-4 ${fichClass}"><span class="font-bold font-display text-xs px-2 py-1.5 rounded-lg ${colorClass}">${d.isZeroRx ? 'N/A' : renderLabel}</span></td>
-                <td class="p-4 ${fichClass}"><div class="flex flex-col sm:flex-row sm:items-center gap-2 group-hover:text-blue-600 transition"><div class="font-bold text-sm text-slate-700 truncate max-w-[150px] md:max-w-[250px]" title="${d.name}">${d.name} ${d.isZeroRx ? '<span class="text-[9px] bg-slate-200 text-slate-500 px-1 rounded ml-1">Sin Rx</span>' : ''}</div><div class="flex flex-shrink-0 items-center gap-1">${fichIcon} ${instIconHtml}</div></div></td>
-                <td class="p-4 text-xs font-medium text-slate-500 ${fichClass}">${d.spec}</td>
-                <td class="p-4 text-right font-mono font-medium text-sm text-slate-600 ${fichClass}">${d.isZeroRx ? '-' : formatNumber(d.totalRx)}</td>
-                <td class="p-4 text-right font-mono text-sm font-bold text-blue-600 ${fichClass}">${d.isZeroRx ? '-' : formatNumber(d.rxPhq)}</td>
-                <td class="p-4 text-center text-xs font-bold text-slate-700 ${fichClass}">${d.isZeroRx ? '-' : formatNumber(d.share, 2)}%</td>
-                <td class="p-4 text-center ${fichClass}">${gapHtml}</td>
-                ${evalCellHtml}
-            `; tbody.appendChild(tr);
+            // Guardar la fila completa como texto
+            htmlBuffer.push(`
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer group" onclick="handleRowClick(${!!d.isInst}, ${realIndex}, '${d.id}')">
+                    <td class="p-4 ${fichClass}"><span class="font-bold font-display text-xs px-2 py-1.5 rounded-lg ${colorClass}">${d.isZeroRx ? 'N/A' : renderLabel}</span></td>
+                    <td class="p-4 ${fichClass}"><div class="flex flex-col sm:flex-row sm:items-center gap-2 group-hover:text-blue-600 transition"><div class="font-bold text-sm text-slate-700 truncate max-w-[150px] md:max-w-[250px]" title="${d.name}">${d.name} ${d.isZeroRx ? '<span class="text-[9px] bg-slate-200 text-slate-500 px-1 rounded ml-1">Sin Rx</span>' : ''}</div><div class="flex flex-shrink-0 items-center gap-1">${fichIcon} ${instIconHtml}</div></div></td>
+                    <td class="p-4 text-xs font-medium text-slate-500 ${fichClass}">${d.spec}</td>
+                    <td class="p-4 text-right font-mono font-medium text-sm text-slate-600 ${fichClass}">${d.isZeroRx ? '-' : formatNumber(d.totalRx)}</td>
+                    <td class="p-4 text-right font-mono text-sm font-bold text-blue-600 ${fichClass}">${d.isZeroRx ? '-' : formatNumber(d.rxPhq)}</td>
+                    <td class="p-4 text-center text-xs font-bold text-slate-700 ${fichClass}">${d.isZeroRx ? '-' : formatNumber(d.share, 2)}%</td>
+                    <td class="p-4 text-center ${fichClass}">${gapHtml}</td>
+                    ${evalCellHtml}
+                </tr>
+            `);
         });
+
+        // Inyección única al DOM (Evita congelamiento de Safari)
+        tbody.innerHTML = htmlBuffer.join('');
     }
 
     function getValueCaseInsensitive(obj, keyPart) { if(!obj) return null; const foundKey = Object.keys(obj).find(k => k.toUpperCase().includes(keyPart.toUpperCase())); return foundKey ? obj[foundKey] : null; }
@@ -2730,9 +2919,21 @@ const docMap = {};
         document.getElementById('dashboardContent').classList.remove('hidden'); document.getElementById('filterBar').classList.remove('hidden'); document.getElementById('filterBar').style.display = 'flex';
     }
 
-    function logoutSession() {
-        sessionStorage.removeItem('userRole'); sessionStorage.removeItem('userName');
-        currentUserRole = 'guest'; currentVisitadorName = ""; isAdmin = false; EVALUACIONES_VISITADOR = {}; ALL_EVALUATIONS = [];
+function logoutSession() {
+        // Limpieza profunda de seguridad
+        sessionStorage.clear(); // Borra absolutamente todo rastro de sesión
+        currentUserRole = 'guest'; 
+        currentVisitadorName = ""; 
+        isAdmin = false; 
+        
+        // Limpiar arrays de datos sensibles del DOM y la memoria RAM
+        EVALUACIONES_VISITADOR = {}; 
+        ALL_EVALUATIONS.length = 0; // Método seguro para vaciar arrays en JS
+        
+        // Borrar el valor del campo de contraseña (evita que el navegador lo autoguarde mal)
+        document.getElementById('adminPwdInput').value = '';
+        document.getElementById('visitadorPwd').value = '';
+    
         document.getElementById('navUserInfo').classList.add('hidden'); document.getElementById('btnLoginNavContainer').classList.remove('hidden');
         document.getElementById('visitadorDashboard').classList.add('hidden'); document.getElementById('adminDashboard').classList.add('hidden'); document.getElementById('textRep').parentElement.parentElement.classList.remove('hidden');
         
@@ -2812,7 +3013,7 @@ const docMap = {};
         element.classList.add('ring-4', 'ring-offset-2', 'ring-indigo-500', 'scale-105', 'z-10'); element.style.opacity = "1";
     }
 
-    async function saveEvaluation() {
+async function saveEvaluation() {
         const docId = document.getElementById('evalDocId').value; const selectedMarket = document.getElementById('evalMarketSelect').value;
         const quadrant = document.getElementById('evalSelectedQuadrant').value; const notas = document.getElementById('evalNotas').value.trim(); 
         const q1 = document.getElementById('surveyQ1').value; const q2 = document.getElementById('surveyQ2').value; const q3 = document.getElementById('surveyQ3').value;
@@ -2822,8 +3023,7 @@ const docMap = {};
         if (!q1 || !q2 || !q3 || !q5) { showToast("Por favor, completa todas las preguntas del paso 1 (Desplegables)."); return; }
         if (!quadrant) { showToast("Selecciona un cuadrante en la matriz (Paso 2)."); return; }
         if (!notas) { showToast("Por favor, ingresa una nota o comentario (Paso 3 Obligatorio)."); return; }
-        if (!window.firebaseAuth || !window.firebaseAuth.currentUser) { showToast("Error de conexión a la base de datos."); return; }
-
+        
         const btnSave = document.getElementById('btnSaveEval'); btnSave.disabled = true; btnSave.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Guardando...';
 
         try {
@@ -2831,43 +3031,70 @@ const docMap = {};
             let actualRepName = currentVisitadorName; const adminRepNameInput = document.getElementById('evalRepName').value;
             if(isAdmin && adminRepNameInput) { actualRepName = adminRepNameInput; }
 
+            // Seguridad Etapa 3
+            if(!isAdmin && actualRepName !== sessionStorage.getItem('userName')) { throw new Error("Violación de seguridad de sesión."); }
+            const sanitizedNotas = notas.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
             const payload = { 
                 visitador: actualRepName, medico_id: docId, medico_name: document.getElementById('evalModalDocName').innerText, 
-                mercado: selectedMarket, cuadrante: quadrant, notas: notas, survey: { q1, q2, q3, q4, q5 }, timestamp: new Date().toISOString() 
+                mercado: selectedMarket, cuadrante: quadrant, notas: sanitizedNotas, survey: { q1, q2, q3, q4, q5 }, timestamp: new Date().toISOString(),
+                _user_role: currentUserRole
             };
             
             let docRefId = ""; const adminFirebaseId = document.getElementById('evalFirebaseId').value;
-            if(isAdmin && adminFirebaseId) { docRefId = adminFirebaseId; } else { const cleanMarketName = selectedMarket.replace(/[^a-zA-Z0-9]/g, ""); docRefId = `${actualRepName}_${docId}_${cleanMarketName}`; }
+            if(isAdmin && adminFirebaseId) { docRefId = adminFirebaseId; } else { 
+                const safeRepName = actualRepName.replace(/[^a-zA-Z0-9_-]/g, ""); const cleanMarketName = selectedMarket.replace(/[^a-zA-Z0-9_-]/g, ""); 
+                docRefId = `${safeRepName}_${docId}_${cleanMarketName}`; 
+            }
             
-            await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', docRefId), payload);
+            // --- LOGICA DE MODO OFFLINE ---
+            if (navigator.onLine && window.firebaseAuth && window.firebaseAuth.currentUser) {
+                // Hay internet: Subir a Firebase
+                await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', docRefId), payload);
+                showToast("Evaluación guardada en Firebase correctamente.");
+            } else {
+                // No hay internet (o Firebase falló temporalmente): Guardar en Cola Local
+                OFFLINE_QUEUE.push({ docRefId, payload });
+                await localforage.setItem('OFFLINE_QUEUE', OFFLINE_QUEUE);
+                showToast("Sin conexión: Evaluación guardada localmente. Se sincronizará al tener internet.");
+            }
+            // ------------------------------
             
+            // Actualizar memoria RAM local (para que la tabla cambie de color y refleje el cambio visualmente)
             if(!isAdmin) {
                 if(!EVALUACIONES_VISITADOR[docId]) EVALUACIONES_VISITADOR[docId] = {};
                 EVALUACIONES_VISITADOR[docId][selectedMarket] = payload;
                 
-                // Actualizar los datos globales (Q1 y Q5) para TODOS los mercados evaluados de este médico
                 for (let mkt in EVALUACIONES_VISITADOR[docId]) {
                     if(mkt !== selectedMarket && EVALUACIONES_VISITADOR[docId][mkt].survey) {
                         EVALUACIONES_VISITADOR[docId][mkt].survey.q1 = q1;
                         EVALUACIONES_VISITADOR[docId][mkt].survey.q5 = q5;
                         
-                        // Guardar en background la actualización global a firebase
-                        const otherRefId = `${actualRepName}_${docId}_${mkt.replace(/[^a-zA-Z0-9]/g, "")}`;
-                        window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', otherRefId), EVALUACIONES_VISITADOR[docId][mkt]);
+                        // Si actualiza otros mercados del mismo médico y estamos offline, mandarlo a la cola también
+                        const otherRefId = `${actualRepName.replace(/[^a-zA-Z0-9_-]/g, "")}_${docId}_${mkt.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+                        if (navigator.onLine && window.firebaseAuth) {
+                            window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', otherRefId), EVALUACIONES_VISITADOR[docId][mkt]);
+                        } else {
+                            OFFLINE_QUEUE.push({ docRefId: otherRefId, payload: EVALUACIONES_VISITADOR[docId][mkt] });
+                            localforage.setItem('OFFLINE_QUEUE', OFFLINE_QUEUE);
+                        }
                     }
                 }
             }
             
-            showToast("Evaluación guardada correctamente"); closeEvalModal();
-            
+            closeEvalModal();
             if(isAdmin) { fetchAllEvaluacionesAdmin(); } 
             else { resetPaginationAndRender(); aggregateAndCalculate(); updateVisitadorDashboard(parseInt(document.getElementById('visTotalFichero').innerText.replace(/\./g,'')), parseInt(document.getElementById('visTotalCruzados').innerText.replace(/\./g,''))); }
-        } catch(e) { console.error(e); showToast("Hubo un error al guardar. Revisa tu conexión."); } 
-        finally { btnSave.disabled = false; btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación'; }
+        } catch(e) { 
+            console.error(e); 
+            showToast("Hubo un error al guardar. Revisa tu conexión."); 
+        } finally { 
+            btnSave.disabled = false; btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación'; 
+        }
     }
 </script>
 
-<script type="module">
+    <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -2885,7 +3112,63 @@ const docMap = {};
     }
 </script>
 
+
 <script>
+    // --- SISTEMA DE SINCRONIZACIÓN OFFLINE INTELIGENTE ---
+    let OFFLINE_QUEUE = [];
+
+    async function initOfflineQueue() {
+        if (!window.localforage) return;
+        const stored = await localforage.getItem('OFFLINE_QUEUE');
+        if (stored) OFFLINE_QUEUE = stored;
+        if (navigator.onLine && OFFLINE_QUEUE.length > 0) setTimeout(syncOfflineEvaluations, 3000); 
+    }
+
+    async function syncOfflineEvaluations() {
+        if (!navigator.onLine || OFFLINE_QUEUE.length === 0) return;
+        showToast(`Sincronizando ${OFFLINE_QUEUE.length} evaluaciones pendientes...`);
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
+        const remainingQueue = [];
+        let syncedCount = 0;
+
+        for (let item of OFFLINE_QUEUE) {
+            try {
+                await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', item.docRefId), item.payload);
+                syncedCount++;
+            } catch (e) {
+                console.error("Error sincronizando un item offline, se mantendrá en cola:", e);
+                remainingQueue.push(item);
+            }
+        }
+
+        OFFLINE_QUEUE = remainingQueue; 
+        await localforage.setItem('OFFLINE_QUEUE', OFFLINE_QUEUE);
+        
+        if (syncedCount > 0) {
+            showToast(`${syncedCount} evaluaciones subidas a la nube exitosamente.`);
+            if(isAdmin && typeof fetchAllEvaluacionesAdmin === 'function') fetchAllEvaluacionesAdmin();
+        }
+    }
+
+    // Detectores de caída de red del navegador
+    window.addEventListener('online', () => {
+        const indicator = document.getElementById('offlineIndicator');
+        if(indicator) { indicator.classList.add('hidden'); indicator.classList.remove('flex'); }
+        syncOfflineEvaluations(); 
+    });
+
+    window.addEventListener('offline', () => {
+        const indicator = document.getElementById('offlineIndicator');
+        if(indicator) { indicator.classList.remove('hidden'); indicator.classList.add('flex'); }
+        showToast("Se perdió la conexión. Puedes seguir evaluando (Guardado Local Activo).");
+    });
+    
+    // Iniciar la cola al cargar el documento
+    window.addEventListener('DOMContentLoaded', initOfflineQueue);
+    // ----------------------------------------------------
+    
+    
     window.openAccessManager = async function() {
         if (!FICHERO_MAP || FICHERO_MAP.size === 0) { showToast("Debes cargar un Fichero Médico primero."); return; }
         document.getElementById('accessModal').classList.remove('hidden');
