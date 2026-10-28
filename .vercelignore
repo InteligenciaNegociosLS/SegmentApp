@@ -4,5 +4,6 @@
 docs/
 tests/
 scripts/hotfix/
+scripts/migracion/
 fichero_medico.csv
 datacloseup.xlsx
