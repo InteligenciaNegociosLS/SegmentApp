@@ -16,6 +16,31 @@
 - **Las claves nunca pasan por el chat ni por GitHub:** van en un archivo privado
   (`.env`) dentro de tu Cloud Shell.
 
+## Si se recarga o se cierra Cloud Shell
+**Tus archivos NO se borran**: Cloud Shell guarda tu carpeta personal. Lo único
+que se pierde es "dónde estabas parado". Para volver, pega:
+
+```bash
+cd ~/SegmentApp-rediseno/scripts/migracion
+```
+
+Comprueba que siguen ahí la exportación y tu `.env`:
+
+```bash
+ls exportaciones .env
+```
+
+Si ves el archivo `firebase-….json` y `.env`, **continúa donde ibas**. Si dice
+*No such file or directory*, repite la sección B (y el paso C).
+
+## Cómo descargar un archivo de Cloud Shell a tu computadora
+Escribe `cloudshell download` seguido del archivo. El navegador lo descarga
+(si pregunta, pulsa **Descargar**). Ejemplos:
+
+```bash
+cloudshell download VALIDACION.md
+```
+
 ---
 
 ## A. Preparar (una sola vez, 10 min)
@@ -106,9 +131,13 @@ node 1-exportar-firebase.mjs
 ```
 
 Verás cuántos documentos hay por colección. **Anota el número de
-`evaluaciones_matriz`.** Descarga la copia a tu computadora: ⋮ → **Descargar**
-→ la ruta que muestra el script. Guárdala en un lugar privado: contiene las
-claves viejas.
+`evaluaciones_matriz`.** Luego descarga la copia a tu computadora:
+
+```bash
+cloudshell download "$(ls -t exportaciones/*.json | head -1)"
+```
+
+Guárdala en un lugar privado: contiene las claves viejas.
 
 ## D. Paso 2: importar a Supabase de PRUEBAS (5 a 10 min)
 
@@ -141,10 +170,14 @@ Compara todo:
 - Los archivos originales contra Supabase: el fichero completo y las recetas
   fila por fila.
 
-Debe terminar en **✅ TODO COINCIDE**. Descarga `VALIDACION.md` (⋮ →
-Descargar → `SegmentApp-rediseno/scripts/migracion/VALIDACION.md`) y súbelo a
-GitHub como `docs/VALIDACION.md` (rama `rediseno` → **Add file → Upload
-files**), o pégame su contenido: no tiene claves.
+Debe terminar en **✅ TODO COINCIDE**. Descárgalo:
+
+```bash
+cloudshell download VALIDACION.md
+```
+
+Y súbelo a GitHub como `docs/VALIDACION.md` (rama `rediseno` → **Add file →
+Upload files**), o pégame su contenido: no tiene claves.
 
 ## F. Paso 3: usuarios (10 min)
 
@@ -157,8 +190,15 @@ files**), o pégame su contenido: no tiene claves.
 node 3-usuarios.mjs --plantilla
 ```
 
-2. Descarga `usuarios.csv` (⋮ → Descargar →
-   `SegmentApp-rediseno/scripts/migracion/usuarios.csv`) y ábrelo en Excel:
+   Si en Firebase ya había usuarios con correo (los 53 de tipo "password"),
+   **sus correos vienen ya llenos**. Revísalos.
+
+2. Descárgalo y ábrelo en Excel:
+
+```bash
+cloudshell download usuarios.csv
+```
+
 
    | correo | nombre | rol | visitador | distritos |
    |---|---|---|---|---|
@@ -167,7 +207,7 @@ node 3-usuarios.mjs --plantilla
    | gd@empresa.com | EI-LING LOPEZ | gd | | 100007 |
    | vm@empresa.com | NEIVIS PARRA | vm | NEIVIS PARRA | |
 
-   - Llena **solo la columna correo**. Una fila sin correo se omite.
+   - Completa **solo la columna correo** donde falte. Una fila sin correo se omite.
    - **No cambies** las columnas `visitador` ni `distritos`.
    - Si un GD maneja **varios distritos**, pon los códigos en una sola fila,
      separados por `|` (ej. `100007|100005`), y borra las otras filas de ese GD.

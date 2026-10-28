@@ -20,13 +20,15 @@ export const ROLES = ['vm', 'gd', 'gte_nacional', 'admin'];
 const CLAVE_MINIMA = 6;
 
 /* ---------- Plantilla con los datos que ya están en Supabase ---------- */
-export async function plantillaCsv(db) {
+// Si la exportación de Firebase trae correos (usuarios con rol), se llenan solos.
+export async function plantillaCsv(db, { correosVisitador = new Map(), correoAdmin = '' } = {}) {
     const vis = (await db.query('select nombre_sector from public.visitadores where activo order by 1')).rows;
     const dis = (await db.query('select codigo, nombre from public.distritos where activo order by 1')).rows;
-    const lineas = ['correo,nombre,rol,visitador,distritos', ',ADMINISTRADOR,admin,,', ',GERENTE NACIONAL,gte_nacional,,'];
+    const lineas = ['correo,nombre,rol,visitador,distritos', `${correoAdmin},ADMINISTRADOR,admin,,`, ',GERENTE NACIONAL,gte_nacional,,'];
     dis.forEach(d => lineas.push(`,${d.nombre},gd,,${d.codigo}`));
-    vis.forEach(v => lineas.push(`,${v.nombre_sector},vm,${v.nombre_sector},`));
-    return lineas.join('\n') + '\n';
+    vis.forEach(v => lineas.push(`${correosVisitador.get(v.nombre_sector) || ''},${v.nombre_sector},vm,${v.nombre_sector},`));
+    const llenos = vis.filter(v => correosVisitador.has(v.nombre_sector)).length + (correoAdmin ? 1 : 0);
+    return { texto: lineas.join('\n') + '\n', llenos };
 }
 
 /* ---------- Lectura y validación del CSV ---------- */

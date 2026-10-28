@@ -169,11 +169,24 @@ describe('Paso 3 · Usuarios', () => {
     };
 
     it('la plantilla trae los 51 visitadores, los 7 distritos y las filas de admin y Gte. Nacional', async () => {
-        const csv = await plantillaCsv(db);
+        const { texto: csv } = await plantillaCsv(db);
         const lineas = csv.trim().split('\n');
         expect(lineas[0]).toBe('correo,nombre,rol,visitador,distritos');
         expect(lineas.filter(l => l.includes(',vm,'))).toHaveLength(51);
         expect(lineas.filter(l => l.includes(',gd,'))).toHaveLength(7);
+    });
+
+    it('la plantilla trae los correos que ya existían en Firebase Auth', async () => {
+        const exp = leerExportacion({ documentos: {}, usuarios_con_correo: [
+            { correo: 'Jefe@LaSante.com', claims: { role: 'admin' } },
+            { correo: 'vm0@lasante.com', claims: { role: 'visitador', visitadorName: visitadores[0] } },
+            { correo: 'baja@lasante.com', desactivado: true, claims: { role: 'visitador', visitadorName: visitadores[1] } }
+        ] });
+        const { texto, llenos } = await plantillaCsv(db, exp);
+        expect(llenos).toBe(2);
+        expect(texto).toContain('jefe@lasante.com,ADMINISTRADOR,admin,,');
+        expect(texto).toContain(`vm0@lasante.com,${visitadores[0]},vm,${visitadores[0]},`);
+        expect(texto).toContain(`\n,${visitadores[1]},vm,${visitadores[1]},`);
     });
 
     it('el CSV se valida antes de crear nada', () => {

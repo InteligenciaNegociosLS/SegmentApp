@@ -194,5 +194,15 @@ export function leerExportacion(rutaOObjeto) {
         else if (coleccion.endsWith('/public/data/claves_visitadores')) claves.set(normalizarVisitador(id), String(datos.clave || ''));
         else if (ruta.endsWith('/config/admin_settings')) claveAdmin = String(datos.clave || '');
     }
-    return { evaluaciones, claves, claveAdmin, conteo: exp.conteo || {}, creadoEn: exp.creado_en };
+    // Correos de Firebase Auth → para llenar la plantilla de usuarios
+    const correosVisitador = new Map();
+    let correoAdmin = '';
+    for (const u of exp.usuarios_con_correo || []) {
+        if (u.desactivado) continue;
+        const c = u.claims || {};
+        const correo = String(u.correo || '').trim().toLowerCase();
+        if (c.role === 'admin' && !correoAdmin) correoAdmin = correo;
+        if (c.role === 'visitador' && c.visitadorName) correosVisitador.set(normalizarVisitador(c.visitadorName), correo);
+    }
+    return { evaluaciones, claves, claveAdmin, correosVisitador, correoAdmin, conteo: exp.conteo || {}, creadoEn: exp.creado_en };
 }
