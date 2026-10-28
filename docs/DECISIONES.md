@@ -81,3 +81,24 @@ información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
   "eliminada" (historial).
 - 10 evaluaciones ya venían **sin matrícula** desde Firebase; se migraron tal
   cual. Revisarlas con el admin en la app nueva.
+- Usuarios de prueba creados en PRUEBAS (admin, gte nacional, 2 GD, 2 VM).
+  Solo pueden entrar los que conservaron su clave hasta configurar el correo
+  propio (SMTP) en la Fase 9.
+
+## 28/10/2026 (Fase 5 aprobada)
+
+- La app de `rediseno` pasa a usar **Supabase** para todo: iniciar sesión,
+  datos, evaluaciones y configuración. La app de `main` (Firebase) no cambia.
+- **Datos privados:** los `.gz` ya no se publican en la web. Cada versión
+  guarda su archivo en el almacén privado de Supabase y se descarga solo
+  después de iniciar sesión. Los `.gz` **siguen en el repositorio** como
+  respaldo (no se borran). Es una solución intermedia: en la Fase 7 la app
+  consultará la base directamente.
+- **Carga de datos solo para el admin:** Excel o CSV → revisión fila por fila
+  (sin cambiar nada) → borrador → comparación con "Hoy" → Publicar. Se puede
+  volver a cualquier versión anterior. Nada se borra; un borrador se puede
+  "archivar".
+- **GD y Gerente Nacional entran en modo consulta:** ven el panel del equipo
+  (el GD, solo sus visitadores) pero sin botones de editar ni eliminar.
+- **Selector "Datos: Hoy"** para todos: ver una versión anterior solo afecta
+  a quien la elige, en esa pestaña.
