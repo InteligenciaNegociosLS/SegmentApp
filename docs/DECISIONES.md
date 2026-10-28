@@ -57,3 +57,15 @@ información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
   hasta el pase a producción final; cada fase va solo a `rediseno`.
 - El equipo no está usando la app mientras dure el arreglo, así que no importa
   que nadie pueda entrar por un tiempo.
+
+## 28/10/2026 (Fase 3 aprobada)
+
+- **Roles aprobados:** vm, gd, gte_nacional (ve todo, no edita), admin (todo).
+- **Un GD puede tener varios distritos y varios VM; un VM tiene un solo GD.**
+  Se garantiza con la regla "un distrito = un GD" (migración 5).
+- **Versiones de datos** aprobadas tal como se propusieron.
+- **Nada se borra** (ni el admin): "eliminar" marca la evaluación; no genera
+  duplicados porque solo cuentan las activas (ver `docs/ESQUEMA.md`, FAQ).
+- **Ponderación y configuración: una sola, centralizada** para todos.
+- **Plan gratuito de Supabase** por ahora; el espacio no es problema todavía.
+- Migraciones 1–4 aplicadas por el dueño en el Supabase de pruebas.

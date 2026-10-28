@@ -53,9 +53,26 @@ function esClaveSecreta(valor) {
     return false;
 }
 
+// Acepta la URL aunque venga con algo de más (ej. ".../rest/v1/"):
+// se queda solo con "https://xxxx.supabase.co"
+function normalizarUrlSupabase(valor) {
+    const texto = (valor || '').trim();
+    if (!texto) return { url: '', problema: '' };
+    try {
+        const u = new URL(texto);
+        if (u.protocol !== 'https:') return { url: '', problema: 'la URL debe empezar con https://' };
+        if (!/\.supabase\.co$/i.test(u.hostname)) return { url: '', problema: 'la URL no es de un proyecto Supabase (debe terminar en .supabase.co)' };
+        return { url: u.origin, problema: '' };
+    } catch {
+        return { url: '', problema: 'la URL no es válida' };
+    }
+}
+const urlSupabase = normalizarUrlSupabase(process.env.SUPABASE_URL);
+
 const config = {
     APP_ENV: entorno(),
-    SUPABASE_URL: (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, ''),
+    SUPABASE_URL: urlSupabase.url,
+    SUPABASE_PROBLEMA: urlSupabase.problema,
     SUPABASE_ANON_KEY: (process.env.SUPABASE_ANON_KEY || '').trim(),
     ERROR_LOG_REMOTE: ['1', 'true', 'si', 'sí'].includes((process.env.ERROR_LOG_REMOTE || '').trim().toLowerCase()),
     VERSION: (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7),
@@ -67,8 +84,10 @@ if (esClaveSecreta(config.SUPABASE_ANON_KEY)) {
     console.error('   Esa clave nunca debe ir al navegador. Usa la clave "anon" / "publishable".\n');
     process.exit(1);
 }
-if (config.SUPABASE_URL && !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(config.SUPABASE_URL)) {
-    console.warn(`⚠️  SUPABASE_URL no parece una URL de Supabase: ${config.SUPABASE_URL}`);
+if (urlSupabase.problema) {
+    console.warn(`⚠️  SUPABASE_URL: ${urlSupabase.problema}.`);
+} else if (config.SUPABASE_URL && config.SUPABASE_URL !== (process.env.SUPABASE_URL || '').trim()) {
+    console.log(`ℹ️  SUPABASE_URL ajustada a ${config.SUPABASE_URL}`);
 }
 
 // --- 2. Copiar archivos ----------------------------------------------------

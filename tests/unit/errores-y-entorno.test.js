@@ -30,6 +30,20 @@ describe('Registro de fallas', () => {
     });
 });
 
+describe('Errores externos', () => {
+    it('un error de una extensión o librería externa se registra pero NO avisa al usuario', () => {
+        document.getElementById('toast').innerText = '';
+        window.dispatchEvent(new ErrorEvent('error', { message: 'Script error.', filename: '' }));
+        expect(App.errores.lista().at(-1).tipo).toBe('externo');
+        expect(document.getElementById('toast').innerText).toBe('');
+    });
+    it('un error de la app sí avisa al usuario', () => {
+        window.dispatchEvent(new ErrorEvent('error', { message: 'falla real', filename: location.origin + '/js/matrix.js', error: new Error('falla real') }));
+        expect(App.errores.lista().at(-1).tipo).toBe('error');
+        expect(document.getElementById('toast').innerText).toContain('Algo no funcionó');
+    });
+});
+
 describe('Entorno', () => {
     it('sin configuración se considera entorno local, sin Supabase', () => {
         expect(App.env.APP_ENV).toBe('development');
@@ -49,6 +63,15 @@ describe('Construcción para Vercel (scripts/build.mjs)', () => {
         expect(envJs).toContain('"SUPABASE_URL": "https://abcd.supabase.co"');
         expect(fs.existsSync(path.join(RAIZ, 'dist', 'docs'))).toBe(false);
         expect(fs.existsSync(path.join(RAIZ, 'dist', 'datacloseup.xlsx'))).toBe(false);
+    });
+    it('corrige la URL de Supabase si trae algo de más, y avisa si no es de Supabase', () => {
+        construir({ VERCEL_ENV: 'preview', SUPABASE_URL: 'https://abcd.supabase.co/rest/v1/', SUPABASE_ANON_KEY: 'sb_publishable_1' });
+        let envJs = fs.readFileSync(path.join(RAIZ, 'dist', 'js', 'env.js'), 'utf8');
+        expect(envJs).toContain('"SUPABASE_URL": "https://abcd.supabase.co"');
+        construir({ VERCEL_ENV: 'preview', SUPABASE_URL: 'https://supabase.com/dashboard/project/abcd', SUPABASE_ANON_KEY: 'sb_publishable_1' });
+        envJs = fs.readFileSync(path.join(RAIZ, 'dist', 'js', 'env.js'), 'utf8');
+        expect(envJs).toContain('"SUPABASE_URL": ""');
+        expect(envJs).toContain('no es de un proyecto Supabase');
     });
     it('se niega a publicar una clave secreta de Supabase', () => {
         const r1 = construir({ SUPABASE_ANON_KEY: 'sb_secret_abc' });

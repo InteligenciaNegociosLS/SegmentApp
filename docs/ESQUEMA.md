@@ -1,15 +1,16 @@
 # Esquema de la base de datos (Supabase) — PROPUESTA
 
-> **Estado: propuesta para aprobar.** Nada se ha aplicado en Supabase.
-> Los archivos SQL están en `supabase/migrations/` y se aplican solo cuando
-> el dueño lo apruebe (pasos al final).
+> **Estado: aprobado el 28/10/2026.** Migraciones 1 a 4 aplicadas en el
+> Supabase de pruebas. La migración 5 (un GD por distrito) se agregó después
+> y falta aplicarla.
 
 ## Resumen en 6 puntos
 
 1. **Cuatro roles:** `vm`, `gd`, `gte_nacional` y `admin`. Cada persona ve solo
    lo que le toca, y lo controla **la base de datos** (no el navegador).
 2. **VM y GD se agregan, mueven o desactivan desde tablas** (sin tocar código).
-   Un GD puede tener uno o varios distritos.
+   Un GD puede tener uno o varios distritos (y por lo tanto varios VM), pero
+   **cada distrito tiene un solo GD**, así que **cada VM tiene un solo GD**.
 3. **Los datos tienen versiones.** Cada carga de fichero o de recetas es una
    versión nueva ("Datos enero", "Datos noviembre"…). Solo una por tipo es la
    **vigente** ("Hoy"); las demás se pueden consultar. Una versión nueva **no
@@ -170,6 +171,18 @@ nada, y que ni el admin puede borrar.
 
 ---
 
+## Preguntas frecuentes
+
+**Si nada se borra, ¿no se generan duplicados?** No:
+- Una evaluación "eliminada" queda **marcada** (`eliminado_en`). Los VM, los GD,
+  los reportes y las exportaciones **no la ven ni la cuentan**. Solo el admin y
+  el Gerente Nacional la pueden consultar, como historial.
+- La regla "una evaluación por visitador + médico + mercado" aplica **solo a
+  las activas**. Si se elimina una por error y se vuelve a hacer, la nueva es
+  la que cuenta y la vieja queda en el historial. Nunca hay dos activas.
+- Si alguna vez hiciera falta borrar de verdad (por ejemplo, por una solicitud
+  legal), se haría con un procedimiento explícito del admin, no desde la app.
+
 ## Versiones de datos ("Hoy" y anteriores)
 
 ```
@@ -222,7 +235,8 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261028120100_datos_versionados.sql` | Versiones, catálogos, recetas, fichero, publicar versión |
 | `supabase/migrations/20261028120200_evaluaciones_y_config.sql` | Evaluaciones, historial, configuración compartida (con los valores actuales), registro de fallas |
 | `supabase/migrations/20261028120300_seguridad_rls.sql` | Todas las reglas de seguridad por fila |
-| `supabase/rollback/20261028120000_deshacer_esquema.sql` | Deshace todo (**solo** en pruebas o antes de cargar datos) |
+| `supabase/migrations/20261028130000_un_gd_por_distrito.sql` | Regla: cada distrito tiene un solo GD |
+| `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 
 Todas las migraciones son **aditivas**: solo crean cosas nuevas y no tocan

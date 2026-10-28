@@ -74,7 +74,7 @@ window.App.errores = (function() {
 
     /* ------------------------------------------------------------
        REGISTRAR UNA FALLA
-       tipo: 'error' | 'promesa' | 'recurso' | 'consola'
+       tipo: 'error' | 'promesa' | 'recurso' | 'consola' | 'externo'
     ------------------------------------------------------------ */
     function registrar(tipo, mensaje, detalle, opciones) {
         if (registrando) return null;
@@ -125,13 +125,20 @@ window.App.errores = (function() {
                 registrar('recurso', `No se pudo cargar: ${objetivo.src || objetivo.href}`, objetivo.tagName);
                 return;
             }
-            registrar('error', ev.message, ev.error || `${ev.filename}:${ev.lineno}:${ev.colno}`, { avisar: true });
+            // Errores de otro origen (extensiones del navegador, librerías externas):
+            // el navegador oculta el detalle ("Script error."). Se registran, sin avisar.
+            const externo = !ev.filename || !ev.filename.startsWith(location.origin) || ev.message === 'Script error.';
+            registrar(externo ? 'externo' : 'error', ev.message || 'Error externo',
+                ev.error || `${ev.filename}:${ev.lineno}:${ev.colno}`, { avisar: !externo });
         }, true);
 
         // Promesas rechazadas sin manejar (ej. fallas de red en funciones async)
         window.addEventListener('unhandledrejection', (ev) => {
             const razon = ev.reason;
-            registrar('promesa', razon && razon.message ? razon.message : texto(razon, 300), razon, { avisar: true });
+            // Solo se avisa si la falla viene de un archivo de la app
+            const pila = (razon && razon.stack) || '';
+            const deLaApp = pila.includes(location.origin);
+            registrar(deLaApp ? 'promesa' : 'externo', razon && razon.message ? razon.message : texto(razon, 300), razon, { avisar: deLaApp });
         });
 
         // Errores que la app ya maneja pero que conviene registrar
