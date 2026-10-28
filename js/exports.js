@@ -131,17 +131,32 @@ window.App.exports.exportAdminEvaluationsExcel = async function() {
         return;
     }
     await d.loadLibrary('xlsx');
+    ui.showToast("Preparando el Excel de evaluaciones...");
+    // Dar un respiro a la pantalla para que se vea el aviso
+    await new Promise(r => setTimeout(r, 50));
+
+    // Índices: una sola pasada por los datos (antes se recorría todo por cada evaluación)
+    const docsByKey = new Map();
+    st.PROCESSED_DATA.forEach(x => {
+        const k = d.normalizeKey(x.id);
+        if (!docsByKey.has(k)) docsByKey.set(k, x);
+    });
+    const neededKeys = new Set(st.ALL_EVALUATIONS.map(ev => d.normalizeKey(ev.medico_id)));
+    const specByKey = new Map();
+    for (const r of st.RAW_DATA) {
+        const k = d.normalizeKey(r.license);
+        if (neededKeys.has(k) && !specByKey.has(k)) specByKey.set(k, r.spec);
+    }
 
     const exportData = st.ALL_EVALUATIONS.map(ev => {
         const docIdNorm = d.normalizeKey(ev.medico_id);
-        const docObj = st.PROCESSED_DATA.find(x => d.normalizeKey(x.id) === docIdNorm);
+        const docObj = docsByKey.get(docIdNorm);
         let spec = "-", matrixLabel = "No visible (Fuera de filtro)";
         if (docObj) {
             spec = docObj.spec;
             matrixLabel = docObj.closeupLabel || docObj.matrixLabel;
-        } else {
-            const raw = st.RAW_DATA.find(r => d.normalizeKey(r.license) === docIdNorm);
-            if (raw) spec = raw.spec;
+        } else if (specByKey.has(docIdNorm)) {
+            spec = specByKey.get(docIdNorm);
         }
         const objScoreClass = m.calculateObjectiveScore(ev.survey).label;
         const mktClass = m.getDoctorMarketClassification(ev.medico_id, ev.mercado);

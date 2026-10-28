@@ -92,9 +92,14 @@ window.App.matrix.getDoctorMarketClassification = function(docId, targetMarket) 
             const l = share >= st.TH_LOY_HIGH ? 'A' : (share > st.TH_LOY_LOW ? 'B' : 'C');
             doc.matrixLabel = p + (l === 'C' ? '-' : (l === 'A' ? '+' : ''));
         });
-        st.MARKET_CACHE[targetMarket] = docs;
+        const byKey = new Map();
+        docs.forEach(doc => {
+            const k = d.normalizeKey(doc.id);
+            if (!byKey.has(k)) byKey.set(k, doc);
+        });
+        st.MARKET_CACHE[targetMarket] = byKey;
     }
-    const found = st.MARKET_CACHE[targetMarket].find(x => d.normalizeKey(x.id) === d.normalizeKey(docId));
+    const found = st.MARKET_CACHE[targetMarket].get(d.normalizeKey(docId));
     return found ? found.matrixLabel : "";
 };
 
