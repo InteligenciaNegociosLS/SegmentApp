@@ -72,9 +72,14 @@ Abre el enlace de Preview del PR. Abajo a la izquierda debe decir:
 
 | Si dice… | Significa |
 |---|---|
-| `Supabase: sin configurar` | Faltan las variables en Preview o falta el Redeploy |
-| `Supabase: error 401` | La clave no corresponde a esa URL |
-| `Supabase: sin respuesta` | La URL está mal escrita o el proyecto está en pausa |
+| `Supabase: sin configurar (falta …)` | Falta esa variable en Preview, o falta el Redeploy |
+| `Supabase: revisar SUPABASE_URL (…)` | La URL no es de un proyecto Supabase (debe ser `https://xxxx.supabase.co`) |
+| `Supabase: la clave no corresponde a esa URL` | La clave es de otro proyecto, o se copió incompleta |
+| `Supabase: URL no encontrada` | La URL está mal escrita |
+| `Supabase: sin respuesta (…)` | El proyecto está en pausa (Supabase pausa los proyectos gratis tras 7 días sin uso) o la URL está mal |
+
+Si la URL trae algo de más al final (por ejemplo `/rest/v1/`), la app ahora lo
+corrige sola.
 
 ### 5. Producción (más adelante, NO ahora)
 El Supabase **real** se crea igual (nombre `segmentapp`) cuando lleguemos al

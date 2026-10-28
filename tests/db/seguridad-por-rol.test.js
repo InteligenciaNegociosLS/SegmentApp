@@ -86,6 +86,21 @@ describe('Alta de usuarios', () => {
     });
 });
 
+describe('Un GD por distrito', () => {
+    it('un distrito no puede quedar asignado a dos GD (cada VM tiene un solo GD)', async () => {
+        let rechazado = false;
+        try { await db.query('insert into public.perfil_distritos values ($1, $2)', [U.gte, ids.d1]); }
+        catch { rechazado = true; }
+        expect(rechazado).toBe(true);
+    });
+    it('un GD sí puede tener varios distritos', async () => {
+        await db.query('insert into public.perfil_distritos values ($1, $2)', [U.gd1, ids.d2]);
+        const n = (await db.query('select count(*)::int as n from public.perfil_distritos where perfil_id = $1', [U.gd1])).rows[0].n;
+        expect(n).toBe(2);
+        await db.query('delete from public.perfil_distritos where perfil_id = $1 and distrito_id = $2', [U.gd1, ids.d2]);
+    });
+});
+
 describe('Visitador (vm)', () => {
     it('ve SOLO sus evaluaciones', async () => {
         const r = await filas(U.vm1, 'select id from public.evaluaciones');

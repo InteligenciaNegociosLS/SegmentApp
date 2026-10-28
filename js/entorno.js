@@ -17,6 +17,7 @@ window.App = window.App || {};
         APP_ENV: crudo.APP_ENV || 'development',
         SUPABASE_URL: crudo.SUPABASE_URL || '',
         SUPABASE_ANON_KEY: crudo.SUPABASE_ANON_KEY || '',
+        SUPABASE_PROBLEMA: crudo.SUPABASE_PROBLEMA || '',
         ERROR_LOG_REMOTE: crudo.ERROR_LOG_REMOTE === true,
         VERSION: crudo.VERSION || 'local',
         CONSTRUIDO_EN: crudo.CONSTRUIDO_EN || ''
@@ -52,14 +53,20 @@ window.App.supabase = {
 
     // Comprueba que Supabase responde (para la etiqueta de pruebas)
     estado: async function() {
-        if (!window.App.supabase.configurado()) return 'sin configurar';
+        const env = window.App.env;
+        if (env.SUPABASE_PROBLEMA) return `revisar SUPABASE_URL (${env.SUPABASE_PROBLEMA})`;
+        if (!env.SUPABASE_URL) return 'sin configurar (falta SUPABASE_URL)';
+        if (!env.SUPABASE_ANON_KEY) return 'sin configurar (falta SUPABASE_ANON_KEY)';
         try {
-            const r = await fetch(window.App.env.SUPABASE_URL + '/auth/v1/health', {
-                headers: { apikey: window.App.env.SUPABASE_ANON_KEY }
+            const r = await fetch(env.SUPABASE_URL + '/auth/v1/health', {
+                headers: { apikey: env.SUPABASE_ANON_KEY }
             });
-            return r.ok ? 'conectado' : `error ${r.status}`;
+            if (r.ok) return 'conectado';
+            if (r.status === 401 || r.status === 403) return 'la clave no corresponde a esa URL';
+            if (r.status === 404) return 'URL no encontrada: revisa SUPABASE_URL';
+            return `error ${r.status}`;
         } catch (e) {
-            return 'sin respuesta';
+            return 'sin respuesta (¿proyecto en pausa o URL mal escrita?)';
         }
     }
 };
