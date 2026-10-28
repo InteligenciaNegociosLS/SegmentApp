@@ -157,7 +157,18 @@ window.App.evaluation.getEvaluationsForDoc = function(docId) {
         const evMap = st.EVALUACIONES_VISITADOR[d.normalizeKey(docId)];
         return evMap ? Object.values(evMap) : [];
     } else {
-        return st.ALL_EVALUATIONS.filter(e => d.normalizeKey(e.medico_id) === d.normalizeKey(docId));
+        // Índice por médico; se reconstruye solo si cambia la lista de evaluaciones
+        const idx = window.App.evaluation._adminIndex;
+        if (!idx || idx.source !== st.ALL_EVALUATIONS || idx.length !== st.ALL_EVALUATIONS.length) {
+            const byDoc = new Map();
+            st.ALL_EVALUATIONS.forEach(e => {
+                const k = d.normalizeKey(e.medico_id);
+                if (!byDoc.has(k)) byDoc.set(k, []);
+                byDoc.get(k).push(e);
+            });
+            window.App.evaluation._adminIndex = { source: st.ALL_EVALUATIONS, length: st.ALL_EVALUATIONS.length, byDoc };
+        }
+        return window.App.evaluation._adminIndex.byDoc.get(d.normalizeKey(docId)) || [];
     }
 };
 /* ============================================================
@@ -443,8 +454,8 @@ window.App.evaluation.saveEvaluation = async function() {
         const adminRepNameInput = document.getElementById('evalRepName').value;
         if (st.isAdmin && adminRepNameInput) actualRepName = adminRepNameInput;
 
-        // Seguridad básica
-        if (!st.isAdmin && actualRepName !== sessionStorage.getItem('userName')) {
+        // Un visitador solo guarda a su nombre (las reglas de Firestore lo exigen)
+        if (!st.isAdmin && actualRepName !== st.currentVisitadorName) {
             throw new Error("Violación de seguridad de sesión.");
         }
 

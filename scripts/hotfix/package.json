@@ -1,0 +1,16 @@
+{
+  "name": "segmentapp-hotfix-seguridad",
+  "private": true,
+  "description": "Scripts del arreglo urgente de seguridad (se ejecutan en Google Cloud Shell)",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "respaldo": "node respaldo.mjs",
+    "plantilla": "node crear-usuarios.mjs --plantilla",
+    "usuarios:simulacro": "node crear-usuarios.mjs --simulacro",
+    "usuarios": "node crear-usuarios.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "13.4.0"
+  }
+}

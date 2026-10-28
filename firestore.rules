@@ -1,0 +1,43 @@
+rules_version = '2';
+// Reglas de Firestore de SegmentApp (versión "hotfix seguridad").
+// Se publican a mano en Firebase Console → Firestore → Reglas.
+// Sin excepciones "TEMPORAL": cada usuario necesita su rol en el token.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Todo cerrado por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function rol() {
+      return request.auth != null ? request.auth.token.get('role', '') : '';
+    }
+    function esAdmin() {
+      return rol() == 'admin';
+    }
+    function esVisitador(nombre) {
+      return rol() == 'visitador' && request.auth.token.get('visitadorName', '') == nombre;
+    }
+
+    match /artifacts/{appId}/public/data/evaluaciones_matriz/{evalId} {
+      allow read:   if esAdmin() || esVisitador(resource.data.visitador);
+      allow create: if esAdmin() || esVisitador(request.resource.data.visitador);
+      // Un visitador solo modifica las suyas y no puede "pasarlas" a otro
+      allow update: if esAdmin() ||
+                    (esVisitador(resource.data.visitador) && esVisitador(request.resource.data.visitador));
+      allow delete: if esAdmin();
+    }
+
+    // Claves viejas: se conservan (no se borran) pero solo el admin las ve
+    match /artifacts/{appId}/public/data/claves_visitadores/{name} {
+      allow read:  if esAdmin();
+      allow write: if false;
+    }
+
+    // Configuración y directorio de usuarios: solo admin
+    match /artifacts/{appId}/config/{doc} {
+      allow read, write: if esAdmin();
+    }
+  }
+}
