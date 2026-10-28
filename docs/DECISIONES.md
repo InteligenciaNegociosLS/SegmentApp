@@ -69,3 +69,15 @@ información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
 - **Ponderación y configuración: una sola, centralizada** para todos.
 - **Plan gratuito de Supabase** por ahora; el espacio no es problema todavía.
 - Migraciones 1–4 aplicadas por el dueño en el Supabase de pruebas.
+
+## 28/10/2026 (Fase 4: migración en PRUEBAS validada)
+
+- Migración ejecutada por el dueño en el Supabase de pruebas: **✅ TODO
+  COINCIDE** (ver `docs/VALIDACION.md`): 8.625 evaluaciones, 7.308 filas de
+  fichero y 231.729 de recetas, sin diferencias.
+- 10 evaluaciones estaban **duplicadas en Firebase** (el mismo médico y mercado
+  guardado por dos versiones de la app, con y sin espacio en el nombre del
+  visitador). Se conservó activa la más reciente y la otra quedó como
+  "eliminada" (historial).
+- 10 evaluaciones ya venían **sin matrícula** desde Firebase; se migraron tal
+  cual. Revisarlas con el admin en la app nueva.
