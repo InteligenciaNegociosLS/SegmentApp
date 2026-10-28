@@ -1,0 +1,38 @@
+# Pruebas automáticas: se ejecutan solas en cada PR y en cada cambio
+# de las ramas rediseno y main. El resultado aparece en el PR
+# (✔ verde = todo bien, ✖ rojo = algo se rompió).
+name: Pruebas
+
+on:
+  pull_request:
+  push:
+    branches: [rediseno, main]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas de cálculos, sesión y errores
+        run: npm test
+
+      - name: Construir el sitio (como Vercel)
+        run: npm run build
+
+      - name: Instalar navegador para pruebas de punta a punta
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: Pruebas de punta a punta
+        run: npm run test:e2e
