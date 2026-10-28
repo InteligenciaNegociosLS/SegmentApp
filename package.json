@@ -3,15 +3,19 @@
   "private": true,
   "description": "SegmentApp - Matriz estratégica de La Santé",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs && node scripts/servidor-local.mjs",
     "test": "vitest run",
-    "test:e2e": "node tests/e2e/flujos.e2e.mjs"
+    "test:e2e": "node tests/e2e/flujos.e2e.mjs",
+    "test:db": "vitest run tests/db"
   },
   "devDependencies": {
     "jsdom": "25.0.1",
-    "vitest": "2.1.9"
+    "vitest": "2.1.9",
+    "@electric-sql/pglite": "0.2.17"
   }
 }
