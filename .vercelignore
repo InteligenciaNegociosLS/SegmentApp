@@ -1,9 +1,8 @@
-# Archivos que NO se publican en el sitio web (siguen en el repositorio).
-# Vercel solo necesita index.html, css/, js/ y los .csv.gz que usa la app.
-scripts/
+# Archivos que no se suben a Vercel (siguen en el repositorio).
+# Lo que se publica lo decide scripts/build.mjs (carpeta dist/).
+# OJO: no excluir scripts/build.mjs, Vercel lo necesita para construir.
 docs/
-CLAUDE.md
-README.md
-firestore.rules
+tests/
+scripts/hotfix/
 fichero_medico.csv
 datacloseup.xlsx
