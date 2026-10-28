@@ -48,3 +48,12 @@ información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
   evaluaciones).
 - El arreglo urgente va en el PR `hotfix-seguridad` → `main` y lo une el dueño.
   Guía: `scripts/hotfix/LEEME.md` (en esa rama).
+
+## 28/10/2026 (Fase 2)
+
+- Se aprueba arrancar la Fase 2 en paralelo al arreglo urgente.
+- El dueño unió los PR #1, #2 y #3 (este último `rediseno` → `main`). No se
+  perdió nada. **Regla a partir de ahora:** `rediseno` **no** se une a `main`
+  hasta el pase a producción final; cada fase va solo a `rediseno`.
+- El equipo no está usando la app mientras dure el arreglo, así que no importa
+  que nadie pueda entrar por un tiempo.
