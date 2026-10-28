@@ -11,6 +11,11 @@
     <!-- M3 Expressive Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
 
+    <!-- Entorno y manejo de errores (deben ir primero) -->
+    <script src="js/env.js"></script>
+    <script src="js/entorno.js"></script>
+    <script src="js/errores.js"></script>
+
     <!-- Tailwind + Fuentes + Material Symbols -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -110,6 +115,9 @@
                     </button>
                     <button onclick="openSurveyConfigModal()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
                         <span class="material-symbols-outlined text-[20px]">tune</span> Ponderación
+                    </button>
+                    <button onclick="descargarRegistroFallas()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap" title="Descargar el registro de fallas de este dispositivo">
+                        <span class="material-symbols-outlined text-[20px]">bug_report</span> Registro de fallas
                     </button>
                 </div>
             </div>
