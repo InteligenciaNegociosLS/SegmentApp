@@ -24,3 +24,6 @@
   elementos; mismos tiempos de animación y de carga entre pantallas.
 - Mobile-first: debe funcionar bien en móvil, tablet e iPad.
 - Idioma de la interfaz: español.
+
+## Contexto entre sesiones
+- Antes de trabajar, lee `docs/DECISIONES.md` (decisiones del dueño) y `docs/AUDIT.md`.
