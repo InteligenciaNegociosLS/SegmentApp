@@ -342,14 +342,16 @@ window.App.matrix.aggregateAndCalculate = function() {
         };
     });
 
-    // Vista de visitador: filtrar solo médicos asignados
+    // Solo los médicos de los visitadores permitidos (VM: los suyos; GD: los de su distrito)
     let visTotalFichero = 0, visTotalCruzados = 0;
-    if (st.currentUserRole === 'visitador') {
+    const repsPermitidos = st.REPS_PERMITIDOS ||
+        (st.currentUserRole === 'visitador' ? new Set([String(st.currentVisitadorName).toUpperCase().trim()]) : null);
+    if (repsPermitidos) {
         const assignedDocsMap = new Map();
         st.FICHERO_MAP.forEach((rows, docId) => {
             const isAssigned = rows.some(fRow => {
                 const repKey = d.getFicheroRepKey(fRow);
-                return repKey && fRow[repKey] && String(fRow[repKey]).toUpperCase().trim() === st.currentVisitadorName.toUpperCase();
+                return repKey && fRow[repKey] && repsPermitidos.has(String(fRow[repKey]).toUpperCase().trim());
             });
             if (isAssigned) { visTotalFichero++; assignedDocsMap.set(docId, rows); }
         });

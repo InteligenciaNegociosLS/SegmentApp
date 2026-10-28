@@ -9,12 +9,6 @@
 window.App = window.App || {};
 window.App.config = {};
 
-// --- Archivos del repositorio (GitHub/Vercel) ---
-window.App.config.FILES = {
-    AUDIT: 'datacloseup.csv.gz',
-    FICHERO: 'fichero_medico.csv.gz'
-};
-
 // --- Librerías cargadas dinámicamente (Lazy Loading) ---
 window.App.config.LIBRARIES = {
     xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",

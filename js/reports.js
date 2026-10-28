@@ -35,6 +35,7 @@ window.App.reports.init = function() {
             const repKey = d.getFicheroRepKey(row);
             if (!repKey || !row[repKey]) return;
             const repName = String(row[repKey]).trim().toUpperCase();
+            if (st.REPS_PERMITIDOS && !st.REPS_PERMITIDOS.has(repName)) return;
             repsSet.add(repName);
 
             // Detectar línea desde campo 'Equipo'

@@ -22,16 +22,12 @@ window.App.offline.initOfflineQueue = async function() {
     const stored = await localforage.getItem('OFFLINE_QUEUE');
     if (stored) st.OFFLINE_QUEUE = stored;
 
-    // Si hay internet y cola pendiente, sincronizar después de 3 segundos
-    // (damos tiempo a que Firebase Auth termine de conectarse)
-    if (navigator.onLine && st.OFFLINE_QUEUE.length > 0) {
-        setTimeout(() => window.App.offline.syncOfflineEvaluations(), 3000);
-    }
+    // La cola se sube al iniciar sesión (ver auth.loginSuccess)
 };
 
 /* ============================================================
    SINCRONIZAR EVALUACIONES PENDIENTES
-   Recorre la cola, sube cada item a Firebase, y al final
+   Recorre la cola, sube cada item a Supabase, y al final
    guarda solo los que fallaron (reintento futuro).
 ============================================================ */
 window.App.offline.syncOfflineEvaluations = async function() {
@@ -39,37 +35,48 @@ window.App.offline.syncOfflineEvaluations = async function() {
     const ui = window.App.ui;
 
     if (!navigator.onLine || st.OFFLINE_QUEUE.length === 0) return;
-    if (!window.firebaseAuth || !window.firebaseAuth.currentUser) return;
+    if (st.currentUserRole === 'guest' || window.App.offline._sincronizando) return;
+    window.App.offline._sincronizando = true;
 
     ui.showToast(`Sincronizando ${st.OFFLINE_QUEUE.length} evaluaciones pendientes...`);
-
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
     const remainingQueue = [];
     let syncedCount = 0;
 
-    for (const item of st.OFFLINE_QUEUE) {
-        try {
-            await window.firebaseSetDoc(
-                window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', item.docRefId),
-                item.payload
-            );
-            syncedCount++;
-        } catch (e) {
-            console.error("Error sincronizando un item offline, se mantendrá en cola:", e);
-            remainingQueue.push(item);
+    try {
+        for (const item of st.OFFLINE_QUEUE) {
+            let evaluacion = item.evaluacion;
+            // Pendientes de la versión anterior de la app (formato Firebase)
+            if (!evaluacion && item.payload) {
+                if (normalizarNombre(item.payload.visitador) !== normalizarNombre(st.currentVisitadorName) || !st.visitadorId) {
+                    remainingQueue.push(item);   // es de otro usuario: se conserva hasta que ese usuario entre
+                    continue;
+                }
+                evaluacion = { ...item.payload, visitador_id: st.visitadorId };
+            }
+            try {
+                await window.App.sb.guardarEvaluacion(evaluacion);
+                syncedCount++;
+            } catch (e) {
+                console.error("Error sincronizando un item offline, se mantendrá en cola:", e);
+                remainingQueue.push(item);
+            }
         }
+        st.OFFLINE_QUEUE = remainingQueue;
+        if (window.localforage) await localforage.setItem('OFFLINE_QUEUE', st.OFFLINE_QUEUE);
+    } finally {
+        window.App.offline._sincronizando = false;
     }
-
-    st.OFFLINE_QUEUE = remainingQueue;
-    await localforage.setItem('OFFLINE_QUEUE', st.OFFLINE_QUEUE);
 
     if (syncedCount > 0) {
         ui.showToast(`${syncedCount} evaluaciones subidas a la nube exitosamente.`);
-        if (st.isAdmin && window.App.evaluation && window.App.evaluation.fetchAllEvaluacionesAdmin) {
-            window.App.evaluation.fetchAllEvaluacionesAdmin();
-        }
+        if (st.isAdmin) window.App.evaluation.fetchAllEvaluacionesAdmin();
+        else window.App.evaluation.fetchEvaluacionesYCalcular();
     }
 };
+
+function normalizarNombre(n) {
+    return String(n || '').trim().toUpperCase();
+}
 
 /* ============================================================
    LISTENERS DE EVENTOS DE CONEXIÓN DEL NAVEGADOR

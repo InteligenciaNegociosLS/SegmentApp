@@ -4,7 +4,7 @@
    Responsable de:
    - Leer la configuración PÚBLICA que genera scripts/build.mjs
      (js/env.js → window.__SEGMENTAPP_ENV__)
-   - Preparar la conexión a Supabase (sin usarla todavía)
+   - Preparar la conexión a Supabase (login, datos y evaluaciones)
    - Mostrar la etiqueta "PRUEBAS" fuera de producción
    DEBE CARGARSE ANTES que el resto de los archivos de la app.
 ============================================================ */
@@ -27,7 +27,7 @@ window.App = window.App || {};
 })();
 
 /* ============================================================
-   SUPABASE (preparado para las próximas fases; hoy no se usa)
+   SUPABASE (la librería se descarga solo cuando se necesita)
 ============================================================ */
 window.App.supabase = {
     // Versión fija de la librería (se descarga solo cuando se necesite)
