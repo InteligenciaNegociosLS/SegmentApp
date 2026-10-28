@@ -18,7 +18,9 @@ const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(RAIZ, 'dist');
 
 // Archivos y carpetas que se publican (todo lo demás queda fuera del sitio)
-const PUBLICAR = ['index.html', 'css', 'js', 'datacloseup.csv.gz', 'fichero_medico.csv.gz'];
+// Los archivos .gz siguen en el repositorio como respaldo, pero ya no se publican:
+// desde la Fase 5 los datos se descargan de Supabase, solo después de iniciar sesión.
+const PUBLICAR = ['index.html', 'css', 'js'];
 
 // --- 1. Variables de entorno ----------------------------------------------
 function cargarDotEnv() {
