@@ -38,6 +38,18 @@ export async function preguntar(texto) {
     return r.trim();
 }
 
+// Acepta la URL aunque venga con algo de más (ej. ".../rest/v1/"):
+// se queda solo con "https://xxxx.supabase.co"
+export function normalizarUrlSupabase(valor) {
+    const texto = String(valor || '').trim();
+    if (!texto) return '';
+    try {
+        return new URL(texto).origin;
+    } catch {
+        return texto;
+    }
+}
+
 // Referencia del proyecto (ej. "abcdxyz") a partir de sus URLs
 function refDesdeUrl(url) {
     const m = String(url).match(/https:\/\/([a-z0-9]+)\.supabase\.co/i);
@@ -53,7 +65,7 @@ export async function destinoSeguro({ necesitaAuth = false } = {}) {
     cargarEnv();
     const destino = (process.env.DESTINO || '').trim().toLowerCase();
     const dbUrl = (process.env.SUPABASE_DB_URL || '').trim();
-    const url = (process.env.SUPABASE_URL || '').trim();
+    const url = normalizarUrlSupabase(process.env.SUPABASE_URL);
     if (!['pruebas', 'produccion'].includes(destino)) salir('Falta DESTINO=pruebas (o DESTINO=produccion) en el archivo .env');
     if (!dbUrl) salir('Falta SUPABASE_DB_URL en el archivo .env (Supabase → Connect → Session pooler)');
     if (!url) salir('Falta SUPABASE_URL en el archivo .env');

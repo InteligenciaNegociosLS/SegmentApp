@@ -47,7 +47,20 @@ const proveedores = {};
 const usuariosConCorreo = [];   // solo correo y rol; nunca claves ni hashes
 let pagina;
 do {
-    const r = await getAuth(app).listUsers(1000, pagina);
+    let r;
+    try {
+        r = await getAuth(app).listUsers(1000, pagina);
+    } catch (e) {
+        const texto = String(e && e.message || e);
+        if (/quota project|SERVICE_DISABLED|Application Default Credentials/i.test(texto)) {
+            console.error('\n❌ Google no dio permiso para leer los usuarios de Firebase (falta el "proyecto de cuota").');
+            console.error('   Pega estos comandos, uno por uno, y vuelve a ejecutar este paso:\n');
+            console.error('   gcloud auth application-default login');
+            console.error(`   gcloud auth application-default set-quota-project ${PROYECTO}\n`);
+            process.exit(1);
+        }
+        throw e;
+    }
     r.users.forEach(u => {
         const p = u.providerData.length ? u.providerData.map(x => x.providerId).join('+') : 'anonimo';
         proveedores[p] = (proveedores[p] || 0) + 1;
