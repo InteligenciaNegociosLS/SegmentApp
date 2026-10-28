@@ -44,12 +44,14 @@ for (const col of await db.listCollections()) await recorrer(col);
 // Usuarios de Firebase Auth (solo para el registro: hoy son anónimos;
 // las claves de los VM estaban en Firestore y viajan en este archivo)
 const proveedores = {};
+const usuariosConCorreo = [];   // solo correo y rol; nunca claves ni hashes
 let pagina;
 do {
     const r = await getAuth(app).listUsers(1000, pagina);
     r.users.forEach(u => {
         const p = u.providerData.length ? u.providerData.map(x => x.providerId).join('+') : 'anonimo';
         proveedores[p] = (proveedores[p] || 0) + 1;
+        if (u.email) usuariosConCorreo.push({ correo: u.email.toLowerCase(), desactivado: u.disabled, claims: u.customClaims || {} });
     });
     pagina = r.pageToken;
 } while (pagina);
@@ -59,11 +61,14 @@ fs.mkdirSync(carpeta, { recursive: true });
 const p = (n) => String(n).padStart(2, '0');
 const d = new Date();
 const archivo = path.join(carpeta, `firebase-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`);
-fs.writeFileSync(archivo, JSON.stringify({ creado_en: d.toISOString(), proyecto: PROYECTO, conteo, usuarios_auth: proveedores, documentos }, null, 1));
+fs.writeFileSync(archivo, JSON.stringify({ creado_en: d.toISOString(), proyecto: PROYECTO, conteo, usuarios_auth: proveedores, usuarios_con_correo: usuariosConCorreo, documentos }, null, 1));
 
 console.log('\nDocumentos por colección:');
 Object.entries(conteo).sort().forEach(([c, n]) => console.log(`  ${String(n).padStart(6)}  ${c}`));
 console.log(`  ${String(Object.keys(documentos).length).padStart(6)}  TOTAL`);
 console.log('\nUsuarios de Firebase Auth por tipo:', JSON.stringify(proveedores));
+const dominios = {};
+usuariosConCorreo.forEach(u => { const d = u.correo.split('@')[1]; dominios[d] = (dominios[d] || 0) + 1; });
+console.log('Usuarios con correo, por dominio:', JSON.stringify(dominios));
 console.log(`\n✅ Exportación guardada en: ${archivo}`);
 console.log('⚠️  Contiene las claves antiguas: descárgala y guárdala en un lugar privado.');

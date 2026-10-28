@@ -16,8 +16,13 @@ const db = await conectarBase(dbUrl);
 try {
     if (tieneOpcion('--plantilla')) {
         if (fs.existsSync(CSV)) salir('Ya existe usuarios.csv. Renómbralo si quieres una plantilla nueva.');
-        fs.writeFileSync(CSV, await plantillaCsv(db));
-        console.log(`✅ Creado ${CSV}\n   Descárgalo, completa la columna "correo" en Excel y guárdalo como "CSV UTF-8".`);
+        const exp = leerExportacion(rutaExportacion());
+        const { texto, llenos } = await plantillaCsv(db, exp);
+        fs.writeFileSync(CSV, texto);
+        console.log(`✅ Creado ${CSV}`);
+        console.log(`   ${llenos} correo(s) ya vienen llenos desde Firebase: revísalos.`);
+        console.log('   Descárgalo con:  cloudshell download usuarios.csv');
+        console.log('   Completa los correos que falten en Excel y guárdalo como "CSV UTF-8".');
     } else {
         if (!fs.existsSync(CSV)) salir('No encuentro usuarios.csv. Primero: node 3-usuarios.mjs --plantilla');
         const { filas, errores } = leerCsvUsuarios(fs.readFileSync(CSV, 'utf8'));
