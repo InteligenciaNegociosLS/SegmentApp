@@ -23,60 +23,14 @@ window.App.admin.showAdminAuthModal = function() {
         window.App.auth.logoutSession();
         return;
     }
-    document.getElementById('adminPwdInput').value = '';
-    document.getElementById('adminAuthError').classList.add('hidden');
-    document.getElementById('adminAuthModal').classList.remove('hidden');
-    document.getElementById('adminPwdInput').focus();
+    // El admin entra por el mismo formulario (correo + clave). Firebase
+    // decide el rol; ya no existe una clave de admin aparte ni por defecto.
+    window.App.auth.openLoginModal();
 };
 
-window.App.admin.processAdminAuth = async function() {
-    const pwdInput = document.getElementById('adminPwdInput');
-    const pwd = pwdInput.value.trim();
-    const errorEl = document.getElementById('adminAuthError');
-    const btnAcceder = document.querySelector('#adminAuthModal button.bg-blue-600');
-
-    if (!pwd) {
-        errorEl.innerText = "Ingresa una clave.";
-        errorEl.classList.remove('hidden');
-        return;
-    }
-
-    const oldBtnText = btnAcceder.innerHTML;
-    btnAcceder.disabled = true;
-    btnAcceder.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse text-[18px]">sync</span> Verificando...';
-    errorEl.classList.add('hidden');
-
-    try {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-        const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'config', 'admin_settings');
-        const docSnap = await window.firebaseGetDoc(docRef);
-
-        let realPwd = "admin_seguro_2024"; // fallback (se elimina en el Bloque 2)
-        if (docSnap.exists() && docSnap.data().clave) {
-            realPwd = docSnap.data().clave;
-        } else {
-            await window.firebaseSetDoc(docRef, { clave: realPwd, creado_en: new Date().toISOString() });
-            console.log("Se creó la clave admin por defecto en Firebase.");
-        }
-
-        if (pwd === realPwd) {
-            if (typeof loginSuccess === 'function') {
-                loginSuccess('admin', 'Administrador');
-            }
-            window.App.ui.showToast("Modo Administrador activado");
-            pwdInput.value = '';
-        } else {
-            errorEl.innerText = "Clave incorrecta. Intenta de nuevo.";
-            errorEl.classList.remove('hidden');
-        }
-    } catch (e) {
-        console.error("Error validando admin", e);
-        errorEl.innerText = "Error de conexión con el servidor.";
-        errorEl.classList.remove('hidden');
-    } finally {
-        btnAcceder.disabled = false;
-        btnAcceder.innerHTML = oldBtnText;
-    }
+window.App.admin.processAdminAuth = function() {
+    document.getElementById('adminAuthModal').classList.add('hidden');
+    window.App.auth.openLoginModal();
 };
 
 /* ============================================================
@@ -286,7 +240,6 @@ window.App.admin.toggleRepDetails = function(repName) {
         const cache = window.App.admin._repStatsCache || {};
         const stat = cache[repName];
         if (stat) {
-            const safeName = repName.replace(/'/g, "\\'");
             const evalsHtml = stat.evals.map(e => {
                 // Pedido 2 Entrega 2: estilo distintivo para evaluaciones de Cruce Errado
                 const isCE = e.cruceErrado === true;
@@ -312,7 +265,6 @@ window.App.admin.toggleRepDetails = function(repName) {
             detailDiv.innerHTML = `
                 <div class="text-[10px] uppercase font-bold text-slate-400 mb-2">Detalle de Encuestas (${stat.evals.length})</div>
                 ${evalsHtml || '<div class="text-xs text-slate-400 italic">Sin encuestas registradas.</div>'}
-                <div class="mt-2 text-right"><button onclick="clearRepEvaluations('${safeName}')" class="text-[10px] text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 transition border border-rose-100">Borrar TODAS las de este Asesor</button></div>
             `;
             detailDiv.dataset.loaded = 'true';
         }
@@ -383,6 +335,12 @@ window.App.admin.adminDeleteEval = async function(firebaseId) {
             window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', firebaseId)
         );
         window.App.ui.showToast("Evaluación eliminada");
+        // La sincronización incremental no detecta borrados: quitarla también de la caché local
+        const st = window.App.state;
+        st.ALL_EVALUATIONS = st.ALL_EVALUATIONS.filter(e => e.firebaseId !== firebaseId);
+        if (window.localforage) await localforage.setItem('ADMIN_EVALS_CACHE', st.ALL_EVALUATIONS);
+        window.App.admin.renderAdminDashboard();
+        window.App.filters.resetPaginationAndRender();
         window.App.evaluation.fetchAllEvaluacionesAdmin();
     } catch (e) {
         console.error(e);
@@ -393,75 +351,14 @@ window.App.admin.adminDeleteEval = async function(firebaseId) {
 /* ============================================================
    LIMPIEZA MASIVA DE EVALUACIONES
 ============================================================ */
+// Desactivado por seguridad: borrar evaluaciones en bloque no se puede
+// deshacer. Solo se permite eliminar una evaluación a la vez.
 window.App.admin.confirmClearAllEvals = function() {
-    document.getElementById('confirmClearAllModal').classList.remove('hidden');
+    window.App.ui.showToast("Función desactivada por seguridad. Elimina las evaluaciones una por una.");
 };
-
-window.App.admin.executeClearAllEvals = async function() {
-    const st = window.App.state;
-    const btn = document.getElementById('btnConfirmClearAll');
-    if (!window.firebaseAuth || !window.firebaseAuth.currentUser || !window.firebaseDeleteDoc) {
-        window.App.ui.showToast("Error de conexión con base de datos.");
-        return;
-    }
-    btn.disabled = true;
-    btn.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Limpiando...';
-    try {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-        for (const ev of st.ALL_EVALUATIONS) {
-            if (ev.firebaseId) {
-                const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', ev.firebaseId);
-                await window.firebaseDeleteDoc(docRef);
-            }
-        }
-        window.App.ui.showToast("¡Todas las evaluaciones han sido borradas!");
-        document.getElementById('confirmClearAllModal').classList.add('hidden');
-        window.App.evaluation.fetchAllEvaluacionesAdmin();
-    } catch (e) {
-        console.error("Error masivo de borrado", e);
-        window.App.ui.showToast("Ocurrió un error al limpiar datos.");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Sí, Limpiar Todo';
-    }
-};
-
-window.App.admin.clearRepEvaluations = function(repName) {
-    document.getElementById('lblRepToDelete').innerText = repName;
-    document.getElementById('hiddenRepToDelete').value = repName;
-    document.getElementById('confirmClearRepModal').classList.remove('hidden');
-};
-
-window.App.admin.executeClearRepEvals = async function() {
-    const st = window.App.state;
-    const btn = document.getElementById('btnConfirmClearRep');
-    const repName = document.getElementById('hiddenRepToDelete').value;
-    if (!window.firebaseAuth || !window.firebaseAuth.currentUser || !window.firebaseDeleteDoc) {
-        window.App.ui.showToast("Error de conexión con base de datos.");
-        return;
-    }
-    btn.disabled = true;
-    btn.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Borrando...';
-    try {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-        const repEvals = st.ALL_EVALUATIONS.filter(e => e.visitador === repName);
-        for (const ev of repEvals) {
-            if (ev.firebaseId) {
-                const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', ev.firebaseId);
-                await window.firebaseDeleteDoc(docRef);
-            }
-        }
-        window.App.ui.showToast(`Evaluaciones de ${repName} borradas con éxito.`);
-        document.getElementById('confirmClearRepModal').classList.add('hidden');
-        window.App.evaluation.fetchAllEvaluacionesAdmin();
-    } catch (e) {
-        console.error("Error borrando datos del asesor", e);
-        window.App.ui.showToast("Ocurrió un error al limpiar datos.");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Borrar Datos';
-    }
-};
+window.App.admin.executeClearAllEvals = window.App.admin.confirmClearAllEvals;
+window.App.admin.clearRepEvaluations  = window.App.admin.confirmClearAllEvals;
+window.App.admin.executeClearRepEvals = window.App.admin.confirmClearAllEvals;
 
 /* ============================================================
    CONFIGURACIÓN DE PONDERACIÓN DE LA ENCUESTA
@@ -627,48 +524,34 @@ window.App.admin.openAccessManager = async function() {
         return;
     }
 
-    const clavesMap = {};
-    if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-        try {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-            const colRef = window.firebaseCollection(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'claves_visitadores');
-            const snapshot = await window.firebaseGetDocs(colRef);
-            snapshot.forEach(doc => { clavesMap[doc.id] = doc.data().clave; });
-        } catch (e) {
-            console.error("Error leyendo claves desde Firebase:", e);
-        }
-    }
-
-    container.innerHTML = reps.map((rep, idx) => `
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 transition shadow-sm gap-3 group">
-            <span class="text-sm font-bold text-slate-700 truncate flex-1 flex items-center gap-2" title="${rep}"><span class="bg-indigo-100 text-indigo-700 w-6 h-6 flex items-center justify-center rounded-full text-[10px]">${idx + 1}</span>${rep}</span>
-            <div class="flex gap-2 items-center w-full sm:w-auto">
-                <div class="relative w-full sm:w-48">
-                    <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[16px]">lock</span>
-                    <input type="text" id="pwd_input_${idx}" value="${clavesMap[rep] || ''}" placeholder="Asignar clave..." class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-slate-600 bg-slate-50 focus:bg-white transition">
-                </div>
-                <button onclick="saveRepPwd('${rep.replace(/'/g, "\\'")}', 'pwd_input_${idx}')" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl shadow-md transition flex-shrink-0 flex items-center group-hover:scale-105" title="Guardar Clave"><span class="material-symbols-outlined text-[18px]">save</span></button>
-            </div>
-        </div>
-    `).join('');
-};
-
-window.App.admin.saveRepPwd = async function(repName, inputId) {
-    const pwd = document.getElementById(inputId).value.trim();
-    if (!pwd) { window.App.ui.showToast("La clave no puede estar vacía"); return; }
-    if (!window.firebaseAuth || !window.firebaseAuth.currentUser) {
-        window.App.ui.showToast("Error: No estás conectado a la base de datos.");
-        return;
-    }
+    // Directorio nombre -> correo (lo escribe el script crear-usuarios en Cloud Shell)
+    let correos = {};
     try {
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-        const docRef = window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'claves_visitadores', repName);
-        await window.firebaseSetDoc(docRef, { clave: pwd, asignado_en: new Date().toISOString() });
-        window.App.ui.showToast(`Clave asignada correctamente a ${repName.substring(0, 12)}...`);
+        const snap = await window.firebaseGetDoc(
+            window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'config', 'directorio_usuarios')
+        );
+        if (snap.exists()) correos = snap.data().visitadores || {};
     } catch (e) {
-        console.error("Error guardando clave:", e);
-        window.App.ui.showToast("Error crítico al guardar la clave.");
+        console.error("Error leyendo el directorio de usuarios:", e);
     }
+
+    const esc = window.App.ui.escapeHtml;
+    container.innerHTML = reps.map((rep, idx) => {
+        const correo = correos[rep];
+        const estado = correo
+            ? `<span class="text-xs font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl truncate">${esc(correo)}</span>`
+            : `<span class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">Sin usuario</span>`;
+        return `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm gap-3">
+            <span class="text-sm font-bold text-slate-700 truncate flex-1 flex items-center gap-2" title="${esc(rep)}"><span class="bg-indigo-100 text-indigo-700 w-6 h-6 flex items-center justify-center rounded-full text-[10px]">${idx + 1}</span>${esc(rep)}</span>
+            ${estado}
+        </div>`;
+    }).join('');
+};
+
+window.App.admin.saveRepPwd = function() {
+    window.App.ui.showToast("Las claves ya no se asignan aquí. Cada persona usa \"¿Olvidaste tu clave?\" en el ingreso.");
 };
 
 /* ============================================================

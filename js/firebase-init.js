@@ -5,16 +5,23 @@
    Expone: window.firebaseDb, window.firebaseAuth,
            window.firebaseSetDoc, window.firebaseGetDocs,
            window.firebaseGetDoc, window.firebaseCollection,
-           window.firebaseDoc, window.firebaseDeleteDoc
+           window.firebaseDoc, window.firebaseDeleteDoc,
+           window.firebaseAuthApi (login con correo y clave),
+           window.firebaseAuthReady (promesa: estado de sesión inicial)
 ============================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import {
+    getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+    sendPasswordResetEmail, signOut
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Configuración del proyecto Firebase ---
+// (Estos valores son públicos por diseño; la protección está en las reglas
+//  de Firestore y en Firebase Auth.)
 const miConfiguracionFirebase = {
     apiKey: "AIzaSyAIu61M-R9eCX9oEJG4X3vJgZ6JDrO0DNw",
     authDomain: "segmentapp-1b237.firebaseapp.com",
@@ -37,6 +44,7 @@ if (firebaseConfig && firebaseConfig.apiKey) {
     try {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        auth.languageCode = 'es';   // correos de recuperación en español
         const db = getFirestore(app);
 
         // Exponer instancias y métodos en window (para que los archivos
@@ -50,22 +58,28 @@ if (firebaseConfig && firebaseConfig.apiKey) {
         window.firebaseDoc = doc;
         window.firebaseDeleteDoc = deleteDoc;
 
-        // Login anónimo (temporal - en Bloque 2 migraremos a email/password)
-        (async function initAuth() {
-            try {
-                await signInAnonymously(auth);
-                console.log('[SegmentApp] Conexión segura a Firebase establecida.');
+        // Login real con correo y clave (reemplaza al login anónimo)
+        window.firebaseAuthApi = {
+            signIn:        (email, pwd) => signInWithEmailAndPassword(auth, email, pwd),
+            sendReset:     (email)      => sendPasswordResetEmail(auth, email),
+            signOut:       ()           => signOut(auth)
+        };
 
-                // Notificar a otros módulos que Firebase está listo
-                window.dispatchEvent(new CustomEvent('firebase-ready'));
-            } catch (e) {
-                console.error('[SegmentApp] Error al conectar con Firebase Auth:', e);
-                window.dispatchEvent(new CustomEvent('firebase-error', { detail: e }));
-            }
-        })();
+        // Se resuelve con el primer estado de sesión conocido (usuario o null).
+        // Firebase recuerda la sesión en el dispositivo, también sin conexión.
+        window.firebaseAuthReady = new Promise(resolve => {
+            const unsubscribe = onAuthStateChanged(auth, user => {
+                unsubscribe();
+                resolve(user);
+            });
+        });
+
+        console.log('[SegmentApp] Firebase inicializado.');
+        window.dispatchEvent(new CustomEvent('firebase-ready'));
 
     } catch (e) {
         console.error('[SegmentApp] Error inicializando Firebase:', e);
+        window.dispatchEvent(new CustomEvent('firebase-error', { detail: e }));
     }
 } else {
     console.error('[SegmentApp] No se encontró configuración válida de Firebase.');

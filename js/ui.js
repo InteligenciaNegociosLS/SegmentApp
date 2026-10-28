@@ -26,6 +26,15 @@ window.App.ui.compactNum = function(num) {
 };
 
 /* ------------------------------------------------------------
+   ESCAPAR TEXTO PARA INSERTARLO COMO HTML
+------------------------------------------------------------ */
+window.App.ui.escapeHtml = function(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+};
+
+/* ------------------------------------------------------------
    TOAST (notificación flotante)
 ------------------------------------------------------------ */
 window.App.ui.showToast = function(msg) {
@@ -128,7 +137,12 @@ window.App.ui.showConfirmClearModal = function() {
 
 window.App.ui.executeClearSession = async function() {
     if (window.localforage) {
+        // Conservar las evaluaciones hechas sin conexión que aún no se subieron
+        const pendingQueue = (await localforage.getItem('OFFLINE_QUEUE')) || [];
         await localforage.clear();
+        if (pendingQueue.length > 0) {
+            await localforage.setItem('OFFLINE_QUEUE', pendingQueue);
+        }
     }
     window.location.reload();
 };

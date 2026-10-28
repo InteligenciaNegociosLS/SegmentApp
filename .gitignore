@@ -1,0 +1,15 @@
+# Dependencias
+node_modules/
+
+# Secretos y configuración local (nunca al repositorio)
+.env
+.env.*
+!.env.example
+
+# Archivos generados por los scripts del hotfix (contienen datos sensibles)
+scripts/hotfix/usuarios.csv
+scripts/hotfix/respaldos/
+
+# Sitio construido (se genera con npm run build)
+dist/
+js/env.js
