@@ -210,16 +210,38 @@ de las reglas de seguridad.
 
 ### Reglas de seguridad
 
-**No están en el repositorio** (no hay `firestore.rules` ni `firebase.json`).
-Por cómo funciona la app, las reglas **tienen que permitir que cualquier usuario
-anónimo lea y escriba todo**:
-- La pantalla de login lista `claves_visitadores` **antes** de que nadie inicie
-  sesión. Esa misma lectura trae las claves de todos.
-- Cualquier visitador puede escribir, y el admin puede borrar, cualquier
-  evaluación.
+No están en el repositorio. El dueño del proyecto las copió desde Firebase
+Console el 28/10/2026. Están bien pensadas (todo cerrado por defecto, permisos
+por rol con `role`, `visitadorName` y `managerName`), pero tienen una
+**excepción "TEMPORAL"** que lo abre casi todo:
 
-➡️ **Acción para ti:** entra a Firebase Console → Firestore → Reglas, copia el
-texto y pégamelo (no contiene secretos). Así confirmo este punto.
+```
+!('role' in request.auth.token)   // TEMPORAL: producción aún usa login anónimo
+```
+
+Como la app inicia sesión en modo anónimo, **nadie tiene `role`**, y esa
+excepción deja pasar a cualquiera que abra la página:
+
+| Ruta | Lectura | Escritura | Borrado |
+|---|---|---|---|
+| `evaluaciones_matriz` | 🔴 Cualquiera, todas | 🔴 Cualquiera puede crear o modificar cualquiera | ✅ Solo `role == 'admin'`, **que hoy nadie tiene** |
+| `claves_visitadores` | 🔴 Cualquiera (incluye las claves) | 🔴 Cualquiera puede **cambiar la clave de otro** | 🔴 Cualquiera |
+| `config/admin_settings` | 🔴 Cualquiera (incluye la clave admin) | 🔴 Cualquiera puede cambiarla | 🔴 Cualquiera |
+| `visitador_directory` | Todos | Nadie | Nadie |
+
+Consecuencias:
+- Se confirman C1, C2 y C3 (§5). Además, **cualquiera puede sobrescribir
+  claves y evaluaciones ajenas**.
+- **Buena noticia:** como ningún usuario tiene el permiso `admin` real, los
+  botones "Eliminar evaluación", "Borrar las de este asesor" y "Limpiar Datos"
+  **fallan hoy con error de permisos**. No se ha podido borrar nada desde la app.
+- La colección `visitador_directory` (solo nombres, sin claves) ya está prevista
+  en las reglas, pero la app no la usa: sigue leyendo `claves_visitadores`.
+- La regla de `gerente` exige un campo `gerente` en cada evaluación, y las
+  evaluaciones no lo tienen.
+
+Las instrucciones para cerrar esta excepción sin perder datos están en
+`docs/URGENTE_SEGURIDAD.md`.
 
 ---
 
@@ -266,7 +288,7 @@ Fallas graves:
 | C4 | Datos personales de médicos publicados en Vercel y guardados en el historial de Git | `fichero_medico.csv(.gz)` |
 | C5 | Un invitado sin login ve todos los datos | `auth.js:94-109` |
 | C6 | **"Recargar" borra la cola sin conexión** (`localforage.clear()`): las evaluaciones hechas sin internet y no subidas se pierden | `ui.js:143-148` |
-| C7 | "Limpiar Datos" borra **todas** las evaluaciones de producción con un solo clic de confirmación, sin respaldo | `admin.js:400-427` |
+| C7 | "Limpiar Datos" intentaría borrar **todas** las evaluaciones con un solo clic de confirmación. Hoy lo frenan las reglas (ver §3), pero en cuanto exista un admin real el botón funcionaría | `admin.js:400-427` |
 
 ### 🟠 Alto (resultados incorrectos)
 
