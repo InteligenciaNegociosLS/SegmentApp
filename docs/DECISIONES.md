@@ -31,3 +31,20 @@ Debe existir siempre al menos un usuario `admin` con acceso total.
 ### Seguridad urgente
 Se aprueba preparar el paso urgente, **solo si es seguro y garantiza no perder
 información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
+
+## 28/10/2026 (paso urgente de seguridad)
+
+- **Login con correo corporativo** (ya no se elige el nombre en una lista) y
+  **recuperación de clave por correo**. Esto se aplica ya en el arreglo
+  urgente (Firebase Auth) y se mantiene en la app nueva (Supabase Auth).
+- **Se conservan las claves actuales** de los VM. Quien tenga una clave de menos
+  de 6 caracteres la cambia con "¿Olvidaste tu clave?".
+- **Los VM necesitan todos los datos del médico** del fichero: no se quitan
+  columnas (se descarta la opción B). La protección real llega cuando los datos
+  queden detrás del login (Fase 7).
+- Usuario administrador: el correo del dueño, con rol `admin`.
+- El Excel de "Descargar" era muy lento y a veces colgaba el navegador: se
+  corrigió en el arreglo urgente (de 35,5 s a 0,36 s en prueba con 3.000
+  evaluaciones).
+- El arreglo urgente va en el PR `hotfix-seguridad` → `main` y lo une el dueño.
+  Guía: `scripts/hotfix/LEEME.md` (en esa rama).

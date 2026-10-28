@@ -5,6 +5,12 @@
 **Dónde aplica:** en la app que usa hoy el equipo (rama `main`). Claude **no**
 toca `main`: prepara un PR y **tú decides** si lo unes.
 
+> **Actualización 28/10/2026:** el dueño eligió el **login con correo
+> corporativo y recuperación de clave por correo**, mantener las claves actuales
+> y conservar todos los datos del médico. La guía definitiva, con todos los
+> comandos, está en `scripts/hotfix/LEEME.md` de la rama `hotfix-seguridad`
+> (PR hacia `main`). Este documento queda como explicación general.
+
 ---
 
 ## Garantías: qué NO va a pasar
