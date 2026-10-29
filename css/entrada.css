@@ -232,8 +232,9 @@
     .stats-drawer { max-height: 0; overflow: hidden; transition: max-height var(--md-motion-medium) var(--md-ease-standard), opacity var(--md-motion-medium) var(--md-ease-standard); opacity: 0; }
     .stats-drawer.open { max-height: 50px; opacity: 1; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,0.12); }
 
-    .checkbox-item { display: flex; align-items: center; padding: 12px; cursor: pointer; border-radius: 12px; }
-    .checkbox-item input { margin-right: 12px; accent-color: var(--md-primary); width: 20px; height: 20px; }
+    .checkbox-item { display: flex; align-items: flex-start; padding: 10px 12px; cursor: pointer; border-radius: 12px; line-height: 1.35; }
+    /* La casilla siempre del mismo tamaño, aunque el nombre sea largo */
+    .checkbox-item input { margin: 0 12px 0 0; accent-color: var(--md-primary); width: 20px; height: 20px; min-width: 20px; flex: 0 0 20px; }
 
     .modal-badge { padding: 4px 8px; border-radius: 8px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.04em; }
     .badge-gap { background-color: theme('colors.error.100'); color: theme('colors.error.900'); font-weight: 800; font-size: 0.75rem; padding: 4px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; }
@@ -389,6 +390,14 @@
     .barra-fina { height: 6px; border-radius: 6px; background: var(--md-primary-container); overflow: hidden; }
     .barra-fina > div { height: 100%; border-radius: 6px; background: var(--md-primary); transition: width var(--md-motion-long) var(--md-ease-emphasized); }
 
+    /* Estado de evaluación (tabla y tarjetas) */
+    .eval-estado { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 10px 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .eval-estado .material-symbols-outlined { font-size: 20px; }
+    .eval-pendiente { background: var(--md-primary); color: var(--md-on-primary); padding-right: 16px; }
+    .eval-hecha { background: rgb(var(--c-success-50)); color: rgb(var(--c-success-800)); }
+    .icono-relleno { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important; color: rgb(var(--c-success-600)); }
+    .eval-cuadrante { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 26px; padding: 0 6px; border-radius: 8px; font-size: 12px; font-weight: 800; }
+
     /* Botón de acción del aviso inferior ("Deshacer") */
     .toast-accion { margin-left: 16px; font-weight: 700; color: theme('colors.primary.200'); padding: 6px 8px; border-radius: 8px; }
 
@@ -416,6 +425,40 @@
         .celda-cuenta { font-size: 0.95rem; }
     }
 }
+
+/* Guía rápida: resalta una parte de la pantalla y la explica */
+.guia-foco {
+    position: fixed; border-radius: 24px; pointer-events: none;
+    box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.55), 0 0 0 3px rgb(var(--c-primary-200));
+    transition: top var(--md-motion-long) var(--md-ease-emphasized), left var(--md-motion-long) var(--md-ease-emphasized),
+                width var(--md-motion-long) var(--md-ease-emphasized), height var(--md-motion-long) var(--md-ease-emphasized);
+}
+.guia-tarjeta {
+    position: fixed; left: 16px; right: 16px; max-width: 380px; margin: 0 auto; padding: 18px 20px;
+    background: rgb(var(--c-white)); border-radius: 24px; box-shadow: theme('boxShadow.2xl');
+    transition: top var(--md-motion-long) var(--md-ease-emphasized);
+    animation: md-dialogo var(--md-motion-long) var(--md-ease-emphasized) both;
+}
+
+/* Matriz en pantalla completa: solo la matriz, sin desplazarse */
+#seccionMatriz.matriz-completa {
+    position: fixed; inset: 0; z-index: 120; margin: 0; padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    background: var(--md-surface); display: flex; flex-direction: column; overflow: hidden;
+    animation: md-dialogo var(--md-motion-long) var(--md-ease-emphasized) both;
+}
+#seccionMatriz.matriz-completa > div:nth-child(2) { flex: 1; min-height: 0; overflow: visible; }
+#seccionMatriz.matriz-completa #matrixCaptureTarget { height: 100%; display: flex; flex-direction: column; padding: 12px; }
+#seccionMatriz.matriz-completa .matrix-grid { flex: 1; min-height: 0; grid-template-rows: auto repeat(3, minmax(0, 1fr)); }
+#seccionMatriz.matriz-completa .matrix-cell { min-height: 0; aspect-ratio: auto; }
+#seccionMatriz.matriz-completa #btnMatrizCompleta { display: none; }
+#seccionMatriz.matriz-completa #btnSalirCompleta { display: flex; }
+#seccionMatriz.matriz-completa .celda-letra { font-size: clamp(2rem, 7vmin, 5rem); }
+#seccionMatriz.matriz-completa .celda-cuenta { font-size: clamp(1rem, 3vmin, 1.75rem); }
+body.sin-desplazar { overflow: hidden; }
+
+/* Lista recién filtrada desde la matriz: un destello suave */
+#seccionMedicos.resaltar > div:last-child { animation: resaltar 1200ms var(--md-ease-standard); }
+@keyframes resaltar { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 4px rgb(var(--c-primary-200)); } }
 
 /* ---------- 5. Movimiento (mismos tiempos en todas las pantallas) ---------- */
 @layer utilities {
