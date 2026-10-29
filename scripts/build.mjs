@@ -6,11 +6,14 @@
       Variables; en tu computadora: archivo .env, que NO se sube a GitHub).
    2. Copia a dist/ SOLO los archivos que la app necesita.
    3. Escribe dist/js/env.js con la configuración PÚBLICA del entorno.
+   4. Escribe dist/sw.js (app sin internet) con la lista de archivos y
+      una versión nueva en cada publicación.
 
    Nunca escribe claves secretas: si detecta una clave de servicio de
    Supabase en una variable pública, se detiene con error.
 ============================================================ */
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,7 +23,7 @@ const DIST = path.join(RAIZ, 'dist');
 // Archivos y carpetas que se publican (todo lo demás queda fuera del sitio)
 // Los archivos .gz siguen en el repositorio como respaldo, pero ya no se publican:
 // desde la Fase 5 los datos se descargan de Supabase, solo después de iniciar sesión.
-const PUBLICAR = ['index.html', 'css', 'js', 'img'];
+const PUBLICAR = ['index.html', 'manifest.webmanifest', 'css', 'js', 'img'];
 
 // --- 1. Variables de entorno ----------------------------------------------
 function cargarDotEnv() {
@@ -109,7 +112,30 @@ fs.writeFileSync(path.join(DIST, 'js', 'env.js'),
     '/* Generado por scripts/build.mjs. No editar. Solo valores PÚBLICOS. */\n' +
     `window.__SEGMENTAPP_ENV__ = ${JSON.stringify(config, null, 2)};\n`);
 
+// --- 4. App sin internet (service worker) ----------------------------------
+function listarArchivos(carpeta, base = '') {
+    return fs.readdirSync(carpeta, { withFileTypes: true }).flatMap(e => {
+        const rel = base ? `${base}/${e.name}` : e.name;
+        return e.isDirectory() ? listarArchivos(path.join(carpeta, e.name), rel) : [rel];
+    });
+}
+const archivosApp = listarArchivos(DIST).filter(a => a !== 'css/entrada.css').sort();
+const huella = crypto.createHash('sha256');
+for (const a of archivosApp) huella.update(a).update(fs.readFileSync(path.join(DIST, a)));
+const versionApp = huella.digest('hex').slice(0, 12);
+// Librerías y fuentes externas que usa la app (se guardan en el dispositivo la primera vez)
+const externos = new Set();
+for (const a of ['index.html', 'js/config.js', 'js/entorno.js']) {
+    const texto = fs.readFileSync(path.join(RAIZ, a), 'utf8');
+    for (const m of texto.matchAll(/https:\/\/(?:cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.googleapis\.com)\/[^'"`\s<>]+/g)) externos.add(m[0].replace(/&amp;/g, '&'));
+}
+fs.writeFileSync(path.join(DIST, 'sw.js'), fs.readFileSync(path.join(RAIZ, 'sw.js'), 'utf8')
+    .replace("'__VERSION__'", JSON.stringify(versionApp))
+    .replace('__ARCHIVOS__', JSON.stringify(['./', ...archivosApp], null, 4))
+    .replace('__EXTERNOS__', JSON.stringify([...externos].sort(), null, 4)));
+
 console.log('✅ Sitio construido en dist/');
+console.log(`   App sin internet: versión ${versionApp} (${archivosApp.length} archivos, ${externos.size} librerías externas)`);
 console.log(`   Entorno:  ${config.APP_ENV}`);
 console.log(`   Supabase: ${config.SUPABASE_URL ? config.SUPABASE_URL : 'sin configurar'}`);
 console.log(`   Registro remoto de fallas: ${config.ERROR_LOG_REMOTE ? 'sí' : 'no'}`);
