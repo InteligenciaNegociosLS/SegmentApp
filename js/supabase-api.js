@@ -117,6 +117,14 @@ window.App.sb.datosEquipo = async function(recetasId, ficheroId) {
     return data;
 };
 
+// Recetas y clasificación del médico en cada versión publicada (migración 10)
+window.App.sb.historialMedico = async function(matricula) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('historial_medico', { p_matricula: matricula });
+    if (error) throw fallo(error, 'Historial del médico');
+    return data || [];
+};
+
 window.App.sb.urlArchivo = async function(ruta) {
     const sb = await window.App.sb.cliente();
     const { data, error } = await sb.storage.from(BUCKET_DATOS).createSignedUrl(ruta, 3600);
