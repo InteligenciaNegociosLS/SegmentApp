@@ -66,7 +66,8 @@ export default {
         fontFamily: {
             sans: ['"Roboto Flex"', 'Roboto', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
             display: ['"Roboto Flex"', 'Roboto', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-            mono: ['"Roboto Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+            // Cifras: la misma Roboto Flex, con números del mismo ancho (ver entrada.css)
+            mono: ['"Roboto Flex"', 'Roboto', 'system-ui', 'sans-serif']
         },
         extend: {
             // Formas M3: 4 · 8 · 12 · 16 · 20 · 28 · píldora

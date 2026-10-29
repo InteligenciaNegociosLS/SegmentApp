@@ -62,6 +62,8 @@
         -webkit-font-smoothing: antialiased;
     }
     h1, h2, h3, h4 { letter-spacing: -0.01em; }
+    /* Cifras alineadas en tablas y contadores */
+    .font-mono, td, .kpi-card { font-variant-numeric: tabular-nums; }
 
     /* Foco visible y accesible (teclado): 2 px con 2 px de separación */
     :focus-visible {
