@@ -54,7 +54,7 @@ describe('Pantalla de ingreso', () => {
         expect(toast()).toContain('permisos');
         expect(App.state.currentUserRole).toBe('guest');
     });
-    it('visitador entra, descarga la versión vigente y ve su tablero', async () => {
+    it('visitador entra, recibe SOLO sus médicos (sin el archivo completo) y ve su tablero', async () => {
         await ingresar('vm@lasante.com', '123456');
         expect(App.state.currentUserRole).toBe('visitador');
         expect(App.state.currentVisitadorName).toBe('NEIVIS PARRA');
@@ -62,17 +62,39 @@ describe('Pantalla de ingreso', () => {
         expect(visible('visitadorDashboard')).toBe(true);
         expect(visible('adminDashboard')).toBe(false);
         expect(document.getElementById('visitadorPwd').value).toBe('');
-        expect(window.__calls).toContain('descargar:https://archivos.prueba/snapshots/s-rec-1/datos.csv.gz');
-        expect(App.state.RAW_DATA).toHaveLength(3);
+        expect(window.__calls).toContain('rpc:datos_equipo:s-rec-1');
+        expect(window.__calls.some(c => c.startsWith('descargar:') || c.startsWith('firmar:'))).toBe(false);
+        expect(App.state.RAW_DATA.map(r => r.license)).toEqual(['00123', '00123']);
+        expect([...App.state.FICHERO_MAP.keys()]).toEqual(['123']);
+        expect(App.state.PROCESSED_DATA.map(d => d.id)).toEqual(['123_PEREZANA']);
         expect(document.getElementById('lblVersionDatos').textContent).toBe('Datos: Hoy');
         expect(visible('btnUploadData')).toBe(false);
     });
     it('segunda entrada usa la copia local (no descarga de nuevo)', async () => {
         await ingresar('vm@lasante.com', '123456');
-        const descargas = () => window.__calls.filter(c => c.startsWith('descargar:')).length;
+        const descargas = () => window.__calls.filter(c => c.startsWith('rpc:datos_equipo')).length;
         const antes = descargas();
         await App.main.reintentarCarga();
         expect(descargas()).toBe(antes);
+    });
+    it('otra persona en el mismo equipo no usa la copia del anterior', async () => {
+        await ingresar('vm@lasante.com', '123456');
+        await App.auth.logoutSession();
+        await ingresar('admin@lasante.com', 'adminadmin');
+        expect(window.__calls).toContain('descargar:https://archivos.prueba/snapshots/s-rec-1/datos.csv.gz');
+        expect(App.state.RAW_DATA).toHaveLength(3);
+    });
+    it('clasificación por mercado: el VM ve la misma etiqueta nacional que calcula el admin', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        const delAdmin = App.matrix.getDoctorMarketClassification('123', 'DESLER MERCADO');
+        await App.auth.logoutSession();
+        await ingresar('vm@lasante.com', '123456');
+        expect(App.state.MARKET_SERVIDOR).toBeTruthy();
+        expect(App.matrix.getDoctorMarketClassification('123', 'DESLER MERCADO')).toBe(delAdmin);
+        expect(delAdmin).toBe('C-');
+        // Los umbrales se aplican en la app: cambiar un umbral cambia la etiqueta sin volver a descargar
+        App.state.TH_POT_HIGH = 90;
+        expect(App.matrix.getDoctorMarketClassification('123', 'DESLER MERCADO')).toBe('B-');
     });
     it('admin ve el panel del equipo y el botón de cargar datos', async () => {
         await ingresar('admin@lasante.com', 'adminadmin');
@@ -176,7 +198,7 @@ describe('Versiones de datos', () => {
         expect(sel.options[sel.selectedIndex].textContent).toContain('(Hoy)');
         sel.value = 's-rec-0';
         await App.versiones.aplicar();
-        expect(window.__calls).toContain('descargar:https://archivos.prueba/snapshots/s-rec-0/datos.csv.gz');
+        expect(window.__calls).toContain('rpc:datos_equipo:s-rec-0');
         expect(document.getElementById('lblVersionDatos').textContent).toBe('Datos: versión anterior');
         await App.versiones.volverAHoy();
         expect(document.getElementById('lblVersionDatos').textContent).toBe('Datos: Hoy');

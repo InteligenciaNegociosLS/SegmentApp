@@ -11,6 +11,7 @@ import { spawn, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { construirDatosEquipo } from '../falsos/datos-equipo.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '..', '..');
@@ -41,12 +42,19 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => { window.__calls = []; });
+  // Lo que el servidor le enviaría a NEIVIS PARRA (calculado aquí con los datos reales)
+  const { leerCsvGz } = await import('../../scripts/migracion/transformar.mjs');
+  const leer = (f) => leerCsvGz(path.join(RAIZ, f));
+  const phq = JSON.parse(fs.readFileSync(path.join(RAIZ, 'js', 'config.js'), 'utf8').match(/DEFAULT_PHQ_PRODUCTS = (\[[\s\S]*?\]);/)[1]);
+  const paqueteVm = construirDatosEquipo({ recetas: leer('datacloseup.csv.gz').filas, fichero: leer('fichero_medico.csv.gz'), visibles: new Set(['NEIVIS PARRA']), phq });
+  await page.addInitScript((p) => { window.__SB_DATOS_EQUIPO = { 's-rec-1|s-fic-1|u-vm': p }; }, paqueteVm);
   const ENV = `window.__SEGMENTAPP_ENV__ = ${JSON.stringify({ APP_ENV: 'preview', SUPABASE_URL: 'https://prueba.supabase.co', SUPABASE_ANON_KEY: 'clave-publica-de-prueba', VERSION: 'e2e' })};`;
   const ARCHIVOS = { 's-rec-1': 'datacloseup.csv.gz', 's-fic-1': 'fichero_medico.csv.gz' };
   await page.route('**/*', route => {
     const u = route.request().url();
     if (u.startsWith(BASE + 'js/env.js')) return route.fulfill({ contentType: 'application/javascript', body: ENV });
     if (u.startsWith(BASE)) return route.continue();
+    if (u.endsWith('/datos-equipo.mjs')) return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(RAIZ, 'tests', 'falsos', 'datos-equipo.mjs')) });
     if (u.includes('@supabase/supabase-js')) return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(RAIZ, 'tests', 'falsos', 'supabase-falso.mjs')) });
     if (u.startsWith('https://prueba.supabase.co/auth/v1/health')) return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     const archivo = u.match(/^https:\/\/archivos\.prueba\/snapshots\/([^/]+)\//);
@@ -74,10 +82,15 @@ try {
   ok('recuperar clave: envía correo', (await page.evaluate(() => window.__calls)).includes('reset:vm@lasante.com'));
 
   await page.fill('#visitadorPwd', '123456');
-  await page.evaluate(() => attemptLogin()); await page.waitForTimeout(1500);
+  const tVm = Date.now();
+  await page.evaluate(() => attemptLogin());
+  await page.waitForFunction(() => App.state.currentUserRole === 'visitador', null, { timeout: 120000 });
+  console.log(`INFO  VM: de "Entrar" al tablero en ${Date.now() - tVm} ms (solo sus médicos)`);
+  await page.waitForTimeout(500);
   ok('VM: entra y ve su tablero', await vis('visitadorDashboard') && await vis('dashboardContent') && !(await vis('adminDashboard')));
   ok('VM: nombre desde su perfil', (await page.textContent('#navUserName')) === 'NEIVIS PARRA');
-  ok('VM: descargó la versión vigente (privada, con enlace firmado)', (await page.evaluate(() => window.__calls)).includes('firmar:snapshots/s-rec-1/datos.csv.gz'));
+  const llamadasVm = await page.evaluate(() => window.__calls);
+  ok('VM: recibe solo sus médicos (no descarga el archivo completo)', llamadasVm.includes('rpc:datos_equipo:s-rec-1') && !llamadasVm.some(c => c.startsWith('firmar:')));
   ok('VM: etiqueta "Datos: Hoy"', (await page.textContent('#lblVersionDatos')) === 'Datos: Hoy');
   ok('VM: sin botón de cargar datos', !(await vis('btnUploadData')));
   const nDocs = await page.evaluate(() => App.state.PROCESSED_DATA.length);
@@ -99,7 +112,11 @@ try {
   ok('usuario sin rol: no entra', (await toast()).includes('permisos') && await page.evaluate(() => App.state.currentUserRole === 'guest'));
 
   await page.fill('#loginEmail', 'admin@lasante.com'); await page.fill('#visitadorPwd', 'adminadmin');
-  await page.evaluate(() => attemptLogin()); await page.waitForTimeout(2000);
+  const tAdmin = Date.now();
+  await page.evaluate(() => attemptLogin());
+  await page.waitForFunction(() => App.state.isAdmin, null, { timeout: 120000 });
+  console.log(`INFO  Admin: de "Entrar" al tablero en ${Date.now() - tAdmin} ms (archivo completo, como antes lo hacían todos)`);
+  await page.waitForTimeout(1000);
   ok('admin: entra al panel', await vis('adminDashboard') && await page.evaluate(() => App.state.isAdmin));
   ok('admin: sin botón "Limpiar Datos"', !(await page.evaluate(() => document.body.innerHTML.includes('Limpiar Datos'))));
   await page.evaluate(() => confirmClearAllEvals());

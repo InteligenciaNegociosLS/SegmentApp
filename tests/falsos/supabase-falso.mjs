@@ -9,6 +9,8 @@
    Registro de llamadas: window.__calls (si existe).
 ============================================================ */
 
+import { construirDatosEquipo } from './datos-equipo.mjs';
+
 const CLAVE_SESION = 'sbFalsoSesion';
 
 function registrar(texto) {
@@ -26,7 +28,7 @@ export function datosDePrueba() {
         perfiles: [
             { id: 'u-vm', correo: 'vm@lasante.com', nombre: 'Neivis Parra', rol: 'vm', activo: true },
             { id: 'u-admin', correo: 'admin@lasante.com', nombre: 'Administrador', rol: 'admin', activo: true },
-            { id: 'u-gd', correo: 'gd@lasante.com', nombre: 'Gerente Uno', rol: 'gd', activo: true },
+            { id: 'u-gd', correo: 'gd@lasante.com', nombre: 'Gerente Uno', rol: 'gd', activo: true, distritos: ['D1'] },
             { id: 'u-sinrol', correo: 'norole@lasante.com', nombre: '', rol: null, activo: false }
         ],
         visitadores: [
@@ -40,6 +42,10 @@ export function datosDePrueba() {
         configuracion: [
             { clave: 'umbrales_matriz', valor: { TH_LOY_LOW: 33, TH_LOY_HIGH: 66, TH_POT_LOW: 33, TH_POT_HIGH: 66 } }
         ],
+        // Contenido de cada versión (para datos_equipo): { id: { encabezados, filas } }
+        fuentes: {},
+        // O el resultado ya calculado: { 'recetas|fichero|usuario': {...} }
+        datosEquipo: {},
         evaluaciones: [],
         // filas cargadas por lote: { snapshotId: Set(fila) }
         lotes: {},
@@ -122,6 +128,7 @@ class Consulta {
 
 export function createClient(url, clave, opciones = {}) {
     const bd = opciones.datos || (typeof window !== 'undefined' && window.__SB_DATOS) || datosDePrueba();
+    if (typeof window !== 'undefined' && window.__SB_DATOS_EQUIPO) Object.assign(bd.datosEquipo, window.__SB_DATOS_EQUIPO);
     const oyentes = [];
     const leerSesion = () => {
         try { return JSON.parse(localStorage.getItem(CLAVE_SESION) || 'null'); } catch { return null; }
@@ -157,6 +164,24 @@ export function createClient(url, clave, opciones = {}) {
         comparar_snapshots({ p_nuevo, p_base }) {
             const n = (bd.lotes[p_nuevo] || new Set()).size;
             return { data: { nuevas: n, eliminadas: 0, cambiadas: 0, iguales: 0, rx_nuevo: 0, rx_base: 0, medicos_nuevo: 0, medicos_base: 0, visitadores_nuevo: 0, visitadores_base: 0, ejemplos: [] }, error: null };
+        },
+        datos_equipo({ p_recetas, p_fichero }) {
+            const s = leerSesion();
+            const p = s && bd.perfiles.find(x => x.id === s.id && x.activo);
+            if (!p) return { data: null, error: { message: 'Tu usuario no tiene permisos' } };
+            registrar(`rpc:datos_equipo:${p_recetas}`);
+            const listo = bd.datosEquipo[`${p_recetas}|${p_fichero}|${s.id}`];
+            if (listo) return { data: listo, error: null };
+            const fr = bd.fuentes[p_recetas];
+            if (!fr) return { data: null, error: { message: 'La versión de recetas no existe o no está publicada' } };
+            const visibles = new Set(bd.visitadores.filter(v =>
+                ['admin', 'gte_nacional'].includes(p.rol) ||
+                (p.rol === 'vm' && v.perfil_id === p.id) ||
+                (p.rol === 'gd' && (p.distritos || []).includes(v.distrito))).map(v => v.nombre_sector));
+            const cfg = bd.configuracion.find(c => c.clave === 'productos_phq');
+            const datos = construirDatosEquipo({ recetas: fr.filas, fichero: bd.fuentes[p_fichero] || { encabezados: [], filas: [] },
+                visibles, phq: cfg ? cfg.valor : [] });
+            return { data: JSON.parse(JSON.stringify(datos)), error: null };
         },
         publicar_snapshot({ p_snapshot_id }) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede publicar versiones' } };
