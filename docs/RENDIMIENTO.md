@@ -17,8 +17,11 @@ uno o dos segundos.
 ## Qué se hizo
 1. **Cada VM y GD recibe solo sus médicos** (función `datos_equipo` en
    Supabase). La etiqueta nacional de cada médico por mercado (A+, B, C-…)
-   necesita las recetas de todo el país: ahora la calcula el servidor y envía
-   solo el resultado.
+   necesita las recetas de todo el país: el servidor guarda ese orden
+   nacional **una vez por versión** (tabla `recetas_orden_mercado`, se
+   prepara al subir o publicar) y a cada VM le envía solo el de sus médicos.
+   La primera versión de la Fase 7 lo recalculaba en cada entrada y Supabase
+   la cortaba a los 8 s ("statement timeout"); la migración 8 lo corrigió.
 2. **El admin y el Gerente Nacional** siguen recibiendo el archivo completo
    (ven todo), pero los cálculos son más rápidos:
    - la agrupación por médico se reutiliza si solo cambian productos,

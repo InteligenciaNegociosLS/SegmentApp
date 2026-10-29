@@ -1,8 +1,8 @@
 # Esquema de la base de datos (Supabase) — PROPUESTA
 
-> **Estado: aprobado el 28/10/2026.** Migraciones 1 a 6 aplicadas en el
-> Supabase de pruebas. La migración 7 (datos por equipo, Fase 7) falta
-> aplicarla.
+> **Estado: aprobado el 28/10/2026.** Migraciones 1 a 7 aplicadas en el
+> Supabase de pruebas. La migración 8 (orden por mercado precalculado)
+> falta aplicarla.
 
 ## Resumen en 6 puntos
 
@@ -244,6 +244,7 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261028130000_un_gd_por_distrito.sql` | Regla: cada distrito tiene un solo GD |
 | `supabase/migrations/20261029120000_carga_de_datos.sql` | Fase 5: archivo de cada versión, almacén privado `datos`, carga por lotes, comparar versiones |
 | `supabase/migrations/20261030120000_datos_por_equipo.sql` | Fase 7: `datos_equipo` (cada VM/GD recibe solo lo suyo) y archivo completo solo para admin y Gte. Nacional |
+| `supabase/migrations/20261030130000_orden_mercado.sql` | Arreglo Fase 7: orden nacional por mercado precalculado una vez por versión (`recetas_orden_mercado`) |
 | `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 

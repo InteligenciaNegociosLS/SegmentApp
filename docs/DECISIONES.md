@@ -130,3 +130,9 @@ información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
   (seguridad: antes, con sesión, cualquiera podía bajarlo).
 - Se deja para la Fase 6 (rediseño) quitar el Tailwind en línea y cambiar las
   fuentes, porque esa fase rehace los estilos.
+- **Arreglo (29/10/2026):** en el Supabase real, la entrada de un VM daba
+  "statement timeout": `datos_equipo` calculaba en cada consulta el orden
+  nacional de las 231 mil recetas, y Supabase corta a los 8 s. Ahora ese
+  orden se calcula **una vez por versión** (migración 8) y se guarda en
+  `recetas_orden_mercado`. Al subir o publicar recetas, la app lo prepara
+  sola ("Preparando la versión para los visitadores: mercado X de 32").

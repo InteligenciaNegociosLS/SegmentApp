@@ -25,7 +25,9 @@ Desde la Fase 5, los datos de recetas (CloseUp) y el fichero médico se cargan
       - ⚠️ **avisos** (no impiden subir): columnas en otro orden, filas
         repetidas, visitadores nuevos o que ya no aparecen.
 4. Pulsa **Subir como borrador**. Verás el avance. Si se corta internet,
-   pulsa **Reintentar**: continúa donde quedó, sin duplicar.
+   pulsa **Reintentar**: continúa donde quedó, sin duplicar. En recetas, al
+   final verás "Preparando la versión para los visitadores: mercado X de 32"
+   (unos segundos): deja listo lo que necesitan los VM y GD.
 5. Al terminar, la app muestra la **comparación con "Hoy"**: filas nuevas,
    eliminadas, cambiadas e iguales, con ejemplos.
 6. Si todo se ve bien, pulsa **Publicar**. Desde ese momento es la versión de
