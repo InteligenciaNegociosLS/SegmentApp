@@ -59,7 +59,7 @@ window.App.ui.showToast = function(msg, opciones = {}) {
         t.appendChild(b);
     }
     t.classList.add('show');
-    temporizadorToast = setTimeout(() => t.classList.remove('show'), opciones.accion ? 6000 : 3500);
+    temporizadorToast = setTimeout(() => t.classList.remove('show'), opciones.duracion || (opciones.accion ? 6000 : 3500));
 };
 
 /* ------------------------------------------------------------

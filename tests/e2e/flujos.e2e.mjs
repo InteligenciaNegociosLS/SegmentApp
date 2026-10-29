@@ -38,7 +38,7 @@ await new Promise(r => setTimeout(r, 800));
 let fallas = 0;
 const browser = await chromium.launch();
 try {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ serviceWorkers: 'block' });   // la app sin internet se prueba en sin-internet.e2e.mjs
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => { window.__calls = []; window.__SIN_GUIA = true; });

@@ -69,10 +69,10 @@ window.App.ux.alEntrar = function() {
     if (sig) sig.classList.toggle('hidden', st.rolReal !== 'vm');
     window.App.ux.ocultarSplash();
     // Movimientos y tendencias respecto a la versión anterior (si existe)
-    if (window.App.comparar) setTimeout(() => window.App.comparar.cargar(true), 300);
+    setTimeout(() => { if (typeof window !== 'undefined' && window.App && window.App.comparar) window.App.comparar.cargar(true); }, 300);
     // La primera vez de cada persona: guía rápida (cuando ya se ve el tablero)
     // (las pruebas automáticas la desactivan con window.__SIN_GUIA)
-    setTimeout(() => { if (!window.__SIN_GUIA && window.App.state.currentUserRole !== 'guest') window.App.ux.iniciarGuia(); }, 1400);
+    setTimeout(() => { if (typeof window !== 'undefined' && !window.__SIN_GUIA && window.App && window.App.state.currentUserRole !== 'guest') window.App.ux.iniciarGuia(); }, 1400);
 };
 
 window.App.ux.alSalir = function() {
@@ -628,6 +628,8 @@ window.App.ux.vigilarVersion = function() {
     const actual = window.App.env && window.App.env.VERSION;
     if (!actual || actual === 'local') return;
     setInterval(async () => {
+        // Con la app instalada, el aviso lo da el trabajador de fondo (sw.js) al encontrar la versión nueva
+        if (window.App.offline && window.App.offline.registro) { window.App.offline.registro.update().catch(() => {}); return; }
         try {
             const r = await fetch('js/env.js', { cache: 'no-store' });
             const texto = await r.text();

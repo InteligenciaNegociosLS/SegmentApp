@@ -222,10 +222,16 @@ window.App.auth.entrar = async function(user, { avisar = false } = {}) {
     if (perfil.rol === 'vm') {
         st.REPS_PERMITIDOS = new Set([perfil.visitadorNombre]);
     } else if (perfil.rol === 'gd') {
+        const claveGd = 'SEGMENTAPP_VISITADORES_' + perfil.uid;
         try {
-            st.REPS_PERMITIDOS = new Set(await window.App.sb.nombresVisitadoresVisibles());
+            const nombres = await window.App.sb.nombresVisitadoresVisibles();
+            st.REPS_PERMITIDOS = new Set(nombres);
+            try { localStorage.setItem(claveGd, JSON.stringify(nombres)); } catch (e) { /* sin almacenamiento */ }
         } catch (e) {
-            st.REPS_PERMITIDOS = new Set();
+            // Sin conexión: la última lista conocida de su distrito
+            let guardados = [];
+            try { guardados = JSON.parse(localStorage.getItem(claveGd) || '[]'); } catch (e2) { guardados = []; }
+            st.REPS_PERMITIDOS = new Set(guardados);
             console.error('[SegmentApp] No se pudieron leer los visitadores del distrito:', e);
         }
     } else {
@@ -329,6 +335,7 @@ window.App.auth.loginSuccess = function(role, name) {
     // Subir evaluaciones pendientes hechas sin conexión (ahora que hay sesión)
     if (window.App.offline && window.App.offline.syncOfflineEvaluations) {
         window.App.offline.syncOfflineEvaluations();
+        window.App.offline.actualizarIndicadores();
     }
 };
 
@@ -343,6 +350,8 @@ window.App.auth.logoutSession = async function() {
         console.error('[SegmentApp] Error al cerrar sesión:', e);
     }
     try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch (e) { /* sin almacenamiento */ }
+    // Las evaluaciones sin subir NO se borran: se suben cuando esta persona vuelva a entrar
+    const porSubir = window.App.offline ? window.App.offline.pendientesPropias().length : 0;
 
     st.EVALUACIONES_VISITADOR = {};
     st.ALL_EVALUATIONS.length = 0;
@@ -351,7 +360,10 @@ window.App.auth.logoutSession = async function() {
 
     st.currentMatrixMode = 'closeup';
     window.App.auth.showLoginRequired();
-    window.App.ui.showToast("Sesión cerrada correctamente");
+    if (window.App.offline) window.App.offline.actualizarIndicadores();
+    window.App.ui.showToast(porSubir
+        ? `Sesión cerrada. Tienes ${porSubir} ${porSubir === 1 ? 'evaluación' : 'evaluaciones'} sin subir: quedan guardadas en este dispositivo y se subirán cuando vuelvas a entrar.`
+        : "Sesión cerrada correctamente", porSubir ? { duracion: 8000 } : {});
 };
 
 /* ============================================================

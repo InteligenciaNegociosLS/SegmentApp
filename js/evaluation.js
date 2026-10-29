@@ -27,6 +27,12 @@ window.App.evaluation.armarMapaVisitador = function(lista) {
         if (!st.EVALUACIONES_VISITADOR[key]) st.EVALUACIONES_VISITADOR[key] = {};
         st.EVALUACIONES_VISITADOR[key][data.mercado || 'General'] = data;
     });
+    // Las hechas sin conexión que todavía no se subieron también cuentan como evaluadas
+    if (window.App.offline) window.App.offline.pendientesPropias().forEach(data => {
+        const key = window.App.data.normalizeKey(data.medico_id);
+        if (!st.EVALUACIONES_VISITADOR[key]) st.EVALUACIONES_VISITADOR[key] = {};
+        st.EVALUACIONES_VISITADOR[key][data.mercado || 'General'] = { ...(st.EVALUACIONES_VISITADOR[key][data.mercado || 'General'] || {}), ...data, porSubir: true };
+    });
 };
 
 window.App.evaluation.fetchEvaluacionesYCalcular = async function() {
@@ -389,8 +395,7 @@ window.App.evaluation.guardarOEncolar = async function(evaluacion, mensajeOk) {
     const st = window.App.state;
     const ui = window.App.ui;
     const encolar = async () => {
-        st.OFFLINE_QUEUE.push({ tipo: 'evaluacion', evaluacion });
-        if (window.localforage) await localforage.setItem('OFFLINE_QUEUE', st.OFFLINE_QUEUE);
+        await window.App.offline.encolar(evaluacion);
         if (mensajeOk) ui.showToast("Sin conexión: evaluación guardada en este dispositivo. Se subirá sola al volver internet.");
         return evaluacion;
     };

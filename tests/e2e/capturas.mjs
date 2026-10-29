@@ -71,7 +71,7 @@ const browser = await chromium.launch();
 const hechas = [];
 try {
     for (const [nombre, viewport] of Object.entries(PANTALLAS)) {
-        const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1,
+        const page = await browser.newPage({ serviceWorkers: 'block', viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1,
             hasTouch: nombre !== 'computadora', colorScheme: viewport.oscuro ? 'dark' : 'light' });
         await rutas(page);
         const foto = async (id, opciones = {}) => {
@@ -105,8 +105,25 @@ try {
         await foto('3a-vm-cuadrante');
         await page.evaluate(() => { clearMatrixFilter(); App.ux.abrirFiltros(); });
         await foto('3d-vm-filtros');
-        await page.evaluate(() => { App.ux.cerrarFiltros(); App.ux.abrirMas(); });
+        // Fase 8: sin conexión, "N por subir" y el botón "Instalar la app"
+        await page.evaluate(() => {
+            App.ux.cerrarFiltros();
+            const e = { visitador_id: App.state.visitadorId, medico_id: 'X', mercado: 'M' };
+            App.state.OFFLINE_QUEUE.push({ tipo: 'evaluacion', evaluacion: e }, { tipo: 'evaluacion', evaluacion: { ...e, mercado: 'N' } });
+            Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+            App.offline.actualizarIndicadores();
+            document.getElementById('btnInstalarApp').classList.remove('hidden');
+            App.ux.abrirMas();
+        });
         await foto('3e-vm-mas');
+        await page.evaluate(() => { App.ux.cerrarMas(); App.offline.instalar(); });
+        await foto('3e2-vm-instalar-iphone');
+        await page.evaluate(() => {
+            document.getElementById('instalarIos').classList.add('hidden');
+            App.state.OFFLINE_QUEUE.length = 0;
+            Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+            App.offline.actualizarIndicadores();
+        });
         await page.evaluate(() => { App.ux.cerrarMas(); App.ux.iniciarGuia(true); });
         await foto('3f-vm-guia');
         await page.evaluate(() => App.ux.pasoGuia(2));
