@@ -154,3 +154,26 @@ información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
   quedar con el estilo mal después de varios cambios (hallazgo M6 de la
   auditoría).
 - Solo modo claro por ahora (el modo oscuro no se pidió).
+- Fase 6 aprobada por el dueño (29/10/2026), con el pedido de un cambio más
+  profundo de experiencia de uso.
+
+## 29/10/2026 (Fase 6B: experiencia de uso)
+
+Aprobados por el dueño los puntos 1 a 10:
+1. Filtros compactos (buscador, filtros rápidos y hoja "Filtros").
+2. Matriz más vistosa (intensidad, números animados, médicos del cuadrante al
+   tocarlo, cabe en el teléfono).
+3. Un solo botón "Exportar" (Excel, PDF, imagen).
+4. Progreso discreto (anillo y barra fina).
+5. Evaluación rápida (botones de un toque, "Guardar y siguiente").
+6. Filtro "Pendientes por evaluar" con contador.
+7. Tarjetas de médicos en teléfono e iPad.
+8. Barra de navegación inferior en el teléfono.
+9. Silueta de carga, "Deshacer", mensajes cuando no hay resultados.
+10. Modo oscuro automático.
+
+Además: logo rediseñado (el mismo en la pestaña y en la app), animación de
+inicio nueva, menú "Más" con lo que antes estaba suelto ("Recargar",
+"Productos", "Registro de fallas"), aviso de versión nueva y nombres de
+médicos protegidos contra caracteres especiales (hallazgo M2 de la auditoría).
+Ningún cálculo cambia; la evaluación guarda exactamente las mismas respuestas.

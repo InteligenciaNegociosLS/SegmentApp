@@ -37,12 +37,23 @@ window.App.ui.escapeHtml = function(value) {
 /* ------------------------------------------------------------
    TOAST (notificación flotante)
 ------------------------------------------------------------ */
-window.App.ui.showToast = function(msg) {
+// Aviso inferior (snackbar). Opcional: un botón de acción, p. ej. "Deshacer".
+let temporizadorToast = null;
+window.App.ui.showToast = function(msg, opciones = {}) {
     const t = document.getElementById('toast');
     if (!t) return;
+    clearTimeout(temporizadorToast);
     t.innerText = msg;
+    if (opciones.accion && typeof opciones.alAccionar === 'function') {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'toast-accion';
+        b.textContent = opciones.accion;
+        b.onclick = () => { t.classList.remove('show'); opciones.alAccionar(); };
+        t.appendChild(b);
+    }
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
+    temporizadorToast = setTimeout(() => t.classList.remove('show'), opciones.accion ? 6000 : 3500);
 };
 
 /* ------------------------------------------------------------

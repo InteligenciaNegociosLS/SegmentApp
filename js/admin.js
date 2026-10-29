@@ -329,15 +329,32 @@ window.App.admin.adminEditEval = function(firebaseId) {
 window.App.admin.adminDeleteEval = async function(firebaseId) {
     const st = window.App.state;
     if (st.soloLectura) return;
-    if (!confirm("¿Eliminar esta evaluación?\n\nNo se borra: queda guardada en el historial y se puede recuperar.")) return;
-    try {
-        await window.App.sb.eliminarEvaluacion(firebaseId);
-        window.App.ui.showToast("Evaluación eliminada (queda en el historial)");
-        st.ALL_EVALUATIONS = st.ALL_EVALUATIONS.filter(e => e.firebaseId !== firebaseId);
+    const refrescar = async () => {
         if (window.localforage) await localforage.setItem('EQUIPO_EVALS_CACHE', st.ALL_EVALUATIONS);
         st._lastUniverseSignature = null;
         window.App.admin.renderAdminDashboard();
         window.App.filters.resetPaginationAndRender();
+    };
+    try {
+        const eliminada = st.ALL_EVALUATIONS.find(e => e.firebaseId === firebaseId);
+        await window.App.sb.eliminarEvaluacion(firebaseId);
+        st.ALL_EVALUATIONS = st.ALL_EVALUATIONS.filter(e => e.firebaseId !== firebaseId);
+        await refrescar();
+        // No se borra (queda en el historial) y se puede deshacer enseguida
+        window.App.ui.showToast("Evaluación eliminada.", {
+            accion: 'Deshacer',
+            alAccionar: async () => {
+                try {
+                    const restaurada = await window.App.sb.restaurarEvaluacion(firebaseId);
+                    st.ALL_EVALUATIONS.push(restaurada || eliminada);
+                    await refrescar();
+                    window.App.ui.showToast("Evaluación restaurada.");
+                } catch (e) {
+                    console.error(e);
+                    window.App.ui.showToast("No se pudo restaurar: puede que ya exista otra evaluación activa para ese médico y mercado.");
+                }
+            }
+        });
     } catch (e) {
         console.error(e);
         window.App.ui.showToast("Error al eliminar. Revisa tu conexión.");

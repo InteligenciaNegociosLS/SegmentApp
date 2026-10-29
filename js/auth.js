@@ -193,6 +193,7 @@ window.App.auth.showLoginRequired = function() {
     document.getElementById('btnLoginNavContainer').classList.remove('hidden');
 
     if (typeof updateAdminUI === 'function') updateAdminUI();
+    if (window.App.ux) window.App.ux.alSalir();
 };
 
 /* ============================================================
@@ -323,6 +324,7 @@ window.App.auth.loginSuccess = function(role, name) {
     document.getElementById('filterBar').style.display = 'flex';
 
     if (window.App.versiones && window.App.versiones.actualizarEtiqueta) window.App.versiones.actualizarEtiqueta();
+    if (window.App.ux) window.App.ux.alEntrar();
 
     // Subir evaluaciones pendientes hechas sin conexión (ahora que hay sesión)
     if (window.App.offline && window.App.offline.syncOfflineEvaluations) {

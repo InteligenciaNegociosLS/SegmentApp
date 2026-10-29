@@ -108,6 +108,21 @@ try {
   await page.evaluate(() => switchMatrixMode('closeup'));
   const modoDatos = await page.evaluate(() => [document.getElementById('btnMatrixSurvey').classList.contains('bg-blue-600'), document.getElementById('btnMatrixData').classList.contains('bg-blue-600')]);
   ok('matriz: el botón CloseUp/Encuesta marca solo el elegido', modoEncuesta.join() === 'true,false' && modoDatos.join() === 'false,true');
+  // Fase 6B: filtro de pendientes, respuestas de un toque y "Guardar y siguiente"
+  await page.evaluate(() => App.ux.filtroRapido('pendientes'));
+  ok('VM: filtro "Pendientes" muestra solo los no evaluados', await page.evaluate(() => App.state.CURRENT_TABLE_DATA.length === 142 && App.state.CURRENT_TABLE_DATA.every(d => !App.ux.estaEvaluado(d))));
+  const primero = await page.evaluate(() => { const d = App.state.CURRENT_TABLE_DATA[0]; openEvalModal(d.id, d.name); return d.name; });
+  const toque = (zona, i = 0) => page.evaluate(([z, n]) => document.querySelectorAll(`#${z}_chips button`)[n].click(), [zona, i]);
+  ok('evaluación: respuestas como botones', await page.evaluate(() => document.querySelectorAll('#surveyQ1_chips button').length === 7));
+  await toque('evalMarketSelect'); await toque('surveyQ1', 1); await toque('surveyQ5', 2); await toque('surveyQ2', 1); await toque('surveyQ3', 1);
+  ok('evaluación: tocar un botón llena la respuesta', await page.evaluate(() => document.getElementById('surveyQ1').value === '10 a 20'));
+  await page.evaluate(() => { selectEvalQuadrant(document.querySelector('.eval-btn'), 'A-'); document.getElementById('evalNotas').value = 'Prueba automática'; });
+  await page.evaluate(() => App.ux.guardarYSiguiente()); await page.waitForTimeout(600);
+  const despues = await page.evaluate(() => ({ abierto: !document.getElementById('evalModal').classList.contains('hidden'), nombre: document.getElementById('evalModalDocName').innerText, evaluados: Object.keys(App.state.EVALUACIONES_VISITADOR).length }));
+  ok('evaluación: "Guardar y siguiente" guarda y abre el próximo pendiente', despues.abierto && despues.nombre !== primero && despues.evaluados === 1);
+  await page.evaluate(() => { closeEvalModal(); App.ux.filtroRapido('evaluados'); });
+  ok('VM: filtro "Evaluados" muestra el recién evaluado', await page.evaluate(() => App.state.CURRENT_TABLE_DATA.length === 1));
+  await page.evaluate(() => App.ux.filtroRapido('todos'));
   ok('VM: consulta las evaluaciones', (await page.evaluate(() => window.__calls)).includes('select:evaluaciones'));
 
   await page.reload();

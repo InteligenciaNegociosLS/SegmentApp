@@ -387,6 +387,7 @@ window.App.data.cargarDatos = async function() {
     const ui = window.App.ui;
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('restoringSession').classList.remove('hidden');
+    if (window.App.ux) window.App.ux.ocultarSplash();
     ui.safeSetText('loadingText', 'Buscando la versión de datos vigente...');
 
     let versiones;
