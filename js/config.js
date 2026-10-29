@@ -65,7 +65,7 @@ window.App.config.DEFAULT_THRESHOLDS = {
 };
 
 // --- Paginación de la tabla principal ---
-window.App.config.ROWS_PER_PAGE = 50;
+window.App.config.ROWS_PER_PAGE = 20;
 
 // --- Columnas disponibles para exportar (Excel / PDF) ---
 window.App.config.EXPORT_COLUMNS = [
