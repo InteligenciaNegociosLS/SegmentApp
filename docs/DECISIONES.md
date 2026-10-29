@@ -177,3 +177,25 @@ inicio nueva, menú "Más" con lo que antes estaba suelto ("Recargar",
 "Productos", "Registro de fallas"), aviso de versión nueva y nombres de
 médicos protegidos contra caracteres especiales (hallazgo M2 de la auditoría).
 Ningún cálculo cambia; la evaluación guarda exactamente las mismas respuestas.
+
+## 29/10/2026 (Fase 6C: ajustes pedidos por el dueño)
+
+Fase 6B aprobada. Ajustes:
+- Guía rápida la primera vez (también en "Más → Guía rápida") y ayuda "?"
+  que explica la matriz.
+- Evaluación anterior visible al reevaluar un mercado, con **historial de
+  clasificaciones** (la base ya guardaba cada cambio; la migración 9 permite
+  que cada VM vea el de sus evaluaciones y cada GD el de su distrito).
+- Las respuestas del mercado ya evaluado se ven resumidas con "Cambiar"
+  (igual que las preguntas del médico).
+- Tocar un cuadrante filtra la lista de abajo y baja hasta ella (se quitó la
+  lista repetida bajo la matriz).
+- Matriz en **pantalla completa**.
+- "Evaluar pendientes" sin pendientes muestra un aviso en vez de una lista vacía.
+- La imagen de la matriz ahora se **dibuja** (antes era una captura de
+  pantalla que mostraba "letras raras").
+- Tabla más fácil de leer; **20 médicos por página**; nuevo botón de estado
+  "Evaluar / Evaluado".
+- Casillas de los filtros de tamaño fijo; toda la fila marca la casilla.
+- Los nombres muestran "Ñ" donde el archivo de CloseUp trae "#" (solo al
+  mostrar; el dato no cambia).

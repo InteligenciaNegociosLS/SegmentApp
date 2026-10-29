@@ -28,6 +28,12 @@ window.App.ui.compactNum = function(num) {
 /* ------------------------------------------------------------
    ESCAPAR TEXTO PARA INSERTARLO COMO HTML
 ------------------------------------------------------------ */
+// Nombres del archivo de CloseUp: la "Ñ" viene escrita como "#" (NU#EZ → NUÑEZ).
+// Solo cambia lo que se ve; el dato guardado no se toca.
+window.App.ui.nombreVisible = function(nombre) {
+    return String(nombre == null ? '' : nombre).replace(/([A-ZÁÉÍÓÚ])#(?=[A-ZÁÉÍÓÚ]|\s|$)/g, '$1Ñ');
+};
+
 window.App.ui.escapeHtml = function(value) {
     return String(value == null ? '' : value)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

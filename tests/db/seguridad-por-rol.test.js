@@ -245,3 +245,17 @@ describe('Datos', () => {
         expect(duplicado).toBe(true);
     });
 });
+
+describe('Historial de evaluaciones (migración 9)', () => {
+    it('cada VM ve el historial de SUS evaluaciones; el GD, el de su distrito; otro VM, no', async () => {
+        await como(db, U.vm1, `update public.evaluaciones set cuadrante = 'B' where id = $1`, [ids.e1]);
+        const propio = await filas(U.vm1, 'select accion from public.evaluaciones_historial where evaluacion_id = $1', [ids.e1]);
+        expect(propio.length).toBeGreaterThan(0);
+        expect((await filas(U.gd1, 'select 1 from public.evaluaciones_historial where evaluacion_id = $1', [ids.e1])).length).toBe(propio.length);
+        expect((await filas(U.vm2, 'select 1 from public.evaluaciones_historial where evaluacion_id = $1', [ids.e1])).length).toBe(0);
+    });
+    it('nadie puede borrar ni cambiar el historial', async () => {
+        expect(await falla(U.admin, 'delete from public.evaluaciones_historial')).toBe(true);
+        expect(await falla(U.vm1, `update public.evaluaciones_historial set accion = 'x'`)).toBe(true);
+    });
+});

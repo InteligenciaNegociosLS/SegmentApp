@@ -275,8 +275,9 @@ window.App.evaluation.saveEvaluation = async function() {
     const faltaMedico = (id, msg) => { if (window.App.ux) window.App.ux.editarDatosMedico(true); flashError(id, msg); };
     if (!q1) { faltaMedico('surveyQ1', 'Falta: pacientes por semana'); return; }
     if (!q5) { faltaMedico('surveyQ5', 'Falta: costo de la consulta'); return; }
-    if (!q2) { flashError('surveyQ2', 'Falta: pacientes con esta clase terapéutica'); return; }
-    if (!q3) { flashError('surveyQ3', 'Falta: pacientes con nuestro producto'); return; }
+    const faltaMercado = (id, msg) => { if (window.App.ux) window.App.ux.editarDatosMercado(true); flashError(id, msg); };
+    if (!q2) { faltaMercado('surveyQ2', 'Falta: pacientes con esta clase terapéutica'); return; }
+    if (!q3) { faltaMercado('surveyQ3', 'Falta: pacientes con nuestro producto'); return; }
     if (!quadrant) {
         flashError('evalGrid', 'Falta: elige tu clasificación');
         return;

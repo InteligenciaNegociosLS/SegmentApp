@@ -43,7 +43,7 @@ const CSS_SIMBOLOS = `@font-face{font-family:"Material Symbols Outlined";font-st
 .material-symbols-outlined{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-feature-settings:"liga";-webkit-font-smoothing:antialiased}`;
 
 async function rutas(page) {
-    await page.addInitScript((p) => { window.__calls = []; window.__SB_DATOS_EQUIPO = { 's-rec-1|s-fic-1|u-vm': p }; }, paqueteVm);
+    await page.addInitScript((p) => { window.__calls = []; window.__SIN_GUIA = true; window.__SB_DATOS_EQUIPO = { 's-rec-1|s-fic-1|u-vm': p }; }, paqueteVm);
     await page.route('**/*', route => {
         const u = route.request().url();
         if (u.startsWith(BASE + 'js/env.js')) return route.fulfill({ contentType: 'application/javascript', body: ENV });
@@ -107,7 +107,20 @@ try {
         await foto('3d-vm-filtros');
         await page.evaluate(() => { App.ux.cerrarFiltros(); App.ux.abrirMas(); });
         await foto('3e-vm-mas');
-        await page.evaluate(() => App.ux.cerrarMas());
+        await page.evaluate(() => { App.ux.cerrarMas(); App.ux.iniciarGuia(true); });
+        await foto('3f-vm-guia');
+        await page.evaluate(() => { App.ux.terminarGuia(); App.ux.abrirAyudaMatriz(); });
+        await foto('3g-vm-ayuda');
+        await page.evaluate(() => { App.ux.cerrarAyudaMatriz(); App.ux.abrirMatrizCompleta(); });
+        await foto('3h-vm-matriz-completa');
+        await page.evaluate(() => App.ux.cerrarMatrizCompleta());
+        if (nombre === 'computadora') {
+            // La imagen que se descarga con "Exportar → Imagen de la matriz"
+            const png = await page.evaluate(async () => { await document.fonts.ready; return App.exports.dibujarMatriz().toDataURL('image/png'); });
+            const archivo = path.join(SALIDA, 'imagen-matriz-exportada.png');
+            fs.writeFileSync(archivo, Buffer.from(png.split(',')[1], 'base64'));
+            hechas.push(archivo);
+        }
         await page.evaluate(() => { const d = App.state.PROCESSED_DATA.find(x => !x.isZeroRx); App.modals.openDoctorModal(d.id); });
         await foto('3b-vm-medico');
         await page.evaluate(() => { document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')); const d = App.state.PROCESSED_DATA[0]; App.evaluation.openEvalModal(d.id, d.name); });

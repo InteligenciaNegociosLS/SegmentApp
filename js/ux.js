@@ -43,8 +43,8 @@ window.App.ux.ocultarSplash = function() {
 window.App.ux.irA = function(id) {
     const destino = id === 'inicio' ? null : document.getElementById(id);
     const opciones = { behavior: sinMovimiento() ? 'auto' : 'smooth' };
-    if (destino) destino.scrollIntoView({ ...opciones, block: 'start' });
-    else window.scrollTo({ top: 0, ...opciones });
+    if (destino && destino.scrollIntoView) destino.scrollIntoView({ ...opciones, block: 'start' });
+    else if (window.scrollTo) window.scrollTo({ top: 0, ...opciones });
     window.App.ux.marcarNav(id);
 };
 
@@ -68,6 +68,9 @@ window.App.ux.alEntrar = function() {
     const sig = document.getElementById('btnGuardarSiguiente');
     if (sig) sig.classList.toggle('hidden', st.rolReal !== 'vm');
     window.App.ux.ocultarSplash();
+    // La primera vez de cada persona: guía rápida (cuando ya se ve el tablero)
+    // (las pruebas automáticas la desactivan con window.__SIN_GUIA)
+    setTimeout(() => { if (!window.__SIN_GUIA && window.App.state.currentUserRole !== 'guest') window.App.ux.iniciarGuia(); }, 1400);
 };
 
 window.App.ux.alSalir = function() {
@@ -76,6 +79,7 @@ window.App.ux.alSalir = function() {
     document.querySelectorAll('#menuMas .solo-admin, #menuMas .con-sesion').forEach(e => e.classList.add('hidden'));
     window.App.ux.cerrarMas();
     window.App.ux.cerrarFiltros();
+    document.getElementById('guia')?.classList.add('hidden');
     window.App.state.FILTRO_RAPIDO = 'todos';
     window.App.ux.ocultarSplash();
 };
@@ -127,6 +131,9 @@ document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     window.App.ux.cerrarMas();
     window.App.ux.cerrarFiltros();
+    window.App.ux.cerrarMatrizCompleta();
+    window.App.ux.cerrarAyudaMatriz();
+    if (!document.getElementById('guia')?.classList.contains('hidden')) window.App.ux.terminarGuia();
     document.getElementById('menuExportar')?.classList.add('hidden');
 });
 document.addEventListener('click', (e) => {
@@ -184,6 +191,11 @@ window.App.ux.aplicarFiltroRapido = function(datos) {
 
 window.App.ux.filtroRapido = function(tipo, irALista = false) {
     const st = window.App.state;
+    // "Evaluar pendientes" sin pendientes: avisar en vez de llevar a una lista vacía
+    if (tipo === 'pendientes' && irALista && !(st.PROCESSED_DATA || []).some(CUMPLE.pendientes)) {
+        window.App.ui.showToast('¡Excelente! Ya evaluaste a todos tus médicos. 🎉');
+        return;
+    }
     st.FILTRO_RAPIDO = (st.FILTRO_RAPIDO === tipo && tipo !== 'todos' && !irALista) ? 'todos' : tipo;
     window.App.filters.resetPaginationAndRender();
     if (irALista) {
@@ -285,37 +297,37 @@ window.App.ux.claseCuadrante = function(doc) {
     return /^[ABC]$/.test(p) && /^[ABC]$/.test(l) ? `cell-${p}_${l}` : '';
 };
 
-window.App.ux.mostrarPanelCelda = function(pot, loy) {
-    const st = window.App.state;
-    const panel = document.getElementById('panelCelda');
-    if (!panel) return;
-    const docs = (st.PROCESSED_DATA || []).filter(d => d.catPotency === pot && d.catLoyalty === loy && !d.isZeroRx);
-    const top = [...docs].sort((a, b) => b.gap - a.gap || b.totalRx - a.totalRx).slice(0, 5);
-    const etiqueta = pot + LOY_SIGNO[loy];
-    const esVm = st.currentUserRole === 'visitador';
-    panel.innerHTML = `
-        <div class="flex items-center justify-between gap-3 mb-3">
-            <div class="flex items-center gap-3 min-w-0">
-                <span class="cell-${pot}_${loy} w-11 h-11 rounded-2xl flex items-center justify-center font-display font-extrabold text-lg shrink-0">${etiqueta}</span>
-                <div class="min-w-0"><div class="font-bold text-slate-800">${fmtN(docs.length)} médicos en ${etiqueta}</div>
-                <div class="text-xs text-slate-500">Los de mayor oportunidad primero</div></div>
-            </div>
-            <button class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 shrink-0" onclick="clearMatrixFilter()" title="Cerrar"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        ${top.length ? `<ul class="divide-y divide-slate-100">${top.map(d => `
-            <li class="flex items-center gap-3 py-2.5 px-2 rounded-xl cursor-pointer md-estado" onclick="handleRowClick(false, 0, '${escUx(d.id)}')">
-                <div class="flex-1 min-w-0"><div class="text-sm font-semibold text-slate-800 truncate">${escUx(d.name)}</div>
-                <div class="text-xs text-slate-500">${fmtN(d.totalRx)} recetas · ${fmtN(d.share, 1)}% La Santé</div></div>
-                ${d.gap > 0 ? `<span class="badge-gap">+${fmtN(d.gap)}</span>` : ''}
-                ${esVm ? `<button class="px-3 py-1.5 rounded-full bg-blue-50 text-blue-800 text-xs font-bold" onclick="event.stopPropagation(); App.ux.evaluar(this)" data-id="${escUx(d.id)}" data-nombre="${escUx(d.name)}">Evaluar</button>` : ''}
-            </li>`).join('')}</ul>` : '<p class="text-sm text-slate-500 py-2">No hay médicos en este cuadrante con los filtros actuales.</p>'}
-        ${docs.length > top.length ? `<button class="mt-2 w-full py-2.5 rounded-full text-sm font-bold text-blue-700" onclick="App.ux.irA('seccionMedicos')">Ver los ${fmtN(docs.length)} en la lista</button>` : ''}`;
-    panel.classList.remove('hidden');
-    panel.classList.remove('animate-fade-in'); void panel.offsetWidth; panel.classList.add('animate-fade-in');
-    if (panel.scrollIntoView) panel.scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'nearest' });
+// Matriz en pantalla completa (ideal en iPad y teléfono)
+window.App.ux.abrirMatrizCompleta = function() {
+    const sec = document.getElementById('seccionMatriz');
+    if (!sec) return;
+    sec.classList.add('matriz-completa');
+    document.body.classList.add('sin-desplazar');
+    // Donde el navegador lo permite, también se oculta su barra (pantalla completa real)
+    const pedir = sec.requestFullscreen || sec.webkitRequestFullscreen;
+    if (pedir) { try { const r = pedir.call(sec); if (r && r.catch) r.catch(() => {}); } catch (e) { /* no permitido: basta con el modo de la app */ } }
 };
-window.App.ux.ocultarPanelCelda = function() {
-    document.getElementById('panelCelda')?.classList.add('hidden');
+window.App.ux.cerrarMatrizCompleta = function() {
+    const sec = document.getElementById('seccionMatriz');
+    if (!sec || !sec.classList.contains('matriz-completa')) return;
+    sec.classList.remove('matriz-completa');
+    document.body.classList.remove('sin-desplazar');
+    const salir = document.exitFullscreen || document.webkitExitFullscreen;
+    if ((document.fullscreenElement || document.webkitFullscreenElement) && salir) { try { const r = salir.call(document); if (r && r.catch) r.catch(() => {}); } catch (e) { /* ya salió */ } }
+};
+// Si se sale con el botón del navegador, se cierra también el modo de la app
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) window.App.ux.cerrarMatrizCompleta(); });
+document.addEventListener('webkitfullscreenchange', () => { if (!document.webkitFullscreenElement) window.App.ux.cerrarMatrizCompleta(); });
+
+// Al tocar un cuadrante: la lista de abajo queda filtrada y se baja hasta ella
+window.App.ux.alElegirCuadrante = function(pot, loy) {
+    window.App.ux.cerrarMatrizCompleta();
+    const lista = document.getElementById('seccionMedicos');
+    if (!lista) return;
+    window.App.ux.irA('seccionMedicos');
+    lista.classList.remove('resaltar'); void lista.offsetWidth; lista.classList.add('resaltar');
+    const n = (window.App.state.CURRENT_TABLE_DATA || []).length;
+    window.App.ui.showToast(`Cuadrante ${pot}${LOY_SIGNO[loy]}: ${fmtN(n)} médicos`);
 };
 
 /* ============================================================
@@ -340,14 +352,11 @@ window.App.ux.renderTarjetas = function(pageData, startIdx) {
                 <div class="text-xs text-slate-500">${fmtN(d.docCount)} médicos · ${fmtN(d.totalRx)} recetas · ${fmtN(d.share, 1)}%</div></div></article>`;
         }
         const etiqueta = d.isZeroRx ? '—' : (st.currentMatrixMode === 'survey' ? d.surveyLabel : d.matrixLabel);
-        const evaluado = window.App.ux.estaEvaluado(d);
-        const accion = esVm
-            ? `<button class="px-4 py-2 rounded-full text-xs font-bold ${evaluado ? 'bg-green-50 text-green-800' : 'bg-blue-600 text-white'}" onclick="event.stopPropagation(); App.ux.evaluar(this)" data-id="${escUx(d.id)}" data-nombre="${escUx(d.name)}">${evaluado ? 'Evaluado ✓' : 'Evaluar'}</button>`
-            : `<span class="text-[11px] font-bold ${evaluado ? 'text-green-700' : 'text-slate-500'}">${evaluado ? 'Evaluado' : 'Pendiente'}</span>`;
+        const accion = window.App.ux.estadoEvaluacion(d);
         return `<article class="p-4 flex gap-3 items-start cursor-pointer md-estado" onclick="handleRowClick(false, ${startIdx + i}, '${escUx(d.id)}')">
             <span class="${window.App.ux.claseCuadrante(d) || 'bg-slate-100 text-slate-500'} w-11 h-11 rounded-2xl flex items-center justify-center font-display font-extrabold shrink-0">${escUx(etiqueta)}</span>
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-sm text-slate-800 truncate">${escUx(d.name)}</div>
+                <div class="font-bold text-sm text-slate-800 truncate">${escUx(window.App.ui.nombreVisible(d.name))}</div>
                 <div class="text-xs text-slate-500 truncate">${escUx(d.spec || '')}${d.ficheroData && d.ficheroData.length ? ' · Fichado' : ''}</div>
                 <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 mt-1.5">
                     ${d.isZeroRx ? '<span>Sin recetas en CloseUp</span>' : `<span><b>${fmtN(d.totalRx)}</b> recetas</span><span class="text-blue-700"><b>${fmtN(d.rxPhq)}</b> La Santé</span><span>${fmtN(d.share, 1)}%</span>`}
@@ -357,6 +366,36 @@ window.App.ux.renderTarjetas = function(pageData, startIdx) {
             <div class="shrink-0 self-center">${accion}</div>
         </article>`;
     }).join('');
+};
+
+// Color de una etiqueta de cuadrante ("A-", "B+", "C"…) igual que en la matriz
+window.App.ux.claseDeEtiqueta = function(etiqueta) {
+    const m = String(etiqueta || '').trim().match(/^([ABC])([+-]?)$/);
+    if (!m) return 'bg-slate-100 text-slate-600';
+    return `cell-${m[1]}_${m[2] === '+' ? 'A' : (m[2] === '-' ? 'C' : 'B')}`;
+};
+
+// Estado de evaluación de un médico (tabla y tarjetas)
+window.App.ux.estadoEvaluacion = function(d) {
+    const st = window.App.state;
+    if (st.currentUserRole === 'visitador') {
+        const evals = Object.values(st.EVALUACIONES_VISITADOR[window.App.data.normalizeKey(d.id)] || {});
+        const datos = `data-id="${escUx(d.id)}" data-nombre="${escUx(d.name)}"`;
+        if (!evals.length) {
+            return `<button class="eval-estado eval-pendiente" onclick="event.stopPropagation(); App.ux.evaluar(this)" ${datos}><span class="material-symbols-outlined">rate_review</span>Evaluar</button>`;
+        }
+        const ultima = [...evals].sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))[0];
+        const conNotas = evals.some(e => e.notas && String(e.notas).trim());
+        return `<button class="eval-estado eval-hecha" onclick="event.stopPropagation(); App.ux.evaluar(this)" ${datos} title="Ver o cambiar la evaluación">
+            <span class="material-symbols-outlined icono-relleno">check_circle</span>
+            <span class="text-left leading-tight"><span class="block">Evaluado</span><span class="block text-[11px] font-medium opacity-80">${evals.length} ${evals.length === 1 ? 'mercado' : 'mercados'}${conNotas ? ' · con nota' : ''}</span></span>
+            <span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(ultima.cuadrante)}">${escUx(ultima.cuadrante || '')}</span>
+        </button>`;
+    }
+    const evals = window.getEvaluationsForDoc ? window.getEvaluationsForDoc(d.id) : [];
+    if (!evals.length) return '<span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">Pendiente</span>';
+    return `<div class="flex flex-wrap items-center justify-center gap-1">${evals.slice(0, 4).map(e =>
+        `<span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(e.cuadrante)}" title="${escUx(e.visitador)} · ${escUx(e.mercado || 'General')}">${escUx(e.cuadrante)}</span>`).join('')}${evals.length > 4 ? `<span class="text-[11px] text-slate-500">+${evals.length - 4}</span>` : ''}</div>`;
 };
 
 window.App.ux.evaluar = function(el) {
@@ -389,6 +428,7 @@ window.App.ux.construirChips = function(selectId) {
 window.App.ux.sincronizarEvaluacion = function() {
     ['evalMarketSelect', 'surveyQ1', 'surveyQ5', 'surveyQ2', 'surveyQ3'].forEach(window.App.ux.construirChips);
     window.App.ux.actualizarResumenMedico();
+    window.App.ux.mostrarEvaluacionAnterior();
 };
 
 window.App.ux.actualizarResumenMedico = function() {
@@ -409,6 +449,86 @@ window.App.ux.editarDatosMedico = function(abrir) {
     resumen.classList.toggle('hidden', abrir);
     resumen.classList.toggle('flex', !abrir);
     btn.classList.toggle('hidden', abrir);
+};
+
+// Si el mercado ya tiene evaluación: sus respuestas se ven resumidas, con "Cambiar"
+window.App.ux.editarDatosMercado = function(abrir) {
+    const preguntas = document.getElementById('preguntasMercado');
+    const resumen = document.getElementById('resumenMercado');
+    const btn = document.getElementById('btnCambiarMercado');
+    if (!preguntas || !resumen || !btn) return;
+    preguntas.classList.toggle('hidden', !abrir);
+    resumen.classList.toggle('hidden', abrir);
+    resumen.classList.toggle('flex', !abrir);
+    btn.classList.toggle('hidden', abrir);
+};
+
+const FECHA_CORTA = { day: '2-digit', month: 'short', year: 'numeric' };
+const fechaCorta = (f) => { const d = new Date(f); return isNaN(d) ? '' : d.toLocaleDateString('es-VE', FECHA_CORTA); };
+const segunEncuesta = (survey) => {
+    const r = window.App.matrix.calculateObjectiveScore(survey || {});
+    return r && r.pot ? r.label : '';
+};
+
+// Muestra la evaluación anterior del mercado elegido y permite ver su historial
+window.App.ux.mostrarEvaluacionAnterior = function() {
+    const st = window.App.state;
+    const caja = document.getElementById('evalAnterior');
+    if (!caja) return;
+    const docKey = document.getElementById('evalDocId').value;
+    const mercado = document.getElementById('evalMarketSelect').value;
+    const previa = st.currentUserRole === 'visitador' && mercado ? (st.EVALUACIONES_VISITADOR[docKey] || {})[mercado] : null;
+    if (!previa) {
+        caja.classList.add('hidden');
+        window.App.ux.editarDatosMercado(true);
+        return;
+    }
+    const s = previa.survey || {};
+    const encuesta = segunEncuesta(s);
+    caja.innerHTML = `
+        <div class="flex items-center gap-3">
+            <span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(previa.cuadrante)} !h-11 !min-w-[44px] !rounded-2xl text-lg">${escUx(previa.cuadrante)}</span>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-bold text-slate-800">Evaluación anterior${previa.timestamp ? ' · ' + fechaCorta(previa.timestamp) : ''}</div>
+                <div class="text-xs text-slate-500">Tu clasificación: <b>${escUx(previa.cuadrante)}</b>${encuesta ? ` · Según la encuesta: <b>${escUx(encuesta)}</b>` : ''}</div>
+            </div>
+            ${previa.id ? `<button type="button" class="text-xs font-bold text-blue-700 px-3 py-1.5 rounded-full shrink-0" onclick="App.ux.verHistorial('${escUx(previa.id)}')">Historial</button>` : ''}
+        </div>
+        ${previa.notas ? `<p class="text-xs text-slate-600 mt-2 bg-slate-50 rounded-xl p-2">“${previa.notas}”</p>` : ''}
+        <div id="listaHistorial" class="hidden mt-3"></div>`;
+    caja.classList.remove('hidden');
+    const resumen = document.getElementById('resumenMercado');
+    if (resumen) resumen.innerHTML = [
+        s.q2 && `Clase terapéutica: ${s.q2}`, s.q3 && `Nuestro producto: ${s.q3}`, s.q4 && `Otros: ${s.q4}`
+    ].filter(Boolean).map(t => `<span class="chip" aria-pressed="false">${escUx(t)}</span>`).join('');
+    window.App.ux.editarDatosMercado(false);
+};
+
+window.App.ux.verHistorial = async function(id) {
+    const zona = document.getElementById('listaHistorial');
+    if (!zona) return;
+    if (!zona.classList.contains('hidden')) { zona.classList.add('hidden'); return; }
+    zona.classList.remove('hidden');
+    zona.innerHTML = '<div class="text-xs text-slate-500">Cargando historial…</div>';
+    try {
+        const cambios = await window.App.sb.historialEvaluacion(id);
+        if (!cambios.length) { zona.innerHTML = '<div class="text-xs text-slate-500">Es la primera evaluación de este mercado: todavía no hay cambios anteriores.</div>'; return; }
+        const textos = { modificada: 'Antes del cambio', eliminada: 'Antes de eliminarse', restaurada: 'Antes de restaurarse' };
+        zona.innerHTML = `<div class="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Clasificaciones anteriores</div>
+            <ol class="relative border-l-2 border-slate-200 ml-2 space-y-3">${cambios.map(c => {
+                const e = c.evaluacion, enc = segunEncuesta(e.survey);
+                return `<li class="ml-4">
+                    <span class="absolute -left-[7px] mt-1.5 w-3 h-3 rounded-full bg-slate-300"></span>
+                    <div class="flex items-center gap-2 text-xs"><span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(e.cuadrante)}">${escUx(e.cuadrante)}</span>
+                    <span class="text-slate-700 font-semibold">${fechaCorta(e.timestamp || c.hecho_en)}</span>
+                    ${enc ? `<span class="text-slate-500">· encuesta ${escUx(enc)}</span>` : ''}</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">${textos[c.accion] || ''}${e.notas ? ' · “' + e.notas + '”' : ''}</div>
+                </li>`;
+            }).join('')}</ol>`;
+    } catch (e) {
+        console.error('[SegmentApp] Historial:', e);
+        zona.innerHTML = '<div class="text-xs text-rose-700">No se pudo leer el historial. Revisa tu conexión.</div>';
+    }
 };
 
 window.App.ux.alAbrirEvaluacion = function(docKey) {
@@ -467,6 +587,92 @@ window.App.ux.vigilarVersion = function() {
             }
         } catch (e) { /* sin conexión: se intenta más tarde */ }
     }, 15 * 60 * 1000);
+};
+
+/* ============================================================
+   AYUDA: CÓMO LEER LA MATRIZ
+============================================================ */
+window.App.ux.abrirAyudaMatriz = function() {
+    const st = window.App.state;
+    const zona = document.getElementById('contenidoAyuda');
+    if (!zona) return;
+    const fila = (clase, etiqueta, titulo, texto) => `<div class="flex gap-3 items-start">
+        <span class="${clase} w-12 h-12 rounded-2xl flex items-center justify-center font-display font-extrabold text-lg shrink-0">${etiqueta}</span>
+        <div><div class="font-bold text-slate-800">${titulo}</div><div class="text-slate-600">${texto}</div></div></div>`;
+    zona.innerHTML = `
+        <p>Cada médico se ubica según dos preguntas:</p>
+        <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-slate-50 p-3"><div class="font-bold text-slate-800 flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">arrow_upward</span> Potencial (filas)</div>
+            <div class="text-xs text-slate-600 mt-1">¿Cuántas recetas hace en el mercado? <b>A</b> = los que suman el primer ${st.TH_POT_LOW}% de las recetas; <b>B</b> hasta el ${st.TH_POT_HIGH}%; <b>C</b> el resto.</div></div>
+            <div class="rounded-2xl bg-slate-50 p-3"><div class="font-bold text-slate-800 flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">arrow_forward</span> Adopción (columnas)</div>
+            <div class="text-xs text-slate-600 mt-1">¿Qué parte de sus recetas son de La Santé? <b>-</b> hasta ${st.TH_LOY_LOW}%; <b>media</b> entre ${st.TH_LOY_LOW}% y ${st.TH_LOY_HIGH}%; <b>+</b> desde ${st.TH_LOY_HIGH}%.</div></div>
+        </div>
+        <div class="space-y-3">
+            ${fila('cell-A_C', 'A-', 'Conquistar', 'Recetan mucho pero casi nada nuestro: la mayor oportunidad.')}
+            ${fila('cell-A_B', 'A', 'Desarrollar', 'Recetan mucho y ya nos conocen: hay que crecer la participación.')}
+            ${fila('cell-A_A', 'A+', 'Defender', 'Recetan mucho y son fieles: cuidarlos y mantenerlos.')}
+            ${fila('cell-C_C', 'C-', 'Revisar', 'Recetan poco y casi nada nuestro: evaluar si conviene invertir tiempo.')}
+        </div>
+        <p class="text-xs text-slate-500">Las filas B y C siguen la misma lógica con menos volumen. <b>Oportunidad</b> = recetas que faltan para subir al siguiente nivel de adopción.
+        El modo <b>Encuestas</b> ubica a cada médico según lo que respondió en la evaluación.</p>`;
+    document.getElementById('ayudaMatriz').classList.remove('hidden');
+};
+window.App.ux.cerrarAyudaMatriz = function() {
+    document.getElementById('ayudaMatriz')?.classList.add('hidden');
+};
+
+/* ============================================================
+   GUÍA RÁPIDA (la primera vez que cada persona entra)
+============================================================ */
+const PASOS_GUIA = {
+    vm: [
+        ['#chipsRapidos', 'Tus filtros rápidos', 'Toca "Pendientes" para ver los médicos que te faltan por evaluar. El número te dice cuántos son.'],
+        ['#visitadorDashboard', 'Tu avance', 'Aquí ves cuántos médicos llevas evaluados. "Evaluar pendientes" te lleva directo al trabajo.'],
+        ['#seccionMatriz', 'La matriz', 'Toca un cuadrante para ver sus médicos. El botón "?" explica qué significa cada uno.'],
+        ['#seccionMedicos', 'Evaluar', 'Toca "Evaluar" en un médico. Las respuestas son de un toque y "Guardar y siguiente" te lleva al próximo.']
+    ],
+    equipo: [
+        ['#filterBar', 'Buscar y filtrar', 'Busca un médico o usa los filtros rápidos. En "Filtros" están todos los demás.'],
+        ['#seccionMatriz', 'La matriz', 'Toca un cuadrante para ver sus médicos. Usa pantalla completa para presentarla.'],
+        ['#seccionMedicos', 'La lista', 'Cada médico con su cuadrante, recetas, participación y estado de evaluación.'],
+        ['#btnMas', 'Más opciones', 'Versiones de datos, exportar, la guía y cerrar sesión están aquí.']
+    ]
+};
+let pasoActual = 0;
+const pasosGuia = () => PASOS_GUIA[window.App.state.rolReal === 'vm' ? 'vm' : 'equipo'];
+const claveGuia = () => `SEGMENTAPP_GUIA_${window.App.state.usuarioId || 'x'}`;
+
+window.App.ux.iniciarGuia = function(forzar = false) {
+    try { if (!forzar && localStorage.getItem(claveGuia())) return; } catch (e) { /* sin almacenamiento */ }
+    pasoActual = 0;
+    document.getElementById('guia')?.classList.remove('hidden');
+    window.App.ux.pasoGuia(0);
+};
+
+window.App.ux.pasoGuia = function(delta) {
+    const pasos = pasosGuia();
+    pasoActual += delta;
+    if (pasoActual >= pasos.length) return window.App.ux.terminarGuia();
+    const [selector, titulo, texto] = pasos[pasoActual];
+    const el = document.querySelector(selector);
+    if (!el || el.offsetParent === null) { if (delta === 0 && pasoActual < pasos.length - 1) return window.App.ux.pasoGuia(1); }
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'auto', block: 'center' });
+    const r = el ? el.getBoundingClientRect() : { top: 80, left: 16, width: 200, height: 60 };
+    const foco = document.getElementById('guiaFoco'), tarjeta = document.getElementById('guiaTarjeta');
+    const m = 6, alto = Math.min(r.height + m * 2, window.innerHeight * 0.55);
+    Object.assign(foco.style, { top: `${r.top - m}px`, left: `${r.left - m}px`, width: `${r.width + m * 2}px`, height: `${alto}px` });
+    const abajo = r.top + alto + 16 + 190 < window.innerHeight;
+    tarjeta.style.top = abajo ? `${r.top - m + alto + 12}px` : `${Math.max(12, r.top - m - 190)}px`;
+    window.App.ui.safeSetText('guiaPaso', `Paso ${pasoActual + 1} de ${pasos.length}`);
+    window.App.ui.safeSetText('guiaTitulo', titulo);
+    window.App.ui.safeSetText('guiaTexto', texto);
+    window.App.ui.safeSetText('guiaSiguiente', pasoActual === pasos.length - 1 ? '¡Listo!' : 'Siguiente');
+};
+
+window.App.ux.terminarGuia = function() {
+    document.getElementById('guia')?.classList.add('hidden');
+    try { localStorage.setItem(claveGuia(), '1'); } catch (e) { /* sin almacenamiento */ }
+    window.scrollTo({ top: 0 });
 };
 
 // Seguridad: si algo falla al iniciar, la pantalla de inicio no queda pegada

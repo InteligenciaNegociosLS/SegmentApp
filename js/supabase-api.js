@@ -285,6 +285,18 @@ window.App.sb.eliminarEvaluacion = async function(id) {
     if (error) throw fallo(error, 'Eliminar evaluación');
 };
 
+// Versiones anteriores de una evaluación (la base las guarda en cada cambio)
+window.App.sb.historialEvaluacion = async function(id) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.from('evaluaciones_historial').select('accion, datos_previos, hecho_en')
+        .eq('evaluacion_id', id).order('hecho_en', { ascending: false }).limit(30);
+    if (error) throw fallo(error, 'Historial de la evaluación');
+    return data.map(h => ({
+        accion: h.accion, hecho_en: h.hecho_en,
+        evaluacion: window.App.sb.aFormatoApp(h.datos_previos)
+    }));
+};
+
 // Deshacer un "eliminar": la evaluación vuelve a estar activa
 window.App.sb.restaurarEvaluacion = async function(id) {
     const sb = await window.App.sb.cliente();

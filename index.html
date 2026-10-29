@@ -100,6 +100,8 @@
             <button class="item-menu solo-admin hidden" role="menuitem" onclick="App.ux.cerrarMas(); abrirCargaDatos()"><span class="material-symbols-outlined">upload</span> Cargar datos</button>
             <button class="item-menu solo-admin hidden" id="btnProductsNav" role="menuitem" onclick="App.ux.cerrarMas(); openProductModal()"><span class="material-symbols-outlined">medication</span> Productos del laboratorio</button>
             <button class="item-menu solo-admin hidden" role="menuitem" onclick="App.ux.cerrarMas(); descargarRegistroFallas()"><span class="material-symbols-outlined">bug_report</span> Registro de fallas</button>
+            <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); App.ux.iniciarGuia(true)"><span class="material-symbols-outlined">tour</span> Guía rápida</button>
+            <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); App.ux.abrirAyudaMatriz()"><span class="material-symbols-outlined">help</span> Cómo leer la matriz</button>
             <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); showConfirmClearModal()"><span class="material-symbols-outlined">restart_alt</span> Volver a descargar los datos</button>
         </div>
         <div class="py-2 border-t border-slate-200">
@@ -452,7 +454,9 @@
         <section id="seccionMatriz" class="mb-6 scroll-mt-20" aria-labelledby="tituloMatriz">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div>
-                    <h2 id="tituloMatriz" class="font-display font-bold text-slate-800 text-xl">Matriz estratégica</h2>
+                    <h2 id="tituloMatriz" class="font-display font-bold text-slate-800 text-xl flex items-center gap-1">Matriz estratégica
+                        <button class="w-9 h-9 rounded-full flex items-center justify-center text-blue-700" onclick="App.ux.abrirAyudaMatriz()" title="¿Cómo leer la matriz?" aria-label="¿Cómo leer la matriz?"><span class="material-symbols-outlined text-[20px]">help</span></button>
+                    </h2>
                     <p class="text-xs text-slate-500">Toca un cuadrante para ver sus médicos</p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -462,6 +466,8 @@
                     </div>
                     <button onclick="toggleSummaryCells()" class="hidden sm:flex w-10 h-10 rounded-full items-center justify-center text-slate-700 border border-slate-200" title="Ver subtotales"><span class="material-symbols-outlined text-[20px]">functions</span><span id="btnSummaryText" class="sr-only">Ver Subtotales</span></button>
                     <button onclick="exportMatrixToPNG()" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 border border-slate-200" title="Descargar la matriz como imagen"><span class="material-symbols-outlined text-[20px]">image</span></button>
+                    <button id="btnMatrizCompleta" onclick="App.ux.abrirMatrizCompleta()" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 border border-slate-200" title="Ver la matriz en pantalla completa"><span class="material-symbols-outlined text-[20px]">fullscreen</span></button>
+                    <button id="btnSalirCompleta" onclick="App.ux.cerrarMatrizCompleta()" class="hidden h-10 px-4 rounded-full items-center justify-center gap-1 bg-blue-600 text-white text-sm font-bold" title="Salir de pantalla completa"><span class="material-symbols-outlined text-[20px]">fullscreen_exit</span> Salir</button>
                 </div>
             </div>
             <div class="overflow-x-auto sm:overflow-visible">
@@ -482,8 +488,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Médicos del cuadrante elegido -->
-            <div id="panelCelda" class="hidden mt-3 bg-white rounded-3xl border border-slate-200 p-4" aria-live="polite"></div>
         </section>
 
         <!-- Lista de médicos -->
@@ -514,16 +518,15 @@
             <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden flex flex-col">
                 <div class="hidden lg:block responsive-table-wrapper">
                     <table class="w-full text-left border-collapse" id="mainTable">
-                        <thead class="bg-slate-50 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                        <thead class="bg-slate-50 text-xs font-semibold text-slate-600 sticky top-0 z-10">
                             <tr>
-                                <th class="p-4">Cuadrante</th>
-                                <th class="p-4" id="thNameCol">Médico</th>
-                                <th class="p-4">Esp.</th>
-                                <th class="p-4 text-right">Recetas</th>
-                                <th class="p-4 text-right text-blue-700">La Santé</th>
-                                <th class="p-4 text-center">Part. %</th>
-                                <th class="p-4 text-center">Oportunidad</th>
-                                <th class="p-4 text-center hidden" id="thEvalCol">Evaluación</th>
+                                <th class="px-4 py-3 w-[76px]">Cuadrante</th>
+                                <th class="px-4 py-3" id="thNameCol">Médico</th>
+                                <th class="px-4 py-3 text-right">Recetas</th>
+                                <th class="px-4 py-3 text-right text-blue-700">La Santé</th>
+                                <th class="px-4 py-3 text-right">Participación</th>
+                                <th class="px-4 py-3 text-center">Oportunidad</th>
+                                <th class="px-4 py-3 text-center hidden" id="thEvalCol">Evaluación</th>
                             </tr>
                         </thead>
                         <tbody class="text-sm divide-y divide-slate-100" id="dataTable"></tbody>
@@ -545,6 +548,31 @@
         </section>
     </div>
 </main>
+
+<!-- Ayuda: cómo leer la matriz -->
+<div id="ayudaMatriz" class="hidden fixed inset-0 z-[115] bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="if (event.target === this) App.ux.cerrarAyudaMatriz()">
+    <div class="bg-white w-full sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="tituloAyuda">
+        <div class="flex items-center justify-between px-5 pt-5">
+            <h2 id="tituloAyuda" class="text-xl font-bold text-slate-800">Cómo leer la matriz</h2>
+            <button class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700" onclick="App.ux.cerrarAyudaMatriz()" title="Cerrar"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="px-5 pb-6 pt-2 space-y-4 text-sm text-slate-700" id="contenidoAyuda"></div>
+    </div>
+</div>
+
+<!-- Guía rápida (la primera vez) -->
+<div id="guia" class="hidden fixed inset-0 z-[130]" aria-live="polite">
+    <div id="guiaFoco" class="guia-foco"></div>
+    <div id="guiaTarjeta" class="guia-tarjeta" role="dialog" aria-modal="true" aria-labelledby="guiaTitulo">
+        <div class="text-[11px] font-bold text-blue-700 uppercase tracking-widest" id="guiaPaso">Paso 1 de 4</div>
+        <h3 class="text-lg font-bold text-slate-800 mt-1" id="guiaTitulo"></h3>
+        <p class="text-sm text-slate-600 mt-1" id="guiaTexto"></p>
+        <div class="flex items-center justify-between mt-4">
+            <button class="px-3 py-2 rounded-full text-sm font-bold text-slate-600" onclick="App.ux.terminarGuia()">Saltar</button>
+            <button class="px-5 py-2.5 rounded-full bg-blue-600 text-white text-sm font-bold" id="guiaSiguiente" onclick="App.ux.pasoGuia(1)">Siguiente</button>
+        </div>
+    </div>
+</div>
 
 <!-- Navegación inferior (teléfono) -->
 <nav id="navInferior" class="hidden md:!hidden no-print fixed bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 flex" aria-label="Secciones">
@@ -1065,9 +1093,17 @@
                 </div>
             </section>
 
+            <!-- Evaluación anterior de este mercado e historial -->
+            <section id="evalAnterior" class="hidden rounded-3xl border border-slate-200 p-4"></section>
+
             <!-- Preguntas del mercado elegido -->
             <section class="space-y-4">
-                <h4 class="text-sm font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-blue-700">analytics</span> En este mercado <span class="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">por semana</span></h4>
+                <div class="flex items-center justify-between gap-2">
+                    <h4 class="text-sm font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-blue-700">analytics</span> En este mercado <span class="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">por semana</span></h4>
+                    <button type="button" id="btnCambiarMercado" class="hidden text-xs font-bold text-blue-700 px-3 py-1.5 rounded-full" onclick="App.ux.editarDatosMercado(true)">Cambiar</button>
+                </div>
+                <div id="resumenMercado" class="hidden flex-wrap gap-2"></div>
+                <div id="preguntasMercado" class="space-y-4">
                 <div>
                     <label class="text-sm font-semibold text-slate-700 mb-2 block">De esos pacientes, ¿a cuántos les receta esta clase terapéutica?</label>
                     <select id="surveyQ2" class="sr-only survey-select">
@@ -1100,6 +1136,7 @@
                 <div>
                     <label for="surveyQ4" class="text-sm font-semibold text-slate-700 mb-2 block">¿Qué otros productos usa para esta patología?</label>
                     <input type="text" id="surveyQ4" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:border-blue-600 outline-none bg-white transition" placeholder="Ej.: Producto X, o N/A">
+                </div>
                 </div>
             </section>
 

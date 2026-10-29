@@ -586,7 +586,7 @@ window.App.matrix.filterByMatrix = function(pot, loy) {
     document.getElementById('clearFilterBtn').classList.remove('hidden');
     window.App.ui.safeSetText('tableSubtitle', `Filtrado: Cuadrante ${pot}${(loy === 'C' ? '-' : (loy === 'A' ? '+' : ''))}`);
     window.App.filters.resetPaginationAndRender();
-    if (window.App.ux) window.App.ux.mostrarPanelCelda(pot, loy);
+    if (window.App.ux) window.App.ux.alElegirCuadrante(pot, loy);
 };
 
 window.App.matrix.clearMatrixFilter = function() {
@@ -595,7 +595,6 @@ window.App.matrix.clearMatrixFilter = function() {
     document.getElementById('clearFilterBtn').classList.add('hidden');
     window.App.ui.safeSetText('tableSubtitle', 'Mostrando todos los registros');
     window.App.filters.resetPaginationAndRender();
-    if (window.App.ux) window.App.ux.ocultarPanelCelda();
 };
 
 /* ============================================================
@@ -707,61 +706,54 @@ window.App.matrix.renderTable = function() {
 
     // Construcción del HTML de todas las filas en buffer (mejor performance en iPad)
     const htmlBuffer = [];
+    const mostrarEval = !st.groupByInstitution && (st.currentUserRole === 'visitador' || st.currentUserRole === 'admin');
     pageData.forEach((doc, idxInPage) => {
         const realIndex = startIdx + idxInPage;
-        // Mismo color que su cuadrante en la matriz
-        let colorClass = (window.App.ux && window.App.ux.claseCuadrante(doc)) || "bg-slate-100 text-slate-600";
-        if (doc.isZeroRx) colorClass = "bg-slate-100 text-slate-500";
+        const atenuado = doc.isZeroRx ? 'opacity-75' : '';
 
-        let gapHtml = doc.isZeroRx
-            ? `<span class="text-xs text-slate-400 font-bold">-</span>`
-            : (doc.gap > 0
-                ? `<span class="badge-gap">+${ui.formatNumber(doc.gap)} Rx</span>`
-                : `<span class="text-xs text-green-600 font-bold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[14px]">task_alt</span> Objetivo</span>`);
-
-        const fichClass = (doc.ficheroData && doc.ficheroData.length > 0 && !doc.isInst) ? "" : "opacity-80";
-        const fichIcon = (doc.ficheroData && doc.ficheroData.length > 0 && !doc.isInst)
-            ? `<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold border border-blue-200 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">how_to_reg</span> Fichado</span>`
-            : "";
-        const instIconHtml = doc.isInst
-            ? `<span class="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-bold ml-2 border border-indigo-200">${doc.docCount} Docs</span>`
-            : "";
-
-        let evalCellHtml = "";
-        if (!doc.isInst && (st.currentUserRole === 'visitador' || st.currentUserRole === 'admin')) {
-            if (st.currentUserRole === 'visitador') {
-                const evalsMap = st.EVALUACIONES_VISITADOR[d.normalizeKey(doc.id)];
-                const evalsList = evalsMap ? Object.values(evalsMap) : [];
-                if (evalsList.length > 0) {
-                    const hasNotes = evalsList.some(e => e.notas && String(e.notas).trim() !== '');
-                    const countText = evalsList.length > 1 ? `${evalsList.length} Mercados` : `${evalsList.length} Mercado`;
-                    evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); App.ux.evaluar(this)" data-id="${ui.escapeHtml(doc.id)}" data-nombre="${ui.escapeHtml(doc.name)}"><button class="bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-full shadow-sm transition flex flex-col items-center justify-center gap-0.5 mx-auto"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">EVALUADO</span>${hasNotes ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</div><span class="text-[9px] font-medium text-indigo-500">${countText}</span></button></td>`;
-                } else {
-                    evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); App.ux.evaluar(this)" data-id="${ui.escapeHtml(doc.id)}" data-nombre="${ui.escapeHtml(doc.name)}"><button class="bg-white border border-slate-300 text-slate-600 font-bold px-3 py-1.5 rounded-full shadow-sm transition flex items-center justify-center gap-1 mx-auto"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`;
-                }
-            } else if (st.currentUserRole === 'admin') {
-                const evalsForDoc = (typeof getEvaluationsForDoc === 'function') ? getEvaluationsForDoc(doc.id) : [];
-                if (evalsForDoc.length > 0) {
-                    const evalSummary = evalsForDoc.map(e => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px] font-bold whitespace-nowrap shadow-sm" title="Eval de: ${e.visitador} en ${e.mercado || 'General'}">${e.cuadrante}</span>`).join(' ');
-                    evalCellHtml = `<td class="p-4 text-center"><div class="flex flex-wrap items-center justify-center gap-1">${evalSummary}</div></td>`;
-                } else {
-                    evalCellHtml = `<td class="p-4 text-center"><span class="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-1 rounded-md border border-slate-200">Pendiente</span></td>`;
-                }
-            }
-        }
-
+        // Cuadrante con el mismo color de la matriz
         let renderLabel = doc.matrixLabel;
         if (st.currentMatrixMode === 'survey' && !doc.isInst) renderLabel = doc.surveyLabel;
+        const colorClass = (window.App.ux && window.App.ux.claseCuadrante(doc)) || "bg-slate-100 text-slate-500";
+        const cuadrante = `<span class="inline-flex items-center justify-center min-w-[44px] h-9 px-2 rounded-xl font-display font-extrabold text-sm ${colorClass}">${doc.isZeroRx ? '—' : ui.escapeHtml(renderLabel)}</span>`;
+
+        // Médico: nombre, especialidad y si está fichado, juntos
+        const fichado = doc.ficheroData && doc.ficheroData.length > 0 && !doc.isInst;
+        const etiquetas = [
+            fichado ? '<span class="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-full">Fichado</span>' : '',
+            doc.isZeroRx ? '<span class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">Sin recetas</span>' : '',
+            doc.isInst ? `<span class="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-full">${doc.docCount} médicos</span>` : ''
+        ].join('');
+        const medico = `<div class="min-w-0">
+                <div class="font-semibold text-[15px] text-slate-800 truncate max-w-[340px]" title="${ui.escapeHtml(ui.nombreVisible(doc.name))}">${ui.escapeHtml(ui.nombreVisible(doc.name))}</div>
+                <div class="flex items-center gap-2 mt-0.5 text-xs text-slate-500"><span class="truncate max-w-[200px]">${ui.escapeHtml(doc.spec || '')}</span>${etiquetas}</div>
+            </div>`;
+
+        // Participación: número + barrita
+        const part = doc.isZeroRx ? '<span class="text-slate-400">—</span>' : `<div class="flex items-center justify-end gap-2">
+                <span class="font-semibold text-slate-700 w-14 text-right">${ui.formatNumber(doc.share, 1)}%</span>
+                <span class="w-14 h-1.5 rounded-full bg-slate-100 overflow-hidden"><span class="block h-full rounded-full bg-blue-600" style="width:${Math.min(100, doc.share).toFixed(1)}%"></span></span>
+            </div>`;
+
+        const gapHtml = doc.isZeroRx
+            ? '<span class="text-slate-400">—</span>'
+            : (doc.gap > 0
+                ? `<span class="badge-gap">+${ui.formatNumber(doc.gap)} Rx</span>`
+                : `<span class="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-green-50 px-2 py-1 rounded-full"><span class="material-symbols-outlined text-[16px]">task_alt</span> En meta</span>`);
+
+        let evalCellHtml = "";
+        if (mostrarEval && !doc.isInst) {
+            evalCellHtml = `<td class="px-4 py-3 text-center" onclick="event.stopPropagation()">${window.App.ux ? window.App.ux.estadoEvaluacion(doc) : ''}</td>`;
+        }
 
         htmlBuffer.push(`
-            <tr class=" transition border-b border-slate-100 cursor-pointer group" onclick="handleRowClick(${!!doc.isInst}, ${realIndex}, '${ui.escapeHtml(doc.id)}')">
-                <td class="p-4 ${fichClass}"><span class="font-bold font-display text-xs px-2 py-1.5 rounded-lg ${colorClass}">${doc.isZeroRx ? 'N/A' : renderLabel}</span></td>
-                <td class="p-4 ${fichClass}"><div class="flex flex-col sm:flex-row sm:items-center gap-2 transition"><div class="font-bold text-sm text-slate-700 truncate max-w-[150px] md:max-w-[250px]" title="${ui.escapeHtml(doc.name)}">${ui.escapeHtml(doc.name)} ${doc.isZeroRx ? '<span class="text-[9px] bg-slate-200 text-slate-500 px-1 rounded ml-1">Sin Rx</span>' : ''}</div><div class="flex flex-shrink-0 items-center gap-1">${fichIcon} ${instIconHtml}</div></div></td>
-                <td class="p-4 text-xs font-medium text-slate-500 ${fichClass}">${ui.escapeHtml(doc.spec)}</td>
-                <td class="p-4 text-right font-mono font-medium text-sm text-slate-600 ${fichClass}">${doc.isZeroRx ? '-' : ui.formatNumber(doc.totalRx)}</td>
-                <td class="p-4 text-right font-mono text-sm font-bold text-blue-600 ${fichClass}">${doc.isZeroRx ? '-' : ui.formatNumber(doc.rxPhq)}</td>
-                <td class="p-4 text-center text-xs font-bold text-slate-700 ${fichClass}">${doc.isZeroRx ? '-' : ui.formatNumber(doc.share, 2)}%</td>
-                <td class="p-4 text-center ${fichClass}">${gapHtml}</td>
+            <tr class="cursor-pointer md-estado" onclick="handleRowClick(${!!doc.isInst}, ${realIndex}, '${ui.escapeHtml(doc.id)}')">
+                <td class="px-4 py-3 ${atenuado}">${cuadrante}</td>
+                <td class="px-4 py-3 ${atenuado}">${medico}</td>
+                <td class="px-4 py-3 text-right font-mono text-sm text-slate-700 ${atenuado}">${doc.isZeroRx ? '<span class="text-slate-400">—</span>' : ui.formatNumber(doc.totalRx)}</td>
+                <td class="px-4 py-3 text-right font-mono text-sm font-semibold text-blue-700 ${atenuado}">${doc.isZeroRx ? '<span class="text-slate-400">—</span>' : ui.formatNumber(doc.rxPhq)}</td>
+                <td class="px-4 py-3 text-right text-sm ${atenuado}">${part}</td>
+                <td class="px-4 py-3 text-center ${atenuado}">${gapHtml}</td>
                 ${evalCellHtml}
             </tr>
         `);

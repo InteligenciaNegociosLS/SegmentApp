@@ -84,11 +84,12 @@ window.App.filters.fillGenericDropdown = function(key, dataList) {
     dataList.forEach(item => {
         let cleanName = item;
         if (key === 'Market') cleanName = item.replace(/Mercado/i, '').trim() || item;
-        const div = document.createElement('div');
+        // Toda la fila marca o desmarca (no solo la casilla)
+        const div = document.createElement('label');
         div.className = 'checkbox-item';
         div.innerHTML = `
             <input type="checkbox" value="${item}" onchange="updateGenericSelected('${key}')">
-            <span class="text-sm font-medium text-slate-700">${cleanName}</span>
+            <span class="text-sm font-medium text-slate-700 min-w-0 break-words">${window.App.ui.escapeHtml(cleanName)}</span>
         `;
         // Dejarlo marcado por defecto
         div.querySelector('input').checked = true;
