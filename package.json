@@ -11,11 +11,13 @@
     "dev": "node scripts/build.mjs && node scripts/servidor-local.mjs",
     "test": "vitest run",
     "test:e2e": "node tests/e2e/flujos.e2e.mjs",
-    "test:db": "vitest run tests/db"
+    "test:db": "vitest run tests/db",
+    "css": "tailwindcss -i css/entrada.css -o css/app.css --minify"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.2.17",
     "jsdom": "25.0.1",
-    "vitest": "2.1.9",
-    "@electric-sql/pglite": "0.2.17"
+    "tailwindcss": "3.4.17",
+    "vitest": "2.1.9"
   }
 }
