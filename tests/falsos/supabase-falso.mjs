@@ -183,6 +183,10 @@ export function createClient(url, clave, opciones = {}) {
                 visibles, phq: cfg ? cfg.valor : [] });
             return { data: JSON.parse(JSON.stringify(datos)), error: null };
         },
+        preparar_orden_mercado() {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador' } };
+            return { data: 0, error: null };
+        },
         publicar_snapshot({ p_snapshot_id }) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede publicar versiones' } };
             const v = bd.data_snapshots.find(x => x.id === p_snapshot_id && x.estado !== 'archivado');

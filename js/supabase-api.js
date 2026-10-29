@@ -166,6 +166,15 @@ window.App.sb.comparar = async function(nuevoId, baseId) {
     return data;
 };
 
+// Calcula el orden nacional por mercado de una versión de recetas
+// (un mercado por llamada; devuelve cuántos faltan)
+window.App.sb.prepararOrden = async function(snapshotId) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('preparar_orden_mercado', { p_snapshot: snapshotId });
+    if (error) throw fallo(error, 'Preparar la versión');
+    return data;
+};
+
 window.App.sb.publicar = async function(snapshotId) {
     const sb = await window.App.sb.cliente();
     const { error } = await sb.rpc('publicar_snapshot', { p_snapshot_id: snapshotId });

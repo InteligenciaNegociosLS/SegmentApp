@@ -11,7 +11,7 @@ import { PGlite } from '@electric-sql/pglite';
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MIGRACIONES = path.join(RAIZ, 'supabase', 'migrations');
 
-const BASE_SUPABASE = `
+export const BASE_SUPABASE = `
     create role anon nologin;
     create role authenticated nologin;
     create role service_role nologin bypassrls;

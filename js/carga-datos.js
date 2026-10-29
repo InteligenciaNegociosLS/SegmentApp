@@ -243,6 +243,17 @@ function lotesFichero(validacion) {
     }));
 }
 
+// Recetas: deja listo el orden nacional por mercado que usan los VM y GD
+// (un mercado por llamada para no pasar el límite de tiempo de Supabase)
+window.App.carga.prepararVersion = async function(id, alAvanzar = () => {}) {
+    let faltan = await conReintentos(() => window.App.sb.prepararOrden(id));
+    const total = faltan + 1;
+    while (faltan > 0) {
+        alAvanzar({ etapa: 'preparando', hechas: total - faltan, total, id });
+        faltan = await conReintentos(() => window.App.sb.prepararOrden(id));
+    }
+};
+
 // Sube la validación como BORRADOR. Si ya existe snapshotId (reanudar), continúa ahí.
 window.App.carga.subir = async function({ tipo, nombre, fecha, validacion, snapshotId }, alAvanzar = () => {}) {
     const sb = window.App.sb;
@@ -262,6 +273,7 @@ window.App.carga.subir = async function({ tipo, nombre, fecha, validacion, snaps
     alAvanzar({ etapa: 'verificando', hechas: total, total, id });
     const enBase = await conReintentos(() => sb.contarFilas(id));
     if (enBase !== total) throw new Error(`Se esperaban ${total} filas y en la base hay ${enBase}. Pulsa "Reintentar" para completar.`);
+    if (tipo === 'recetas') await window.App.carga.prepararVersion(id, alAvanzar);
 
     alAvanzar({ etapa: 'archivo', hechas: total, total, id });
     const blob = await window.App.carga.comprimir(window.App.carga.aCsv(encabezados, filasFinales));
@@ -363,9 +375,10 @@ window.App.carga.iniciarSubida = async function() {
     const zona = document.getElementById('cargaProgreso');
     const pintar = ({ etapa, hechas, total }) => {
         const pct = total ? Math.round((hechas / total) * 100) : 0;
-        const textos = { filas: `Subiendo filas: ${fmt(hechas)} de ${fmt(total)}`, verificando: 'Verificando que llegó todo...', archivo: 'Guardando el archivo de la versión...', listo: '¡Listo!' };
+        const textos = { filas: `Subiendo filas: ${fmt(hechas)} de ${fmt(total)}`, verificando: 'Verificando que llegó todo...',
+            preparando: `Preparando la versión para los visitadores: mercado ${fmt(hechas)} de ${fmt(total)}`, archivo: 'Guardando el archivo de la versión...', listo: '¡Listo!' };
         zona.innerHTML = `<div class="text-sm font-bold text-slate-700 mb-2">${textos[etapa]}</div>
-            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden"><div class="bg-indigo-600 h-3 rounded-full transition-all" style="width:${etapa === 'filas' ? pct : 100}%"></div></div>`;
+            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden"><div class="bg-indigo-600 h-3 rounded-full transition-all" style="width:${etapa === 'filas' || etapa === 'preparando' ? pct : 100}%"></div></div>`;
     };
     zona.classList.remove('hidden');
     const btn = document.getElementById('btnCargaSubir');
@@ -444,6 +457,11 @@ window.App.carga.publicar = async function(id) {
     const nombre = v ? v.nombre : 'esta versión';
     if (!confirm(`¿Publicar "${nombre}"?\n\nPasará a ser la versión de HOY para todo el equipo. La versión anterior queda guardada y se puede volver a ella.`)) return;
     try {
+        // Una versión de recetas cargada antes de este cambio puede no estar preparada todavía
+        if (v && v.tipo === 'recetas') {
+            ui.showToast('Preparando la versión para los visitadores...');
+            await window.App.carga.prepararVersion(id);
+        }
         await window.App.sb.publicar(id);
         ui.showToast(`"${nombre}" publicada. Cargando los datos nuevos...`);
         window.App.data.elegirVersion(v ? v.tipo : 'recetas', null);
