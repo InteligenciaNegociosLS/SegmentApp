@@ -32,8 +32,8 @@ window.App.exports.showExportModal = function(targetType) {
         ? '<span class="material-symbols-outlined text-[18px]">download</span> Descargar Excel'
         : '<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Descargar PDF';
     btnAct.className = targetType === 'excel'
-        ? 'bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2'
-        : 'bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2';
+        ? 'bg-green-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2'
+        : 'bg-red-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2';
 
     const container = document.getElementById('exportCheckboxContainer');
     container.innerHTML = '';

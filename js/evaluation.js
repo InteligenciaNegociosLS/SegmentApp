@@ -258,7 +258,7 @@ window.App.evaluation.saveEvaluation = async function() {
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const originalStyle = el.style.cssText;
-            el.style.cssText = originalStyle + 'border: 2px solid #ef4444 !important; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2) !important; background-color: #fef2f2 !important;';
+            el.style.cssText = originalStyle + 'border: 2px solid #ba1a1a !important; box-shadow: 0 0 0 4px rgba(186, 26, 26, 0.16) !important; background-color: #fff0ee !important;';
             setTimeout(() => { el.style.cssText = originalStyle; }, 3000);
         }
         ui.showToast(message);
@@ -516,18 +516,18 @@ function showSaveBanner({ savedMarket, nextMarket, pendingCount, allDone }) {
                 z-index: 50;
                 margin: 0 0 16px 0;
                 padding: 14px 18px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                color: white;
-                border-radius: 10px;
-                box-shadow: 0 10px 28px rgba(16, 185, 129, 0.38);
+                background: #146c3c;
+                color: #ffffff;
+                border-radius: 16px;
+                box-shadow: 0 1px 3px 0 rgba(0,0,0,.15), 0 4px 8px 3px rgba(0,0,0,.10);
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 12px;
-                animation: saveBannerIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+                animation: saveBannerIn var(--md-motion-long) var(--md-ease-emphasized);
             }
             #saveSuccessBanner.is-hiding {
-                animation: saveBannerOut 0.3s ease-in forwards;
+                animation: saveBannerOut var(--md-motion-medium) var(--md-ease-exit) forwards;
             }
             #saveSuccessBanner .sb-text  { flex: 1; line-height: 1.45; }
             #saveSuccessBanner .sb-saved { font-size: 15px; font-weight: 700; letter-spacing: 0.2px; }
@@ -537,11 +537,11 @@ function showSaveBanner({ savedMarket, nextMarket, pendingCount, allDone }) {
                 border: 1px solid rgba(255,255,255,0.45);
                 color: white;
                 padding: 7px 16px;
-                border-radius: 7px;
+                border-radius: 9999px;
                 font-size: 13px;
                 font-weight: 600;
                 cursor: pointer;
-                transition: background 0.15s, transform 0.1s;
+                transition: background var(--md-motion-short) var(--md-ease-standard), transform var(--md-motion-short) var(--md-ease-standard);
                 white-space: nowrap;
             }
             #saveSuccessBanner .sb-btn:hover  { background: rgba(255,255,255,0.34); }
@@ -679,12 +679,12 @@ window.App.evaluation.updateSaveButtonLabel = function() {
     if (!btnSave) return;
     const isCruceErrado = document.getElementById('evalModal').dataset.cruceErrado === 'true';
     if (isCruceErrado) {
-        btnSave.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-        btnSave.classList.add('bg-rose-600', 'hover:bg-rose-700');
+        btnSave.classList.remove('bg-indigo-600');
+        btnSave.classList.add('bg-rose-600');
         btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">block</span> Confirmar Cruce Errado';
     } else {
-        btnSave.classList.remove('bg-rose-600', 'hover:bg-rose-700');
-        btnSave.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        btnSave.classList.remove('bg-rose-600');
+        btnSave.classList.add('bg-indigo-600');
         btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación';
     }
 };

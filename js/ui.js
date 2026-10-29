@@ -119,11 +119,11 @@ window.App.ui.updateFileLabel = function(inputId, msgId) {
     if (!input || !msg) return;
     if (input.files && input.files.length > 0) {
         msg.innerText = input.files[0].name;
-        msg.style.color = "#0A56D1";
+        msg.style.color = "#0b57d0";
         msg.style.fontWeight = "bold";
     } else {
         msg.innerText = "O arrastra el archivo aquí";
-        msg.style.color = "#44474E";
+        msg.style.color = "#44474e";
         msg.style.fontWeight = "normal";
     }
 };

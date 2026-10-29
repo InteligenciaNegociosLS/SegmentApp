@@ -116,6 +116,9 @@ window.App.main.initApp = function() {
     // 4) Chart.js plugin (datalabels)
     if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
         Chart.register(ChartDataLabels);
+        // Misma tipografía y color de texto que el resto de la app
+        Chart.defaults.font.family = '"Roboto Flex", Roboto, system-ui, sans-serif';
+        Chart.defaults.color = '#44474e';
     }
 
     // 5) Cerrar dropdowns al hacer clic fuera
