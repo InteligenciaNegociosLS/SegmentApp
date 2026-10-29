@@ -45,6 +45,7 @@ export function cargarApp({ datos, env } = {}) {
     delete window.App;
     window.localforage = localforageEnMemoria();
     window.__calls = [];
+    window.__SIN_GUIA = true;   // la guía rápida no se abre sola en las pruebas
     window.__SEGMENTAPP_ENV__ = env || { APP_ENV: 'development', SUPABASE_URL: 'https://prueba.supabase.co', SUPABASE_ANON_KEY: 'clave-publica-de-prueba' };
 
     for (const nombre of SCRIPTS) {

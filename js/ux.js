@@ -43,8 +43,8 @@ window.App.ux.ocultarSplash = function() {
 window.App.ux.irA = function(id) {
     const destino = id === 'inicio' ? null : document.getElementById(id);
     const opciones = { behavior: sinMovimiento() ? 'auto' : 'smooth' };
-    if (destino) destino.scrollIntoView({ ...opciones, block: 'start' });
-    else window.scrollTo({ top: 0, ...opciones });
+    if (destino && destino.scrollIntoView) destino.scrollIntoView({ ...opciones, block: 'start' });
+    else if (window.scrollTo) window.scrollTo({ top: 0, ...opciones });
     window.App.ux.marcarNav(id);
 };
 
@@ -656,7 +656,7 @@ window.App.ux.pasoGuia = function(delta) {
     const [selector, titulo, texto] = pasos[pasoActual];
     const el = document.querySelector(selector);
     if (!el || el.offsetParent === null) { if (delta === 0 && pasoActual < pasos.length - 1) return window.App.ux.pasoGuia(1); }
-    if (el) el.scrollIntoView({ behavior: 'auto', block: 'center' });
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'auto', block: 'center' });
     const r = el ? el.getBoundingClientRect() : { top: 80, left: 16, width: 200, height: 60 };
     const foco = document.getElementById('guiaFoco'), tarjeta = document.getElementById('guiaTarjeta');
     const m = 6, alto = Math.min(r.height + m * 2, window.innerHeight * 0.55);
