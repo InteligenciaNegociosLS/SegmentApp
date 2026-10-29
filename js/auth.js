@@ -175,6 +175,7 @@ window.App.auth.showLoginRequired = function() {
     st.currentVisitadorName = "";
     st.isAdmin = false;
     st.rolReal = null;
+    st.usuarioId = null;
     st.soloLectura = false;
     st.visitadorId = null;
     st.REPS_PERMITIDOS = null;
@@ -213,6 +214,7 @@ window.App.auth.entrar = async function(user, { avisar = false } = {}) {
         return;
     }
 
+    st.usuarioId = perfil.uid;
     st.rolReal = perfil.rol;
     st.soloLectura = perfil.rol === 'gd' || perfil.rol === 'gte_nacional';
     st.visitadorId = perfil.visitadorId;

@@ -109,6 +109,14 @@ window.App.sb.versiones = async function() {
     return data;
 };
 
+// VM y GD: solo las recetas y el fichero de sus médicos (formato compacto)
+window.App.sb.datosEquipo = async function(recetasId, ficheroId) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('datos_equipo', { p_recetas: recetasId, p_fichero: ficheroId });
+    if (error) throw fallo(error, 'Datos del equipo');
+    return data;
+};
+
 window.App.sb.urlArchivo = async function(ruta) {
     const sb = await window.App.sb.cliente();
     const { data, error } = await sb.storage.from(BUCKET_DATOS).createSignedUrl(ruta, 3600);

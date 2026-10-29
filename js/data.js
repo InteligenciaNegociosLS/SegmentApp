@@ -31,10 +31,20 @@ window.App.data.normalizeKey = function(key) {
    IS PHQ
    Determina si un producto pertenece al portfolio del laboratorio.
 ------------------------------------------------------------ */
+// Se memoriza por producto: 231 mil filas comparadas contra ~70 productos
+// eran millones de comparaciones en cada filtro. Si cambia la lista, se reinicia.
+let memoPhq = new Map(), listaMemoPhq = null;
 window.App.data.isPhq = function(prodName) {
     if (!prodName) return false;
     const list = window.App.state.PHQ_PRODUCTS;
-    return list.some(p => prodName.toUpperCase().includes(p));
+    if (list !== listaMemoPhq) { memoPhq = new Map(); listaMemoPhq = list; }
+    let r = memoPhq.get(prodName);
+    if (r === undefined) {
+        const mayus = prodName.toUpperCase();
+        r = list.some(p => mayus.includes(p));
+        memoPhq.set(prodName, r);
+    }
+    return r;
 };
 
 /* ------------------------------------------------------------
@@ -259,35 +269,52 @@ window.App.data.parseAuditData = function(json) {
 
 /* ============================================================
    COPIA LOCAL (IndexedDB) DE LA VERSIÓN DESCARGADA
-   Se identifica por los IDs de las versiones: si se publica una
-   versión nueva, la copia vieja deja de usarse sola.
+   Se identifica por usuario + modo + IDs de las versiones: si se
+   publica una versión nueva o entra otra persona en el mismo
+   equipo, la copia vieja deja de usarse sola.
 ============================================================ */
-window.App.data.claveCopia = function(ids) {
-    return `${ids.fichero || '-'}|${ids.recetas || '-'}`;
+window.App.data.claveCopia = function(ids, modo = 'archivo') {
+    const st = window.App.state;
+    return `${st.usuarioId || '-'}|${modo}|${ids.fichero || '-'}|${ids.recetas || '-'}`;
 };
 
-window.App.data.saveSession = async function(ids) {
+window.App.data.saveSession = async function(ids, modo = 'archivo', paquete = null) {
     if (!window.localforage || !ids) return;
     const st = window.App.state;
     try {
         const t0 = performance.now();
-        await localforage.setItem('RAW_DATA_STR', JSON.stringify(st.RAW_DATA));
-        await localforage.setItem('FICHERO_DATA_STR', JSON.stringify(Array.from(st.FICHERO_MAP.entries())));
-        await localforage.setItem('DATA_COPIA', window.App.data.claveCopia(ids));
+        if (modo === 'equipo') {
+            // Pocos KB: se guarda tal cual llegó y se vuelve a aplicar al abrir
+            await localforage.removeItem('RAW_DATA_STR');
+            await localforage.removeItem('FICHERO_DATA_STR');
+            await localforage.setItem('EQUIPO_DATOS', paquete);
+        } else {
+            await localforage.removeItem('EQUIPO_DATOS');
+            await localforage.setItem('RAW_DATA_STR', JSON.stringify(st.RAW_DATA));
+            await localforage.setItem('FICHERO_DATA_STR', JSON.stringify(Array.from(st.FICHERO_MAP.entries())));
+        }
+        await localforage.setItem('DATA_COPIA', window.App.data.claveCopia(ids, modo));
         console.log(`[SegmentApp] Copia local guardada en ${Math.round(performance.now() - t0)}ms`);
     } catch (e) {
         console.error('[SegmentApp] No se pudo guardar la copia local:', e);
     }
 };
 
-async function restaurarCopia(ids) {
+async function restaurarCopia(ids, modo) {
     if (!window.localforage) return false;
     try {
-        if ((await localforage.getItem('DATA_COPIA')) !== window.App.data.claveCopia(ids)) return false;
+        if ((await localforage.getItem('DATA_COPIA')) !== window.App.data.claveCopia(ids, modo)) return false;
+        window.App.ui.safeSetText('loadingText', 'Abriendo la copia guardada en este dispositivo...');
+        if (modo === 'equipo') {
+            const paquete = await localforage.getItem('EQUIPO_DATOS');
+            if (!paquete) return false;
+            window.App.data.aplicarDatosEquipo(paquete);
+            return true;
+        }
         const audit = await localforage.getItem('RAW_DATA_STR');
         const fichero = await localforage.getItem('FICHERO_DATA_STR');
         if (!audit) return false;
-        window.App.ui.safeSetText('loadingText', 'Abriendo la copia guardada en este dispositivo...');
+        window.App.state.MARKET_SERVIDOR = null;
         window.App.state.RAW_DATA = JSON.parse(audit);
         if (fichero) window.App.data.parseStoredFicheroData(JSON.parse(fichero));
         return true;
@@ -296,6 +323,40 @@ async function restaurarCopia(ids) {
         return false;
     }
 }
+
+/* ============================================================
+   DATOS DE MI EQUIPO (VM y GD)
+   El servidor envía solo los médicos del usuario, en formato
+   compacto. Aquí se rearman EXACTAMENTE como si vinieran del
+   archivo completo, para que todos los cálculos den lo mismo.
+============================================================ */
+window.App.data.aplicarDatosEquipo = function(p) {
+    const st = window.App.state;
+    const columnas = p.columnas || [];
+    const encabezados = columnas.map((h, j) => String(h == null ? '' : h).trim() || `col_${j}`);
+    const fichero = (p.fichero || []).map(valores => {
+        const fila = {};
+        encabezados.forEach((h, j) => { fila[h] = valores[j] ? String(valores[j]).trim() : ''; });
+        return fila;
+    });
+    window.App.data.parseFicheroData(fichero);
+
+    // Mismo orden de columnas que el archivo de recetas
+    const filas = (p.recetas || []).map(([medico, mercado, producto, rx]) => {
+        const m = p.medicos[medico], pr = p.productos[producto];
+        return [m[1], m[0], p.mercados[mercado], pr[0], rx, m[2], m[3], m[4], m[5], m[6], m[7], pr[1], pr[2], pr[3], pr[4]];
+    });
+    window.App.data.parseAuditData(filas);
+
+    // Clasificación nacional por mercado (la etiqueta se calcula con los umbrales actuales)
+    const porMercado = {};
+    (p.clasificacion || []).forEach(([mercado, matricula, total, phq, acumulado, totalMercado]) => {
+        const nombre = p.mercados[mercado];
+        if (!porMercado[nombre]) porMercado[nombre] = new Map();
+        porMercado[nombre].set(matricula, { total: Number(total), phq: Number(phq), acumulado: Number(acumulado), totalMercado: Number(totalMercado) });
+    });
+    st.MARKET_SERVIDOR = porMercado;
+};
 
 /* ============================================================
    VERSIONES ELEGIDAS ("Hoy" = la vigente, o una anterior)
@@ -344,19 +405,32 @@ window.App.data.cargarDatos = async function() {
         throw new Error('Todavía no hay una versión de recetas publicada. El administrador debe cargar y publicar una.');
     }
     const ids = { fichero: elegidas.fichero && elegidas.fichero.id, recetas: elegidas.recetas.id };
+    // Admin y Gerente Nacional ven todo: archivo completo. VM y GD: solo lo suyo.
+    const modo = ['admin', 'gte_nacional'].includes(st.rolReal) ? 'archivo' : 'equipo';
 
-    if (!(await restaurarCopia(ids))) {
-        const [fichero, recetas] = await Promise.all([
-            elegidas.fichero
-                ? window.App.sb.urlArchivo(elegidas.fichero.archivo).then(url => window.App.data.fetchFileAsJson(url, 'fichero médico'))
-                : Promise.resolve(null),
-            window.App.sb.urlArchivo(elegidas.recetas.archivo).then(url => window.App.data.fetchFileAsJson(url, 'recetas'))
-        ]);
-        if (fichero) window.App.data.parseFicheroData(fichero);
-        window.App.data.parseAuditData(recetas);
-        window.App.data.saveSession(ids);
+    if (!(await restaurarCopia(ids, modo))) {
+        if (modo === 'equipo') {
+            ui.safeSetText('loadingText', 'Descargando los datos de tus médicos...');
+            const paquete = await window.App.sb.datosEquipo(ids.recetas, ids.fichero || null);
+            window.App.data.aplicarDatosEquipo(paquete);
+            window.App.data.saveSession(ids, modo, paquete);
+        } else {
+            const [fichero, recetas] = await Promise.all([
+                elegidas.fichero
+                    ? window.App.sb.urlArchivo(elegidas.fichero.archivo).then(url => window.App.data.fetchFileAsJson(url, 'fichero médico'))
+                    : Promise.resolve(null),
+                window.App.sb.urlArchivo(elegidas.recetas.archivo).then(url => window.App.data.fetchFileAsJson(url, 'recetas'))
+            ]);
+            st.MARKET_SERVIDOR = null;
+            if (fichero) window.App.data.parseFicheroData(fichero);
+            window.App.data.parseAuditData(recetas);
+            window.App.data.saveSession(ids, modo);
+        }
     }
     st.MARKET_CACHE = {};
+    st._lastUniverseSignature = null;
+    st._lastUniverseRows = null;
+    st._lastGroups = null;
     return elegidas;
 };
 
