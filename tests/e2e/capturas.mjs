@@ -109,10 +109,17 @@ try {
         await foto('3e-vm-mas');
         await page.evaluate(() => { App.ux.cerrarMas(); App.ux.iniciarGuia(true); });
         await foto('3f-vm-guia');
+        await page.evaluate(() => App.ux.pasoGuia(2));
+        await foto('3f3-vm-guia-paso3');
+        await page.evaluate(() => App.ux.pasoGuia(1));
+        await foto('3f4-vm-guia-paso4');
         await page.evaluate(() => { App.ux.terminarGuia(); App.ux.abrirAyudaMatriz(); });
         await foto('3g-vm-ayuda');
         await page.evaluate(() => { App.ux.cerrarAyudaMatriz(); App.ux.abrirMatrizCompleta(); });
         await foto('3h-vm-matriz-completa');
+        await page.evaluate(() => toggleSummaryCells());
+        await foto('3i-vm-matriz-completa-subtotales');
+        await page.evaluate(() => toggleSummaryCells());
         await page.evaluate(() => App.ux.cerrarMatrizCompleta());
         if (nombre === 'computadora') {
             // La imagen que se descarga con "Exportar → Imagen de la matriz"

@@ -297,27 +297,21 @@ window.App.ux.claseCuadrante = function(doc) {
     return /^[ABC]$/.test(p) && /^[ABC]$/.test(l) ? `cell-${p}_${l}` : '';
 };
 
-// Matriz en pantalla completa (ideal en iPad y teléfono)
+// Matriz en pantalla completa (ideal en iPad y teléfono).
+// Se usa solo el modo de la app: la pantalla completa del navegador hacía
+// "parpadear" la página al entrar y al salir.
 window.App.ux.abrirMatrizCompleta = function() {
     const sec = document.getElementById('seccionMatriz');
-    if (!sec) return;
+    if (!sec || sec.classList.contains('matriz-completa')) return;
     sec.classList.add('matriz-completa');
     document.body.classList.add('sin-desplazar');
-    // Donde el navegador lo permite, también se oculta su barra (pantalla completa real)
-    const pedir = sec.requestFullscreen || sec.webkitRequestFullscreen;
-    if (pedir) { try { const r = pedir.call(sec); if (r && r.catch) r.catch(() => {}); } catch (e) { /* no permitido: basta con el modo de la app */ } }
 };
 window.App.ux.cerrarMatrizCompleta = function() {
     const sec = document.getElementById('seccionMatriz');
     if (!sec || !sec.classList.contains('matriz-completa')) return;
     sec.classList.remove('matriz-completa');
     document.body.classList.remove('sin-desplazar');
-    const salir = document.exitFullscreen || document.webkitExitFullscreen;
-    if ((document.fullscreenElement || document.webkitFullscreenElement) && salir) { try { const r = salir.call(document); if (r && r.catch) r.catch(() => {}); } catch (e) { /* ya salió */ } }
 };
-// Si se sale con el botón del navegador, se cierra también el modo de la app
-document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) window.App.ux.cerrarMatrizCompleta(); });
-document.addEventListener('webkitfullscreenchange', () => { if (!document.webkitFullscreenElement) window.App.ux.cerrarMatrizCompleta(); });
 
 // Al tocar un cuadrante: la lista de abajo queda filtrada y se baja hasta ella
 window.App.ux.alElegirCuadrante = function(pot, loy) {
@@ -384,9 +378,12 @@ window.App.ux.estadoEvaluacion = function(d) {
         if (!evals.length) {
             return `<button class="eval-estado eval-pendiente" onclick="event.stopPropagation(); App.ux.evaluar(this)" ${datos}><span class="material-symbols-outlined">rate_review</span>Evaluar</button>`;
         }
-        const ultima = [...evals].sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))[0];
+        const ordenadas = [...evals].sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+        const ultima = ordenadas[0];
         const conNotas = evals.some(e => e.notas && String(e.notas).trim());
-        return `<button class="eval-estado eval-hecha" onclick="event.stopPropagation(); App.ux.evaluar(this)" ${datos} title="Ver o cambiar la evaluación">
+        // Al pasar el mouse (o mantener presionado): la clasificación de cada mercado
+        const detalle = ordenadas.map(e => `${e.mercado}: ${e.cuadrante}`).join('\n');
+        return `<button class="eval-estado eval-hecha" onclick="event.stopPropagation(); App.ux.evaluar(this)" ${datos} title="Última clasificación: ${escUx(ultima.cuadrante || '')}&#10;${escUx(detalle)}">
             <span class="material-symbols-outlined icono-relleno">check_circle</span>
             <span class="text-left leading-tight"><span class="block">Evaluado</span><span class="block text-[11px] font-medium opacity-80">${evals.length} ${evals.length === 1 ? 'mercado' : 'mercados'}${conNotas ? ' · con nota' : ''}</span></span>
             <span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(ultima.cuadrante)}">${escUx(ultima.cuadrante || '')}</span>
@@ -628,13 +625,13 @@ const PASOS_GUIA = {
     vm: [
         ['#chipsRapidos', 'Tus filtros rápidos', 'Toca "Pendientes" para ver los médicos que te faltan por evaluar. El número te dice cuántos son.'],
         ['#visitadorDashboard', 'Tu avance', 'Aquí ves cuántos médicos llevas evaluados. "Evaluar pendientes" te lleva directo al trabajo.'],
-        ['#seccionMatriz', 'La matriz', 'Toca un cuadrante para ver sus médicos. El botón "?" explica qué significa cada uno.'],
-        ['#seccionMedicos', 'Evaluar', 'Toca "Evaluar" en un médico. Las respuestas son de un toque y "Guardar y siguiente" te lleva al próximo.']
+        ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. El botón "?" explica qué significa cada uno.'],
+        ['#dataTable tr:first-child .eval-estado, #dataCards article:first-child .eval-estado, #seccionMedicos', 'Evaluar', 'Toca "Evaluar" en un médico. Las respuestas son de un toque y "Guardar y siguiente" te lleva al próximo.']
     ],
     equipo: [
         ['#filterBar', 'Buscar y filtrar', 'Busca un médico o usa los filtros rápidos. En "Filtros" están todos los demás.'],
-        ['#seccionMatriz', 'La matriz', 'Toca un cuadrante para ver sus médicos. Usa pantalla completa para presentarla.'],
-        ['#seccionMedicos', 'La lista', 'Cada médico con su cuadrante, recetas, participación y estado de evaluación.'],
+        ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. Usa pantalla completa para presentarla.'],
+        ['#dataTable tr:first-child, #dataCards article:first-child, #seccionMedicos', 'La lista', 'Cada médico con su cuadrante, recetas, participación y estado de evaluación.'],
         ['#btnMas', 'Más opciones', 'Versiones de datos, exportar, la guía y cerrar sesión están aquí.']
     ]
 };
@@ -649,20 +646,30 @@ window.App.ux.iniciarGuia = function(forzar = false) {
     window.App.ux.pasoGuia(0);
 };
 
+// El primero de la lista de selectores que esté visible en pantalla
+const primeroVisible = (lista) => lista.split(',').map(x => document.querySelector(x.trim())).find(e => e && e.offsetParent !== null) || null;
+
 window.App.ux.pasoGuia = function(delta) {
     const pasos = pasosGuia();
     pasoActual += delta;
     if (pasoActual >= pasos.length) return window.App.ux.terminarGuia();
     const [selector, titulo, texto] = pasos[pasoActual];
-    const el = document.querySelector(selector);
-    if (!el || el.offsetParent === null) { if (delta === 0 && pasoActual < pasos.length - 1) return window.App.ux.pasoGuia(1); }
-    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'auto', block: 'center' });
-    const r = el ? el.getBoundingClientRect() : { top: 80, left: 16, width: 200, height: 60 };
+    const el = primeroVisible(selector);
+    if (!el && delta === 0 && pasoActual < pasos.length - 1) return window.App.ux.pasoGuia(1);
     const foco = document.getElementById('guiaFoco'), tarjeta = document.getElementById('guiaTarjeta');
-    const m = 6, alto = Math.min(r.height + m * 2, window.innerHeight * 0.55);
-    Object.assign(foco.style, { top: `${r.top - m}px`, left: `${r.left - m}px`, width: `${r.width + m * 2}px`, height: `${alto}px` });
-    const abajo = r.top + alto + 16 + 190 < window.innerHeight;
-    tarjeta.style.top = abajo ? `${r.top - m + alto + 12}px` : `${Math.max(12, r.top - m - 190)}px`;
+    const ARRIBA = 76, TARJETA = 210, m = 8;   // barra superior, alto de la tarjeta, margen
+    // Llevar lo que se explica justo debajo de la barra superior
+    if (el && window.scrollTo) {
+        const r0 = el.getBoundingClientRect();
+        window.scrollTo({ top: Math.max(0, window.scrollY + r0.top - ARRIBA - m), behavior: 'auto' });
+    }
+    const r = el ? el.getBoundingClientRect() : { top: ARRIBA + 10, left: 16, width: Math.min(360, window.innerWidth - 32), height: 60, bottom: ARRIBA + 70 };
+    // Si es más alto que la pantalla, se resalta la parte visible y la tarjeta va abajo
+    const top = Math.max(r.top, ARRIBA) - m;
+    const cabeDebajo = r.bottom + m + TARJETA + 12 <= window.innerHeight;
+    const bottom = cabeDebajo ? r.bottom + m : Math.min(r.bottom + m, window.innerHeight - TARJETA - 24);
+    Object.assign(foco.style, { top: `${top}px`, left: `${Math.max(4, r.left - m)}px`, width: `${Math.min(window.innerWidth - 8, r.width + m * 2)}px`, height: `${Math.max(48, bottom - top)}px` });
+    tarjeta.style.top = `${Math.min(bottom + 12, window.innerHeight - TARJETA - 12)}px`;
     window.App.ui.safeSetText('guiaPaso', `Paso ${pasoActual + 1} de ${pasos.length}`);
     window.App.ui.safeSetText('guiaTitulo', titulo);
     window.App.ui.safeSetText('guiaTexto', texto);
