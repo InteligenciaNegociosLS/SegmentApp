@@ -287,7 +287,7 @@ Fallas graves:
 | C3 | Clave de admin por defecto escrita en el código | `admin.js:54-59` |
 | C4 | Datos personales de médicos publicados en Vercel y guardados en el historial de Git | `fichero_medico.csv(.gz)` |
 | C5 | Un invitado sin login ve todos los datos | `auth.js:94-109` |
-| C6 | **"Recargar" borra la cola sin conexión** (`localforage.clear()`): las evaluaciones hechas sin internet y no subidas se pierden | `ui.js:143-148` |
+| C6 | ✅ *(Corregido; ver Fase 8)* **"Recargar" borra la cola sin conexión** (`localforage.clear()`): las evaluaciones hechas sin internet y no subidas se pierden | `ui.js:143-148` |
 | C7 | "Limpiar Datos" intentaría borrar **todas** las evaluaciones con un solo clic de confirmación. Hoy lo frenan las reglas (ver §3), pero en cuanto exista un admin real el botón funcionaría | `admin.js:400-427` |
 
 ### 🟠 Alto (resultados incorrectos)
@@ -295,9 +295,9 @@ Fallas graves:
 | # | Problema | Dónde |
 |---|---|---|
 | A1 | La ponderación de la encuesta, los umbrales y la lista de productos PHQ se guardan **solo en el navegador** de quien los cambia. Cada VM calcula con valores distintos. | `admin.js:514-599`, `data.js:312` |
-| A2 | La sincronización incremental **no detecta borrados**: lo que el admin elimina sigue apareciendo en las cachés (incluso en la del propio admin) | `evaluation.js:97-136`, `:224-253` |
-| A3 | Las evaluaciones hechas **sin conexión** llevan la hora en que se hicieron. Al subirse después, quedan "antes" de la última sincronización del admin, que **nunca las ve** (salvo borrando su caché) | `evaluation.js:463`, `:227` |
-| A4 | La sincronización compara horas de distintos equipos. Si el reloj de un teléfono está mal, se pierden evaluaciones | `evaluation.js:88`, `:215` |
+| A2 | ✅ *(Resuelto con Supabase y la cola de la Fase 8)* La sincronización incremental **no detecta borrados**: lo que el admin elimina sigue apareciendo en las cachés (incluso en la del propio admin) | `evaluation.js:97-136`, `:224-253` |
+| A3 | ✅ *(Resuelto con Supabase y la cola de la Fase 8)* Las evaluaciones hechas **sin conexión** llevan la hora en que se hicieron. Al subirse después, quedan "antes" de la última sincronización del admin, que **nunca las ve** (salvo borrando su caché) | `evaluation.js:463`, `:227` |
+| A4 | ✅ *(Resuelto con Supabase y la cola de la Fase 8)* La sincronización compara horas de distintos equipos. Si el reloj de un teléfono está mal, se pierden evaluaciones | `evaluation.js:88`, `:215` |
 | A5 | Los datos del repositorio no se guardan en caché, pero la copia del admin sí, y queda congelada (ver §2) | `main.js:43-83` |
 | A6 | Se leen las columnas de CloseUp por posición | `data.js:282-307` |
 | A7 | La matriz "Encuesta" usa la **primera** evaluación que encuentra, sin importar el mercado | `matrix.js:407-409` |

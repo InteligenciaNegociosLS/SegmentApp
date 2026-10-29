@@ -236,3 +236,29 @@ Pedido del dueño: rediseño completo de la ventana del médico y las ideas 1 a 
 - **Competencia por cuadrante**: al tocar un cuadrante se ven los productos
   de la competencia más recetados por esos médicos.
 - La regla de la matriz no cambió (las pruebas de resultados siguen iguales).
+
+## 29/10/2026 (Fase 8: app instalable y sin internet)
+
+Fase 6E aprobada. Fase 8:
+- **Se instala** en el teléfono, iPad o computadora (ícono en la pantalla de
+  inicio). Android/computadora: menú "Más" → "Instalar la app". iPhone/iPad:
+  el mismo botón muestra los 3 pasos de Safari ("Compartir" → "Agregar a
+  inicio").
+- **Abre sin internet**: la app (archivos, librerías y letras) queda guardada en
+  el dispositivo con un "trabajador de fondo" (`sw.js`). Los datos de cada
+  persona ya se guardaban (copia local); ahora también la configuración, el
+  perfil y la lista de visitadores del GD. Si la sesión vence sin internet
+  (dura 1 hora), la app abre con lo guardado y la renueva sola al volver la
+  conexión. El servidor sigue exigiendo sesión para todo.
+- **Evaluar sin internet**: la evaluación se guarda en el dispositivo, cuenta
+  como evaluada y aparece "N por subir" arriba. Se sube sola al volver
+  internet, al volver a la app y cada minuto. Nunca se borra antes de que el
+  servidor la confirme; si se evalúa dos veces el mismo médico y mercado, se
+  sube la última. Cerrar sesión no la borra: se sube cuando esa persona vuelva.
+- **Versión nueva de la app**: aviso "Hay una versión nueva" con botón
+  "Actualizar" (también en el menú "Más").
+- Supabase (datos, sesión, evaluaciones) nunca se guarda en el trabajador de
+  fondo.
+- Auditoría: C6 ya estaba corregido ("Volver a descargar" conserva la cola).
+  A2–A4 dejaron de existir con Supabase (se lee la lista completa, sin comparar
+  horas de distintos equipos); ahora la cola es la única vía sin conexión.

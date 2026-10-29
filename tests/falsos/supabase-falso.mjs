@@ -55,6 +55,10 @@ export function datosDePrueba() {
     };
 }
 
+// Prueba "sin internet": con esta marca el servidor simulado responde como si no hubiera red
+const SIN_RED = { data: null, error: { name: 'TypeError', message: 'Failed to fetch' } };
+const sinRed = () => { try { return typeof localStorage !== 'undefined' && localStorage.getItem('__prueba_sin_red') === '1'; } catch { return false; } };
+
 let contador = 0;
 const nuevoId = (p) => `${p}-nuevo-${++contador}`;
 
@@ -90,6 +94,7 @@ class Consulta {
         return r;
     }
     ejecutar() {
+        if (sinRed()) return SIN_RED;
         const lista = this.filas();
         let res;
         if (this.op === 'insert') {
@@ -253,7 +258,7 @@ export function createClient(url, clave, opciones = {}) {
     return {
         auth, storage,
         from: (tabla) => new Consulta(bd, tabla),
-        rpc: async (nombre, args) => { registrar('rpc:' + nombre); return rpcs[nombre] ? rpcs[nombre](args) : { data: null, error: { message: 'rpc desconocida ' + nombre } }; },
+        rpc: async (nombre, args) => { if (sinRed()) return SIN_RED; registrar('rpc:' + nombre); return rpcs[nombre] ? rpcs[nombre](args) : { data: null, error: { message: 'rpc desconocida ' + nombre } }; },
         _bd: bd
     };
 }
