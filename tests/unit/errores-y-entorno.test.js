@@ -46,6 +46,7 @@ describe('Errores externos', () => {
 
 describe('Entorno', () => {
     it('sin configuración se considera entorno local, sin Supabase', () => {
+        App = cargarApp({ env: {} });
         expect(App.env.APP_ENV).toBe('development');
         expect(App.supabase.configurado()).toBe(false);
     });

@@ -1,8 +1,8 @@
 # Esquema de la base de datos (Supabase) — PROPUESTA
 
-> **Estado: aprobado el 28/10/2026.** Migraciones 1 a 4 aplicadas en el
-> Supabase de pruebas. La migración 5 (un GD por distrito) se agregó después
-> y falta aplicarla.
+> **Estado: aprobado el 28/10/2026.** Migraciones 1 a 5 aplicadas en el
+> Supabase de pruebas. La migración 6 (carga de datos desde la app, Fase 5)
+> falta aplicarla.
 
 ## Resumen en 6 puntos
 
@@ -192,9 +192,13 @@ Carga nueva ──► BORRADOR ──(admin revisa y compara)──► PUBLICADO
            "Volver a una versión" = publicar de nuevo la anterior
 ```
 
-- En la app habrá un **selector de versión**: "Hoy" (la vigente) por defecto, y
-  la lista de las anteriores. Se construye en la Fase 7, cuando la app lea de
-  Supabase.
+- En la app hay un **selector de versión** (botón "Datos: Hoy" arriba):
+  "Hoy" (la vigente) por defecto, y la lista de las anteriores publicadas.
+  Los borradores solo los ve el admin, en el panel de carga.
+- Cada versión guarda además su **archivo comprimido** en un almacén
+  **privado** de Supabase (`datos`). La app lo descarga solo con sesión
+  iniciada, mediante un enlace que vence en 1 hora (Fase 5). En la Fase 7 la
+  app pasará a consultar la base directamente, sin descargar el archivo.
 - Los **datos actuales** se migrarán (Fase 4) como **"Datos enero"**, una
   versión de fichero y otra de recetas, intactas.
 - Fichero y recetas tienen versiones **independientes**: se puede actualizar
@@ -236,6 +240,7 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261028120200_evaluaciones_y_config.sql` | Evaluaciones, historial, configuración compartida (con los valores actuales), registro de fallas |
 | `supabase/migrations/20261028120300_seguridad_rls.sql` | Todas las reglas de seguridad por fila |
 | `supabase/migrations/20261028130000_un_gd_por_distrito.sql` | Regla: cada distrito tiene un solo GD |
+| `supabase/migrations/20261029120000_carga_de_datos.sql` | Fase 5: archivo de cada versión, almacén privado `datos`, carga por lotes, comparar versiones |
 | `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 

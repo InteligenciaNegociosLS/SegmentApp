@@ -3,7 +3,7 @@
    navegador real (Chromium) y recorre los flujos críticos:
    ingreso, permisos por rol, salida, recuperación de clave,
    descarga del Excel y panel de accesos.
-   Firebase y las librerías externas se simulan (sin internet).
+   Supabase y las librerías externas se simulan (sin internet).
    Uso:  npm run build && npm run test:e2e
 ============================================================ */
 import { createRequire } from 'node:module';
@@ -41,11 +41,19 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => { window.__calls = []; });
+  const ENV = `window.__SEGMENTAPP_ENV__ = ${JSON.stringify({ APP_ENV: 'preview', SUPABASE_URL: 'https://prueba.supabase.co', SUPABASE_ANON_KEY: 'clave-publica-de-prueba', VERSION: 'e2e' })};`;
+  const ARCHIVOS = { 's-rec-1': 'datacloseup.csv.gz', 's-fic-1': 'fichero_medico.csv.gz' };
   await page.route('**/*', route => {
     const u = route.request().url();
+    if (u.startsWith(BASE + 'js/env.js')) return route.fulfill({ contentType: 'application/javascript', body: ENV });
     if (u.startsWith(BASE)) return route.continue();
-    const m = u.match(/firebasejs\/[\d.]+\/(firebase-\w+)\.js/);
-    if (m) return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(STUB, m[1] + '.js')) });
+    if (u.includes('@supabase/supabase-js')) return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(RAIZ, 'tests', 'falsos', 'supabase-falso.mjs')) });
+    if (u.startsWith('https://prueba.supabase.co/auth/v1/health')) return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    const archivo = u.match(/^https:\/\/archivos\.prueba\/snapshots\/([^/]+)\//);
+    if (archivo) {
+      if (!ARCHIVOS[archivo[1]]) return route.fulfill({ status: 404, body: '' });
+      return route.fulfill({ contentType: 'application/gzip', body: fs.readFileSync(path.join(RAIZ, ARCHIVOS[archivo[1]])) });
+    }
     if (u.includes('localforage')) return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(STUB, 'localforage.js')) });
     return route.fulfill({ contentType: u.includes('css') ? 'text/css' : 'application/javascript', body: '' });
   });
@@ -68,10 +76,13 @@ try {
   await page.fill('#visitadorPwd', '123456');
   await page.evaluate(() => attemptLogin()); await page.waitForTimeout(1500);
   ok('VM: entra y ve su tablero', await vis('visitadorDashboard') && await vis('dashboardContent') && !(await vis('adminDashboard')));
-  ok('VM: nombre desde el token', (await page.textContent('#navUserName')) === 'NEIVIS PARRA');
+  ok('VM: nombre desde su perfil', (await page.textContent('#navUserName')) === 'NEIVIS PARRA');
+  ok('VM: descargó la versión vigente (privada, con enlace firmado)', (await page.evaluate(() => window.__calls)).includes('firmar:snapshots/s-rec-1/datos.csv.gz'));
+  ok('VM: etiqueta "Datos: Hoy"', (await page.textContent('#lblVersionDatos')) === 'Datos: Hoy');
+  ok('VM: sin botón de cargar datos', !(await vis('btnUploadData')));
   const nDocs = await page.evaluate(() => App.state.PROCESSED_DATA.length);
   ok('VM: ve solo sus médicos (' + nDocs + ')', nDocs > 0 && nDocs < 2000);
-  ok('VM: consulta solo sus evaluaciones', (await page.evaluate(() => window.__calls)).some(c => c.startsWith('getDocs:artifacts/segmentapp-local/public/data/evaluaciones_matriz')));
+  ok('VM: consulta las evaluaciones', (await page.evaluate(() => window.__calls)).includes('select:evaluaciones'));
 
   await page.reload();
   await page.waitForFunction(() => App.state.currentUserRole !== 'guest', null, { timeout: 120000 });
@@ -93,6 +104,30 @@ try {
   ok('admin: sin botón "Limpiar Datos"', !(await page.evaluate(() => document.body.innerHTML.includes('Limpiar Datos'))));
   await page.evaluate(() => confirmClearAllEvals());
   ok('admin: borrado masivo desactivado', (await toast()).includes('desactivada'));
+  ok('admin: botón "Cargar Datos" visible', await vis('btnUploadData'));
+
+  // Panel de carga: revisar un archivo con un error y luego uno correcto
+  await page.evaluate(() => abrirCargaDatos());
+  ok('panel de carga: se abre', await vis('cargaDatosModal'));
+  const C = await page.evaluate(() => App.carga.COLUMNAS_RECETAS);
+  const filaOk = (i) => [`DR ${i}`, String(1000 + i), 'DESLER MERCADO', 'DESLER PHQ', '3', 'MG', 'C', '1', 'CCS', 'DC', 'MG', 'X', 'R', 'N', 'LST'].join(';');
+  await page.check('input[name="cargaTipo"][value="recetas"]');
+  await page.setInputFiles('#cargaArchivo', { name: 'malo.csv', mimeType: 'text/csv', buffer: Buffer.from(C.join(';') + '\n' + filaOk(1) + '\n;2;M;P;x;a;b;c;d;e;f;g;h;i;j\n') });
+  await page.evaluate(() => App.carga.revisar()); await page.waitForTimeout(300);
+  ok('panel de carga: muestra la fila con error', (await page.textContent('#cargaResultado')).includes('falta Medico') && await page.evaluate(() => document.getElementById('btnCargaSubir').disabled));
+  await page.setInputFiles('#cargaArchivo', { name: 'bueno.csv', mimeType: 'text/csv', buffer: Buffer.from(C.join(';') + '\n' + Array.from({ length: 50 }, (_, i) => filaOk(i)).join('\n')) });
+  await page.evaluate(() => App.carga.revisar()); await page.waitForTimeout(300);
+  ok('panel de carga: archivo correcto sin errores', (await page.textContent('#cargaResultado')).includes('Sin errores'));
+  await page.fill('#cargaNombre', 'Prueba febrero'); await page.fill('#cargaFecha', '2026-02-28');
+  await page.evaluate(() => App.carga.iniciarSubida()); await page.waitForTimeout(800);
+  const borrador = await page.evaluate(() => App.supabase._cliente._bd.data_snapshots.find(s => s.nombre === 'Prueba febrero'));
+  ok('panel de carga: queda como borrador con su archivo', !!borrador && borrador.estado === 'borrador' && !!borrador.archivo && !borrador.es_vigente);
+  ok('panel de carga: muestra la comparación', (await page.textContent('#cargaProgreso')).includes('Comparación'));
+  page.once('dialog', d => d.accept());
+  await page.evaluate(id => App.carga.publicar(id), borrador.id); await page.waitForTimeout(1500);
+  const vigente = await page.evaluate(() => App.supabase._cliente._bd.data_snapshots.filter(s => s.tipo === 'recetas' && s.es_vigente).map(s => s.nombre));
+  ok('publicar: la app recarga con los datos nuevos (50 filas)', await page.evaluate(() => App.state.RAW_DATA.length === 50));
+  ok('publicar: la nueva pasa a ser "Hoy" y la anterior se conserva', vigente.length === 1 && vigente[0] === 'Prueba febrero' && await page.evaluate(() => App.supabase._cliente._bd.data_snapshots.some(s => s.id === 's-rec-1')));
 
   // Excel de evaluaciones con 3.000 evaluaciones sintéticas
   const ms = await page.evaluate(async () => {

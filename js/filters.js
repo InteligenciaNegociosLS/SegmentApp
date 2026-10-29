@@ -123,6 +123,7 @@ window.App.filters.populateFilters = function() {
             if (repKey && r[repKey]) repSet.add(String(r[repKey]).trim().toUpperCase());
         });
     });
+    if (st.REPS_PERMITIDOS) [...repSet].forEach(r => { if (!st.REPS_PERMITIDOS.has(r)) repSet.delete(r); });
     window.App.filters.fillGenericDropdown('Rep', Array.from(repSet).sort());
 
     window.App.filters.fillGenericDropdown('Region',   getUnique('region'));

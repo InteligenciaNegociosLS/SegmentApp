@@ -1,15 +1,15 @@
 /* ============================================================
-   SegmentApp - Autenticación y sesión
+   SegmentApp - Autenticación y sesión (Supabase Auth)
    Archivo: js/auth.js
    Responsable de:
-   - Login con correo corporativo + clave (Firebase Auth)
-   - Recuperación de clave por correo
-   - Logout limpio de sesión
-   - Verificación de sesión al abrir la app
-   - Cambio de UI según rol (guest / visitador / admin)
-
-   El rol y el nombre del visitador vienen del token de Firebase
-   (custom claims: role, visitadorName), NO del navegador.
+   - Login con correo corporativo + clave
+   - Recuperación de clave por correo y "Crea tu clave nueva"
+   - Perfil y rol desde la base (no desde el navegador)
+   - Cambio de UI según rol:
+       vm            → su tablero (vista "visitador")
+       admin         → panel del equipo con todas las herramientas
+       gd            → panel del equipo de SU distrito, solo consulta
+       gte_nacional  → panel de todo el equipo, solo consulta
 ============================================================ */
 
 window.App = window.App || {};
@@ -19,41 +19,23 @@ const PROFILE_CACHE_KEY = 'SEGMENTAPP_PROFILE';
 const LAST_EMAIL_KEY    = 'SEGMENTAPP_LAST_EMAIL';
 
 /* ============================================================
-   ESPERAR A QUE FIREBASE ESTÉ LISTO
-   Devuelve el usuario con sesión (o null).
-============================================================ */
-window.App.auth.waitForAuth = async function() {
-    if (!window.firebaseAuthReady) {
-        await new Promise(resolve => {
-            const done = () => resolve();
-            window.addEventListener('firebase-ready', done, { once: true });
-            window.addEventListener('firebase-error', done, { once: true });
-            setTimeout(done, 15000);
-        });
-    }
-    return window.firebaseAuthReady ? window.firebaseAuthReady : null;
-};
-
-/* ============================================================
-   PERFIL (rol + nombre) DESDE EL TOKEN DE FIREBASE
+   PERFIL (rol + nombre) DESDE SUPABASE
    Sin conexión, usa la última copia verificada del mismo usuario.
 ============================================================ */
-window.App.auth.getProfile = async function(user, forceRefresh = false) {
+window.App.auth.getProfile = async function(user) {
     if (!user) return null;
     try {
-        const token = await user.getIdTokenResult(forceRefresh);
-        const role = token.claims.role || null;
-        let name = '';
-        if (role === 'visitador') name = token.claims.visitadorName || '';
-        if (role === 'admin')     name = 'Administrador';
-        const profile = { uid: user.uid, role, name };
-        try { localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile)); } catch (e) { /* sin almacenamiento */ }
-        return profile;
+        const perfil = await window.App.sb.perfil(user);
+        try {
+            if (perfil) localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(perfil));
+            else localStorage.removeItem(PROFILE_CACHE_KEY);
+        } catch (e) { /* sin almacenamiento */ }
+        return perfil;
     } catch (e) {
         // Probablemente sin conexión: usar el perfil guardado del MISMO usuario
         try {
             const cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) || 'null');
-            if (cached && cached.uid === user.uid) return cached;
+            if (cached && cached.uid === user.id) return cached;
         } catch (e2) { /* sin almacenamiento */ }
         throw e;
     }
@@ -61,8 +43,8 @@ window.App.auth.getProfile = async function(user, forceRefresh = false) {
 
 window.App.auth.isValidProfile = function(profile) {
     if (!profile) return false;
-    if (profile.role === 'admin') return true;
-    return profile.role === 'visitador' && !!profile.name;
+    if (['admin', 'gte_nacional', 'gd'].includes(profile.rol)) return true;
+    return profile.rol === 'vm' && !!profile.visitadorNombre;
 };
 
 /* ============================================================
@@ -83,22 +65,22 @@ window.App.auth.openLoginModal = function() {
 };
 
 /* ============================================================
-   MENSAJES DE ERROR DE FIREBASE AUTH (en español)
+   MENSAJES DE ERROR (en español)
 ============================================================ */
 window.App.auth.authErrorMessage = function(e) {
-    const code = (e && e.code) || '';
-    if (code === 'auth/invalid-email')          return "El correo no tiene un formato válido.";
-    if (code === 'auth/invalid-credential' ||
-        code === 'auth/wrong-password' ||
-        code === 'auth/user-not-found')         return "Correo o clave incorrectos.";
-    if (code === 'auth/user-disabled')          return "Tu usuario está desactivado. Contacta al administrador.";
-    if (code === 'auth/too-many-requests')      return "Demasiados intentos. Espera unos minutos o recupera tu clave.";
-    if (code === 'auth/network-request-failed') return "Sin conexión. Revisa tu internet e intenta de nuevo.";
-    return "No se pudo iniciar sesión. Intenta nuevamente.";
+    const texto = String((e && e.original && e.original.message) || (e && e.message) || '');
+    const codigo = String((e && e.code) || '');
+    if (/invalid login credentials|invalid_credentials/i.test(texto + codigo)) return "Correo o clave incorrectos.";
+    if (/email not confirmed/i.test(texto)) return "Tu correo aún no está confirmado. Contacta al administrador.";
+    if (/rate limit|too many/i.test(texto) || codigo === '429') return "Demasiados intentos. Espera unos minutos o recupera tu clave.";
+    if (/failed to fetch|network|load failed/i.test(texto)) return "Sin conexión. Revisa tu internet e intenta de nuevo.";
+    if (/password should be|weak/i.test(texto)) return "La clave es muy débil: usa al menos 8 caracteres.";
+    if (/supabase no está configurado/i.test(texto)) return "La app no está conectada al servidor en este entorno.";
+    return "No se pudo completar. Intenta nuevamente.";
 };
 
 /* ============================================================
-   INTENTAR LOGIN (visitador o admin, mismo formulario)
+   INTENTAR LOGIN (todos los roles, mismo formulario)
 ============================================================ */
 window.App.auth.attemptLogin = async function() {
     const ui    = window.App.ui;
@@ -108,25 +90,16 @@ window.App.auth.attemptLogin = async function() {
 
     if (!email) { ui.showToast("Escribe tu correo corporativo."); return; }
     if (!pwd)   { ui.showToast("Ingresa tu contraseña.");          return; }
-    if (!window.firebaseAuthApi) { ui.showToast("Conectando con el servidor... intenta en unos segundos."); return; }
 
     btn.disabled = true;
     btn.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Validando...';
 
     try {
-        const cred = await window.firebaseAuthApi.signIn(email, pwd);
-        const profile = await window.App.auth.getProfile(cred.user, true);
-
-        if (!window.App.auth.isValidProfile(profile)) {
-            await window.firebaseAuthApi.signOut();
-            ui.showToast("Tu usuario aún no tiene permisos asignados. Contacta al administrador.");
-            return;
-        }
+        const user = await window.App.sb.iniciarSesion(email, pwd);
         try { localStorage.setItem(LAST_EMAIL_KEY, email); } catch (e) { /* sin almacenamiento */ }
-        window.App.auth.loginSuccess(profile.role, profile.name);
-        ui.showToast(profile.role === 'admin'
-            ? "Modo Administrador activado"
-            : `¡Bienvenido/a, ${profile.name.substring(0, 15)}!`);
+        document.getElementById('loginModal').classList.add('hidden');
+        document.getElementById('visitadorPwd').value = '';
+        await window.App.auth.entrar(user, { avisar: true });
     } catch (e) {
         console.error("Error validando login", e);
         ui.showToast(window.App.auth.authErrorMessage(e));
@@ -137,7 +110,7 @@ window.App.auth.attemptLogin = async function() {
 };
 
 /* ============================================================
-   RECUPERAR CLAVE (envía correo de Firebase)
+   RECUPERAR CLAVE (Supabase envía el correo)
 ============================================================ */
 window.App.auth.sendPasswordReset = async function() {
     const ui    = window.App.ui;
@@ -147,24 +120,49 @@ window.App.auth.sendPasswordReset = async function() {
         document.getElementById('loginEmail').focus();
         return;
     }
-    if (!window.firebaseAuthApi) { ui.showToast("Conectando con el servidor... intenta en unos segundos."); return; }
-
     const btn = document.getElementById('btnForgotPwd');
     if (btn) btn.disabled = true;
     try {
-        await window.firebaseAuthApi.sendReset(email);
+        await window.App.sb.enviarRecuperacion(email);
         ui.showToast("Si el correo está registrado, te llegará un mensaje para crear una clave nueva. Revisa también la carpeta de spam.");
     } catch (e) {
-        const code = (e && e.code) || '';
-        if (code === 'auth/user-not-found') {
-            // Mismo mensaje: no revelamos qué correos existen
-            ui.showToast("Si el correo está registrado, te llegará un mensaje para crear una clave nueva. Revisa también la carpeta de spam.");
-        } else {
-            console.error("Error enviando correo de recuperación", e);
-            ui.showToast(window.App.auth.authErrorMessage(e));
-        }
+        console.error("Error enviando correo de recuperación", e);
+        ui.showToast(window.App.auth.authErrorMessage(e));
     } finally {
         if (btn) btn.disabled = false;
+    }
+};
+
+/* ============================================================
+   "CREA TU CLAVE NUEVA" (al abrir el enlace del correo)
+============================================================ */
+window.App.auth.mostrarNuevaClave = function() {
+    document.getElementById('loginModal').classList.add('hidden');
+    document.getElementById('nuevaClaveModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('nuevaClave1').focus(), 50);
+};
+
+window.App.auth.guardarNuevaClave = async function() {
+    const ui = window.App.ui;
+    const c1 = document.getElementById('nuevaClave1').value;
+    const c2 = document.getElementById('nuevaClave2').value;
+    if (c1.length < 8) { ui.showToast("La clave debe tener al menos 8 caracteres."); return; }
+    if (c1 !== c2)     { ui.showToast("Las dos claves no coinciden."); return; }
+    const btn = document.getElementById('btnGuardarNuevaClave');
+    btn.disabled = true;
+    try {
+        await window.App.sb.cambiarClave(c1);
+        document.getElementById('nuevaClave1').value = '';
+        document.getElementById('nuevaClave2').value = '';
+        document.getElementById('nuevaClaveModal').classList.add('hidden');
+        ui.showToast("¡Listo! Tu clave nueva quedó guardada.");
+        const user = await window.App.sb.usuarioActual();
+        if (user && window.App.state.currentUserRole === 'guest') await window.App.auth.entrar(user, { avisar: true });
+    } catch (e) {
+        console.error('Error guardando la clave nueva', e);
+        ui.showToast(window.App.auth.authErrorMessage(e));
+    } finally {
+        btn.disabled = false;
     }
 };
 
@@ -176,8 +174,12 @@ window.App.auth.showLoginRequired = function() {
     st.currentUserRole = 'guest';
     st.currentVisitadorName = "";
     st.isAdmin = false;
+    st.rolReal = null;
+    st.soloLectura = false;
+    st.visitadorId = null;
+    st.REPS_PERMITIDOS = null;
 
-    ['dashboardContent', 'filterBar', 'analysisTools', 'adminDashboard', 'visitadorDashboard', 'navUserInfo']
+    ['dashboardContent', 'filterBar', 'analysisTools', 'adminDashboard', 'visitadorDashboard', 'navUserInfo', 'restoringSession', 'emptyState']
         .forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
@@ -193,33 +195,80 @@ window.App.auth.showLoginRequired = function() {
 };
 
 /* ============================================================
-   VERIFICACIÓN DE SESIÓN AL ABRIR LA APP
-   Se llama al terminar de cargar los datos (processData).
+   ENTRAR: perfil → configuración → datos → tablero
 ============================================================ */
-window.App.auth.checkAuthentication = async function() {
+window.App.auth.entrar = async function(user, { avisar = false } = {}) {
     const st = window.App.state;
-
-    // Si ya hay sesión aplicada en esta pestaña, solo refrescar la vista
-    if (st.currentUserRole !== 'guest' && window.firebaseAuth && window.firebaseAuth.currentUser) {
-        window.App.auth.loginSuccess(st.currentUserRole, st.currentVisitadorName);
+    const ui = window.App.ui;
+    let perfil = null;
+    try {
+        perfil = await window.App.auth.getProfile(user);
+    } catch (e) {
+        console.error('[SegmentApp] No se pudo leer el perfil:', e);
+    }
+    if (!window.App.auth.isValidProfile(perfil)) {
+        await window.App.sb.cerrarSesion().catch(() => {});
+        window.App.auth.showLoginRequired();
+        ui.showToast("Tu usuario aún no tiene permisos asignados o está desactivado. Contacta al administrador.");
         return;
     }
 
-    const user = await window.App.auth.waitForAuth();
+    st.rolReal = perfil.rol;
+    st.soloLectura = perfil.rol === 'gd' || perfil.rol === 'gte_nacional';
+    st.visitadorId = perfil.visitadorId;
+    if (perfil.rol === 'vm') {
+        st.REPS_PERMITIDOS = new Set([perfil.visitadorNombre]);
+    } else if (perfil.rol === 'gd') {
+        try {
+            st.REPS_PERMITIDOS = new Set(await window.App.sb.nombresVisitadoresVisibles());
+        } catch (e) {
+            st.REPS_PERMITIDOS = new Set();
+            console.error('[SegmentApp] No se pudieron leer los visitadores del distrito:', e);
+        }
+    } else {
+        st.REPS_PERMITIDOS = null;
+    }
+
+    const req = document.getElementById('loginRequiredState');
+    if (req) { req.classList.add('hidden'); req.classList.remove('flex'); }
+
+    const ok = await window.App.main.cargarTodo();
+    if (!ok) return;
+
+    const rolVista = perfil.rol === 'vm' ? 'visitador' : 'admin';
+    const nombre = perfil.rol === 'vm' ? perfil.visitadorNombre : (perfil.nombre || 'Equipo');
+    window.App.auth.loginSuccess(rolVista, nombre);
+    if (avisar) {
+        const saludo = { admin: 'Modo Administrador activado', gte_nacional: 'Bienvenido/a, Gerente Nacional (solo consulta)', gd: 'Bienvenido/a, Gerente de Distrito (solo consulta)' };
+        ui.showToast(saludo[perfil.rol] || `¡Bienvenido/a, ${nombre.substring(0, 15)}!`);
+    }
+};
+
+/* ============================================================
+   VERIFICACIÓN DE SESIÓN AL ABRIR LA APP
+============================================================ */
+window.App.auth.checkAuthentication = async function() {
+    if (!window.App.supabase.configurado()) {
+        window.App.auth.showLoginRequired();
+        window.App.ui.showToast('La app no está conectada al servidor en este entorno.');
+        return;
+    }
+    // Enlace del correo de recuperación → pedir clave nueva
+    window.App.sb.alCambiarSesion((evento) => {
+        if (evento === 'PASSWORD_RECOVERY') window.App.auth.mostrarNuevaClave();
+    }).catch(e => console.error('[SegmentApp] Escucha de sesión:', e));
+
+    let user = null;
+    try {
+        user = await window.App.sb.usuarioActual();
+    } catch (e) {
+        console.error('[SegmentApp] No se pudo verificar la sesión:', e);
+    }
     if (!user) {
         window.App.auth.showLoginRequired();
         return;
     }
-    try {
-        const profile = await window.App.auth.getProfile(user);
-        if (window.App.auth.isValidProfile(profile)) {
-            window.App.auth.loginSuccess(profile.role, profile.name);
-            return;
-        }
-    } catch (e) {
-        console.error('[SegmentApp] No se pudo verificar la sesión:', e);
-    }
-    window.App.auth.showLoginRequired();
+    await window.App.auth.entrar(user);
 };
 
 /* ============================================================
@@ -230,18 +279,16 @@ window.App.auth.loginSuccess = function(role, name) {
     st.currentUserRole = role;
     st.currentVisitadorName = name;
 
-    // Cerrar modales y limpiar input sensible
     document.getElementById('loginModal').classList.add('hidden');
     document.getElementById('adminAuthModal').classList.add('hidden');
     document.getElementById('visitadorPwd').value = '';
     const req = document.getElementById('loginRequiredState');
     if (req) { req.classList.add('hidden'); req.classList.remove('flex'); }
 
-    // Barra superior
     document.getElementById('navUserInfo').classList.remove('hidden');
     document.getElementById('btnLoginNavContainer').classList.add('hidden');
-    document.getElementById('navUserName').innerText =
-        role === 'admin' ? 'Administrador' : name.substring(0, 15);
+    const etiquetas = { admin: 'Administrador', gte_nacional: 'Gte. Nacional', gd: 'GD ' + name };
+    document.getElementById('navUserName').innerText = (etiquetas[st.rolReal] || name).substring(0, 18);
 
     const intRow = document.getElementById('intelligenceRow');
 
@@ -273,6 +320,8 @@ window.App.auth.loginSuccess = function(role, name) {
     document.getElementById('filterBar').classList.remove('hidden');
     document.getElementById('filterBar').style.display = 'flex';
 
+    if (window.App.versiones && window.App.versiones.actualizarEtiqueta) window.App.versiones.actualizarEtiqueta();
+
     // Subir evaluaciones pendientes hechas sin conexión (ahora que hay sesión)
     if (window.App.offline && window.App.offline.syncOfflineEvaluations) {
         window.App.offline.syncOfflineEvaluations();
@@ -284,22 +333,16 @@ window.App.auth.loginSuccess = function(role, name) {
 ============================================================ */
 window.App.auth.logoutSession = async function() {
     const st = window.App.state;
-
     try {
-        if (window.firebaseAuthApi) await window.firebaseAuthApi.signOut();
+        await window.App.sb.cerrarSesion();
     } catch (e) {
-        console.error('[SegmentApp] Error al cerrar sesión en Firebase:', e);
+        console.error('[SegmentApp] Error al cerrar sesión:', e);
     }
     try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch (e) { /* sin almacenamiento */ }
 
-    // Borrar datos sensibles de RAM
     st.EVALUACIONES_VISITADOR = {};
     st.ALL_EVALUATIONS.length = 0;
-
-    // Limpiar inputs de contraseña
-    const pwdA = document.getElementById('adminPwdInput');
     const pwdV = document.getElementById('visitadorPwd');
-    if (pwdA) pwdA.value = '';
     if (pwdV) pwdV.value = '';
 
     st.currentMatrixMode = 'closeup';
@@ -313,6 +356,7 @@ window.App.auth.logoutSession = async function() {
 window.openLoginModal       = window.App.auth.openLoginModal;
 window.attemptLogin         = window.App.auth.attemptLogin;
 window.sendPasswordReset    = window.App.auth.sendPasswordReset;
+window.guardarNuevaClave    = window.App.auth.guardarNuevaClave;
 window.checkAuthentication  = window.App.auth.checkAuthentication;
 window.loginSuccess         = window.App.auth.loginSuccess;
 window.logoutSession        = window.App.auth.logoutSession;

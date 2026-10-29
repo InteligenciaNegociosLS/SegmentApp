@@ -23,7 +23,7 @@ window.App.admin.showAdminAuthModal = function() {
         window.App.auth.logoutSession();
         return;
     }
-    // El admin entra por el mismo formulario (correo + clave). Firebase
+    // El admin entra por el mismo formulario (correo + clave). La base
     // decide el rol; ya no existe una clave de admin aparte ni por defecto.
     window.App.auth.openLoginModal();
 };
@@ -38,19 +38,17 @@ window.App.admin.processAdminAuth = function() {
 ============================================================ */
 window.App.admin.updateAdminUI = function() {
     const st = window.App.state;
+    const esAdmin = st.rolReal === 'admin';
     const tools    = document.getElementById('analysisTools');
     const uploadBtn = document.getElementById('btnUploadData');
     const prodBtn  = document.getElementById('btnProductsNav');
-
-    if (st.isAdmin) {
-        tools.classList.remove('hidden');
-        uploadBtn.classList.add('hidden');
-        if (prodBtn) prodBtn.classList.add('hidden');
-    } else {
-        tools.classList.add('hidden');
-        uploadBtn.classList.add('hidden');
-        if (prodBtn) prodBtn.classList.remove('hidden');
-    }
+    // Ajustes, productos y carga de datos: solo el administrador
+    tools.classList.toggle('hidden', !esAdmin);
+    if (uploadBtn) { uploadBtn.classList.toggle('hidden', !esAdmin); uploadBtn.classList.toggle('flex', esAdmin); }
+    if (prodBtn) prodBtn.classList.toggle('hidden', !esAdmin);
+    // Versión de datos: cualquiera con sesión
+    const verBtn = document.getElementById('btnVersionDatos');
+    if (verBtn) verBtn.classList.toggle('hidden', st.currentUserRole === 'guest');
 };
 
 /* ============================================================
@@ -100,6 +98,7 @@ console.time('[Admin] renderAdminDashboard');
             if (repKey && r[repKey]) repsInDoc.add(String(r[repKey]).trim().toUpperCase());
         });
         repsInDoc.forEach(rep => {
+            if (st.REPS_PERMITIDOS && !st.REPS_PERMITIDOS.has(rep)) return;
             if (!repStats[rep]) repStats[rep] = { name: rep, totalDocs: 0, evaluatedDocIds: new Set(), totalSurveys: 0, evals: [] };
             repStats[rep].totalDocs++;
         });
@@ -255,7 +254,7 @@ window.App.admin.toggleRepDetails = function(repName) {
                             <div class="text-[9px] text-slate-500">Mercado: <span class="font-bold text-indigo-600">${e.mercado}</span> | Mat: ${e.medico_id}</div>
                             ${ceFicheroHtml}
                         </div>
-                        <div class="flex gap-1 shrink-0">
+                        <div class="flex gap-1 shrink-0 ${window.App.state.soloLectura ? 'hidden' : ''}">
                             <button onclick="adminEditEval('${e.firebaseId}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded transition" title="Editar"><span class="material-symbols-outlined text-[14px]">edit</span></button>
                             <button onclick="adminDeleteEval('${e.firebaseId}')" class="text-rose-500 hover:bg-rose-100 p-1 rounded transition" title="Eliminar"><span class="material-symbols-outlined text-[14px]">delete</span></button>
                         </div>
@@ -328,23 +327,20 @@ window.App.admin.adminEditEval = function(firebaseId) {
     document.getElementById('evalModal').classList.remove('hidden');
 };
 window.App.admin.adminDeleteEval = async function(firebaseId) {
-    if (!confirm("¿Estás seguro de eliminar esta evaluación individual?")) return;
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
+    const st = window.App.state;
+    if (st.soloLectura) return;
+    if (!confirm("¿Eliminar esta evaluación?\n\nNo se borra: queda guardada en el historial y se puede recuperar.")) return;
     try {
-        await window.firebaseDeleteDoc(
-            window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', firebaseId)
-        );
-        window.App.ui.showToast("Evaluación eliminada");
-        // La sincronización incremental no detecta borrados: quitarla también de la caché local
-        const st = window.App.state;
+        await window.App.sb.eliminarEvaluacion(firebaseId);
+        window.App.ui.showToast("Evaluación eliminada (queda en el historial)");
         st.ALL_EVALUATIONS = st.ALL_EVALUATIONS.filter(e => e.firebaseId !== firebaseId);
-        if (window.localforage) await localforage.setItem('ADMIN_EVALS_CACHE', st.ALL_EVALUATIONS);
+        if (window.localforage) await localforage.setItem('EQUIPO_EVALS_CACHE', st.ALL_EVALUATIONS);
+        st._lastUniverseSignature = null;
         window.App.admin.renderAdminDashboard();
         window.App.filters.resetPaginationAndRender();
-        window.App.evaluation.fetchAllEvaluacionesAdmin();
     } catch (e) {
         console.error(e);
-        window.App.ui.showToast("Error al eliminar");
+        window.App.ui.showToast("Error al eliminar. Revisa tu conexión.");
     }
 };
 
@@ -430,11 +426,15 @@ window.App.admin.saveSurveyConfig = function() {
         }
     });
 
-    window.App.data.saveSession();
-    document.getElementById('surveyConfigModal').classList.add('hidden');
-    window.App.ui.showToast("Configuración de encuesta guardada correctamente.");
-    if (st.isAdmin) window.App.evaluation.fetchAllEvaluacionesAdmin();
-    else            window.App.evaluation.fetchEvaluacionesYCalcular();
+    window.App.admin.guardarConfig({
+        ponderacion_encuesta: st.SURVEY_WEIGHTS,
+        umbrales_encuesta: st.SURVEY_THRESHOLDS
+    }, "Ponderación guardada para todo el equipo.").then(ok => {
+        if (!ok) return;
+        document.getElementById('surveyConfigModal').classList.add('hidden');
+        st._lastUniverseSignature = null;
+        window.App.matrix.aggregateAndCalculate();
+    });
 };
 
 window.App.admin.restoreDefaultWeights = function() {
@@ -484,67 +484,78 @@ window.App.admin.renderProductCheckboxes = function() {
     `).join('');
 };
 
-window.App.admin.saveProductsConfig = function() {
-    window.App.state.PHQ_PRODUCTS = Array
-        .from(document.querySelectorAll('.phq-prod-cb:checked'))
-        .map(cb => cb.value.toUpperCase());
+window.App.admin.saveProductsConfig = async function() {
+    const lista = Array.from(document.querySelectorAll('.phq-prod-cb:checked')).map(cb => cb.value.toUpperCase());
+    const ok = await window.App.admin.guardarConfig({ productos_phq: lista }, "Productos guardados para todo el equipo.");
+    if (!ok) return;
+    window.App.state.PHQ_PRODUCTS = lista;
+    window.App.state._lastUniverseSignature = null;
     document.getElementById('productModal').classList.add('hidden');
-    window.App.data.saveSession();
-    if (window.App.state.RAW_DATA.length > 0 && typeof processData === 'function') {
-        processData(true);
+    if (window.App.state.RAW_DATA.length > 0) window.App.main.processData();
+};
+
+/* ------------------------------------------------------------
+   Guardar configuración compartida (solo admin)
+------------------------------------------------------------ */
+window.App.admin.guardarConfig = async function(cambios, mensajeOk) {
+    if (window.App.state.rolReal !== 'admin') return false;
+    try {
+        for (const [clave, valor] of Object.entries(cambios)) {
+            await window.App.sb.guardarConfiguracion(clave, valor);
+        }
+        if (window.localforage) {
+            const cfg = (await localforage.getItem('CONFIG_CACHE')) || {};
+            await localforage.setItem('CONFIG_CACHE', { ...cfg, ...cambios });
+        }
+        if (mensajeOk) window.App.ui.showToast(mensajeOk);
+        return true;
+    } catch (e) {
+        console.error('[SegmentApp] No se pudo guardar la configuración:', e);
+        window.App.ui.showToast("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
+        return false;
     }
 };
+
+// Umbrales de la matriz: se guardan para todos al soltar el control (solo admin)
+window.addEventListener('DOMContentLoaded', () => {
+    ['sliderLow', 'sliderHigh', 'sliderPotLow', 'sliderPotHigh'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', () => {
+            const st = window.App.state;
+            if (st.rolReal !== 'admin') return;
+            window.App.admin.guardarConfig({ umbrales_matriz: {
+                TH_LOY_LOW: st.TH_LOY_LOW, TH_LOY_HIGH: st.TH_LOY_HIGH, TH_POT_LOW: st.TH_POT_LOW, TH_POT_HIGH: st.TH_POT_HIGH
+            } }, "Umbrales guardados para todo el equipo.");
+        });
+    });
+});
 
 /* ============================================================
    GESTIÓN DE ACCESOS DE VISITADORES
 ============================================================ */
 window.App.admin.openAccessManager = async function() {
-    const st = window.App.state;
-    const d  = window.App.data;
-    if (!st.FICHERO_MAP || st.FICHERO_MAP.size === 0) {
-        window.App.ui.showToast("Debes cargar un Fichero Médico primero.");
-        return;
-    }
     document.getElementById('accessModal').classList.remove('hidden');
     const container = document.getElementById('accessListContainer');
     container.innerHTML = '<div class="text-center py-8 text-indigo-600 flex flex-col items-center gap-3"><span class="material-symbols-outlined animate-spin-reverse text-4xl">sync</span><span class="text-sm font-bold">Conectando con la base de datos...</span></div>';
-
-    const repSet = new Set();
-    st.FICHERO_MAP.forEach(rows => {
-        rows.forEach(r => {
-            const repKey = d.getFicheroRepKey(r);
-            if (repKey && r[repKey]) repSet.add(String(r[repKey]).trim().toUpperCase());
-        });
-    });
-    const reps = Array.from(repSet).sort();
-    document.getElementById('visitadoresCount').innerText = `${reps.length} encontrados`;
-
-    if (reps.length === 0) {
-        container.innerHTML = '<div class="text-center py-8 text-rose-500 font-bold bg-rose-50 rounded-2xl border border-rose-100">No se detectaron visitadores en las columnas del fichero.</div>';
+    let filas = [];
+    try {
+        filas = await window.App.sb.visitadoresConUsuario();
+    } catch (e) {
+        console.error("Error leyendo visitadores:", e);
+        container.innerHTML = '<div class="text-center py-8 text-rose-500 font-bold bg-rose-50 rounded-2xl border border-rose-100">No se pudo conectar. Intenta de nuevo.</div>';
         return;
     }
-
-    // Directorio nombre -> correo (lo escribe el script crear-usuarios en Cloud Shell)
-    let correos = {};
-    try {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-        const snap = await window.firebaseGetDoc(
-            window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'config', 'directorio_usuarios')
-        );
-        if (snap.exists()) correos = snap.data().visitadores || {};
-    } catch (e) {
-        console.error("Error leyendo el directorio de usuarios:", e);
-    }
-
+    document.getElementById('visitadoresCount').innerText = `${filas.length} visitadores`;
     const esc = window.App.ui.escapeHtml;
-    container.innerHTML = reps.map((rep, idx) => {
-        const correo = correos[rep];
-        const estado = correo
-            ? `<span class="text-xs font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl truncate">${esc(correo)}</span>`
+    container.innerHTML = filas.map((v, idx) => {
+        const p = v.perfiles;
+        const estado = p && p.correo
+            ? `<span class="text-xs font-mono ${p.activo ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-500 bg-slate-50 border-slate-200'} border px-3 py-1.5 rounded-xl truncate">${esc(p.correo)}${p.activo ? '' : ' (desactivado)'}</span>`
             : `<span class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">Sin usuario</span>`;
         return `
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm gap-3">
-            <span class="text-sm font-bold text-slate-700 truncate flex-1 flex items-center gap-2" title="${esc(rep)}"><span class="bg-indigo-100 text-indigo-700 w-6 h-6 flex items-center justify-center rounded-full text-[10px]">${idx + 1}</span>${esc(rep)}</span>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm gap-3 ${v.activo ? '' : 'opacity-60'}">
+            <span class="text-sm font-bold text-slate-700 truncate flex-1 flex items-center gap-2" title="${esc(v.nombre_sector)}"><span class="bg-indigo-100 text-indigo-700 w-6 h-6 flex items-center justify-center rounded-full text-[10px]">${idx + 1}</span>${esc(v.nombre_sector)}${v.activo ? '' : ' · inactivo'}</span>
             ${estado}
         </div>`;
     }).join('');

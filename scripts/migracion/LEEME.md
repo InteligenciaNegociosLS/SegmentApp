@@ -243,8 +243,30 @@ Claves:
 
 ---
 
+## G. Paso 5: subir los archivos de "Datos enero" (Fase 5, 3 min)
+Desde la Fase 5 la app ya **no** lee los datos de los archivos públicos del
+repositorio: los descarga de un almacén **privado** de Supabase, y solo después
+de iniciar sesión. Este paso sube allí los mismos dos archivos de siempre
+(`datacloseup.csv.gz` y `fichero_medico.csv.gz`). No cambia ningún dato y se
+puede repetir. Los archivos siguen en el repositorio como respaldo.
+
+Antes: aplica en Supabase de PRUEBAS el SQL
+`supabase/migrations/20261029120000_carga_de_datos.sql`. Luego:
+
+```bash
+node 5-subir-archivos.mjs --simulacro
+```
+
+```bash
+node 5-subir-archivos.mjs
+```
+
+Debe terminar con **✅ Archivos subidos y asociados: recetas y fichero.**
+
+---
+
 ## Producción (más adelante, el día del pase)
-Se repiten los pasos C a F con un `.env` que diga `DESTINO=produccion` y los
+Se repiten los pasos C a G con un `.env` que diga `DESTINO=produccion` y los
 valores del Supabase **real**. El script pedirá escribir `MIGRAR PRODUCCION`.
 
 ## Si algo falla
