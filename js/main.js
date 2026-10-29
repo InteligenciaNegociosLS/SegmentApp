@@ -134,10 +134,14 @@ window.App.main.initApp = function() {
 
     // 6) Sistema sin conexión
     window.App.offline.setupListeners();
-    window.App.offline.initOfflineQueue();
+    window.App.offline.registrarApp();          // abrir sin internet (sw.js)
+    window.App.offline.prepararInstalacion();   // botón "Instalar la app"
 
-    // 7) Sesión: si hay, carga configuración y datos; si no, pide ingresar
-    window.App.auth.checkAuthentication();
+    // 7) Sesión: si hay, carga configuración y datos; si no, pide ingresar.
+    //    Primero se lee la cola sin conexión, para que lo evaluado sin internet ya cuente.
+    window.App.offline.initOfflineQueue()
+        .catch(e => console.error('[SegmentApp] No se pudo leer la cola sin conexión:', e))
+        .finally(() => window.App.auth.checkAuthentication());
 
     // 8) Avisar si se publica una versión nueva mientras la app está abierta
     if (window.App.ux) window.App.ux.vigilarVersion();
