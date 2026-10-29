@@ -178,7 +178,6 @@
         grid-template-columns: auto minmax(200px, 1fr) minmax(200px, 1fr) minmax(200px, 1fr);
         grid-template-rows: auto 1fr 1fr 1fr;
         gap: 16px;
-        transition: all var(--md-motion-medium) var(--md-ease-standard);
     }
     .matrix-grid.expanded {
         grid-template-columns: auto minmax(200px, 1fr) minmax(200px, 1fr) minmax(200px, 1fr) 200px;
@@ -349,10 +348,10 @@
         .hoja-lateral { left: auto; top: 0; right: 0; bottom: 0; width: 440px; max-height: none; border-radius: 28px 0 0 28px; display: flex; flex-direction: column; }
         .hoja-lateral .hoja-asa { display: none; }
     }
-    .fixed.inset-0:not(.hidden) > .hoja { animation: hoja-subir var(--md-motion-long) var(--md-ease-emphasized) both; }
+    .fixed.inset-0:not(.hidden) > .hoja { animation: hoja-subir var(--md-motion-long) var(--md-ease-emphasized) backwards; }
     @media (min-width: 768px) {
-        .fixed.inset-0:not(.hidden) > .hoja-lateral { animation: hoja-lado var(--md-motion-long) var(--md-ease-emphasized) both; }
-        .fixed.inset-0:not(.hidden) > .hoja-menu { animation: md-dialogo var(--md-motion-medium) var(--md-ease-emphasized) both; }
+        .fixed.inset-0:not(.hidden) > .hoja-lateral { animation: hoja-lado var(--md-motion-long) var(--md-ease-emphasized) backwards; }
+        .fixed.inset-0:not(.hidden) > .hoja-menu { animation: md-dialogo var(--md-motion-medium) var(--md-ease-emphasized) backwards; }
     }
     .item-menu { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 20px; min-height: 48px; font-size: 14px; font-weight: 500; text-align: left; color: inherit; }
     .item-menu .material-symbols-outlined { font-size: 22px; color: var(--md-on-surface-variant); }
@@ -437,18 +436,30 @@
     position: fixed; left: 16px; right: 16px; max-width: 380px; margin: 0 auto; padding: 18px 20px;
     background: rgb(var(--c-white)); border-radius: 24px; box-shadow: theme('boxShadow.2xl');
     transition: top var(--md-motion-long) var(--md-ease-emphasized);
-    animation: md-dialogo var(--md-motion-long) var(--md-ease-emphasized) both;
+    animation: md-dialogo var(--md-motion-long) var(--md-ease-emphasized) backwards;
 }
 
 /* Matriz en pantalla completa: solo la matriz, sin desplazarse */
 #seccionMatriz.matriz-completa {
     position: fixed; inset: 0; z-index: 120; margin: 0; padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     background: var(--md-surface); display: flex; flex-direction: column; overflow: hidden;
-    animation: md-dialogo var(--md-motion-long) var(--md-ease-emphasized) both;
+    animation: md-velo var(--md-motion-medium) var(--md-ease-standard) both;
 }
+/* Las celdas no vuelven a "aparecer" al cambiar de tamaño */
+#seccionMatriz.matriz-completa .matrix-cell { animation: none; opacity: 1; }
 #seccionMatriz.matriz-completa > div:nth-child(2) { flex: 1; min-height: 0; overflow: visible; }
 #seccionMatriz.matriz-completa #matrixCaptureTarget { height: 100%; display: flex; flex-direction: column; padding: 12px; }
-#seccionMatriz.matriz-completa .matrix-grid { flex: 1; min-height: 0; grid-template-rows: auto repeat(3, minmax(0, 1fr)); }
+#seccionMatriz.matriz-completa .matrix-grid { flex: 1; min-height: 0; grid-template-rows: auto repeat(3, minmax(0, 1fr)); gap: 12px; }
+/* Con subtotales: una fila más abajo y una columna más a la derecha, todo cabe */
+#seccionMatriz.matriz-completa .matrix-grid.expanded { grid-template-rows: auto repeat(3, minmax(0, 1fr)) auto; grid-template-columns: auto repeat(3, minmax(0, 1fr)) minmax(150px, 0.7fr); }
+#seccionMatriz.matriz-completa .matrix-cell-summary { min-height: 0; padding: 10px 12px; overflow: hidden; }
+/* Con subtotales en pantallas medianas (iPad): solo lo esencial en cada celda */
+@media (max-width: 1100px) {
+    .matrix-grid.expanded .celda-detalle, .matrix-grid.expanded .celda-pct, .matrix-grid.expanded .celda-cabecera button { display: none; }
+}
+#seccionMatriz.matriz-completa .matrix-cell-summary .space-y-3 > * + * { margin-top: 4px; }
+#seccionMatriz.matriz-completa .matrix-cell-summary .text-center.mb-4 { margin-bottom: 6px; }
+#seccionMatriz.matriz-completa .matrix-cell-summary .my-3 { margin: 4px 0; }
 #seccionMatriz.matriz-completa .matrix-cell { min-height: 0; aspect-ratio: auto; }
 #seccionMatriz.matriz-completa #btnMatrizCompleta { display: none; }
 #seccionMatriz.matriz-completa #btnSalirCompleta { display: flex; }
@@ -462,14 +473,14 @@ body.sin-desplazar { overflow: hidden; }
 
 /* ---------- 5. Movimiento (mismos tiempos en todas las pantallas) ---------- */
 @layer utilities {
-    .animate-fade-in { animation: md-entrar var(--md-motion-long) var(--md-ease-emphasized) both; }
+    .animate-fade-in { animation: md-entrar var(--md-motion-long) var(--md-ease-emphasized) backwards; }
     .animate-spin-reverse { animation: md-girar 1.2s linear infinite; }
 }
 
 /* Toda ventana emergente (diálogo) entra igual: sube y aparece */
 .fixed.inset-0:not(.hidden) > div:first-child:not(.hoja),
 .fixed.inset-0:not(.hidden) > form:first-child {
-    animation: md-dialogo var(--md-motion-long) var(--md-ease-emphasized) both;
+    animation: md-dialogo var(--md-motion-long) var(--md-ease-emphasized) backwards;
 }
 .fixed.inset-0:not(.hidden) { animation: md-velo var(--md-motion-medium) var(--md-ease-standard) both; }
 
