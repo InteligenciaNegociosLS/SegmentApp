@@ -2,7 +2,7 @@
    SegmentApp - Exportaciones (Excel, PDF, PNG)
    Archivo: js/exports.js
    Responsable de:
-   - Captura PNG de la matriz (html2canvas)
+   - Imagen PNG de la matriz (dibujada, nítida)
    - Export Excel de tabla filtrada (XLSX)
    - Export PDF de tabla filtrada (jsPDF + autotable)
    - Export Excel consolidado de evaluaciones (admin)
@@ -79,42 +79,121 @@ window.App.exports.executeExport = function() {
 };
 
 /* ============================================================
-   CAPTURA PNG DE LA MATRIZ
+   IMAGEN PNG DE LA MATRIZ
+   Se DIBUJA (no se fotografía la pantalla): así los íconos y la
+   letra variable no salen como "letras raras" y la imagen queda
+   nítida en cualquier equipo, con título, fecha y filtros.
 ============================================================ */
+const COLORES_IMAGEN = {
+    A_C: ['#ffdad6', '#410002'], A_B: ['#ffddb3', '#2e1500'], A_A: ['#c4eed0', '#003915'],
+    B_C: ['#fff0ee', '#410002'], B_B: ['#fff5e8', '#2e1500'], B_A: ['#d3e3fd', '#041e49'],
+    C_C: ['#eef1f6', '#191c20'], C_B: ['#e1e5ec', '#191c20'], C_A: ['#eedcff', '#280056']
+};
+const TITULOS_CELDA = { C: 'Conquistar', B: 'Desarrollar', A: 'Defender' };
+
+function rectanguloRedondo(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+window.App.exports.dibujarMatriz = function() {
+    const st = window.App.state;
+    const ui = window.App.ui;
+    const fuente = '"Roboto Flex", Roboto, "Segoe UI", Arial, sans-serif';
+    const W = 1600, H = 1240, E = 2;               // tamaño lógico y nitidez (x2)
+    const canvas = document.createElement('canvas');
+    canvas.width = W * E; canvas.height = H * E;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(E, E);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+
+    // Encabezado: logo + título + detalle
+    const logo = [['#4c8df6', '#0b57d0', 'meta'], ['#a8c7fa', '#4c8df6', '#0b57d0'], ['#d3e3fd', '#a8c7fa', '#4c8df6']];
+    logo.forEach((fila, f) => fila.forEach((c, k) => {
+        const x = 60 + k * 22, y = 50 + f * 22;
+        if (c === 'meta') { ctx.fillStyle = '#1e9e5a'; ctx.beginPath(); ctx.arc(x + 9, y + 9, 9.5, 0, Math.PI * 2); ctx.fill(); }
+        else { ctx.fillStyle = c; rectanguloRedondo(ctx, x, y, 18, 18, 5); ctx.fill(); }
+    }));
+    ctx.fillStyle = '#191c20'; ctx.font = `700 40px ${fuente}`; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('Matriz estratégica', 140, 82);
+    const modo = st.currentMatrixMode === 'survey' ? 'Encuestas' : 'CloseUp';
+    const quien = st.currentVisitadorName || '';
+    const version = (st.VERSIONES_EN_USO && st.VERSIONES_EN_USO.recetas && st.VERSIONES_EN_USO.recetas.nombre) || '';
+    const fecha = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
+    ctx.fillStyle = '#44474e'; ctx.font = `400 20px ${fuente}`;
+    ctx.fillText([quien, `Datos: ${modo}${version ? ' · ' + version : ''}`, fecha].filter(Boolean).join('  ·  '), 140, 114);
+    const filtros = Object.keys(st.FILTER_OPTIONS).filter(k => st.FILTER_STATE[k] && st.FILTER_STATE[k].length < st.FILTER_OPTIONS[k].length);
+    if (filtros.length) {
+        const nombres = { Market: 'Mercados', Product: 'Productos', Rep: 'Visitadores', Region: 'Región', Spec: 'Especialidad', Molecule: 'Molécula', Class: 'Clase', Lab: 'Laboratorio' };
+        ctx.fillStyle = '#0842a0'; ctx.font = `600 17px ${fuente}`;
+        ctx.fillText('Filtros: ' + filtros.map(k => {
+            const v = st.FILTER_STATE[k];
+            return `${nombres[k] || k}: ${v.length === 1 ? v[0] : v.length + ' elegidos'}`;
+        }).join(' · ').slice(0, 140), 140, 142);
+    }
+
+    // Datos de cada cuadrante (los mismos que se ven en pantalla)
+    const cruzados = (st.PROCESSED_DATA || []).filter(d => !d.isZeroRx);
+    const total = cruzados.length;
+    const x0 = 150, y0 = 230, gap = 18, cw = (W - x0 - 60 - gap * 2) / 3, ch = (H - y0 - 90 - gap * 2) / 3;
+
+    // Títulos de columnas y filas
+    const cols = [['C', 'Adopción baja', `≤ ${st.TH_LOY_LOW}%`], ['B', 'Adopción media', `${st.TH_LOY_LOW}% - ${st.TH_LOY_HIGH}%`], ['A', 'Adopción alta', `≥ ${st.TH_LOY_HIGH}%`]];
+    ctx.textAlign = 'center';
+    cols.forEach(([, t, r], i) => {
+        const cx = x0 + i * (cw + gap) + cw / 2;
+        ctx.fillStyle = '#44474e'; ctx.font = `700 19px ${fuente}`; ctx.fillText(t.toUpperCase(), cx, y0 - 34);
+        ctx.fillStyle = '#5d6068'; ctx.font = `400 16px ${fuente}`; ctx.fillText(r, cx, y0 - 12);
+    });
+    const filas = [['A', 'Potencial alto'], ['B', 'Potencial medio'], ['C', 'Potencial bajo']];
+    filas.forEach(([letra, t], j) => {
+        const cy = y0 + j * (ch + gap) + ch / 2;
+        ctx.save(); ctx.translate(x0 - 40, cy); ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = '#44474e'; ctx.font = `700 18px ${fuente}`; ctx.fillText(`${t.toUpperCase()} (${letra})`, 0, 0);
+        ctx.restore();
+    });
+
+    filas.forEach(([pot], j) => cols.forEach(([loy], i) => {
+        const key = `${pot}_${loy}`;
+        const sub = cruzados.filter(d => d.catPotency === pot && d.catLoyalty === loy);
+        const rx = sub.reduce((s, d) => s + d.totalRx, 0), phq = sub.reduce((s, d) => s + d.rxPhq, 0);
+        const [fondo, texto] = COLORES_IMAGEN[key];
+        const x = x0 + i * (cw + gap), y = y0 + j * (ch + gap);
+        ctx.fillStyle = fondo; rectanguloRedondo(ctx, x, y, cw, ch, 28); ctx.fill();
+        ctx.fillStyle = texto; ctx.textAlign = 'left';
+        ctx.font = `700 16px ${fuente}`; ctx.fillText((pot === 'C' && loy === 'C' ? 'Revisar' : TITULOS_CELDA[loy]).toUpperCase(), x + 24, y + 38);
+        ctx.textAlign = 'center';
+        ctx.font = `800 92px ${fuente}`; ctx.fillText(pot + ({ A: '+', B: '', C: '-' })[loy], x + cw / 2, y + ch / 2 + 22);
+        ctx.font = `700 26px ${fuente}`; ctx.fillText(`${ui.formatNumber(sub.length)} ${sub.length === 1 ? 'médico' : 'médicos'}`, x + cw / 2, y + ch / 2 + 62);
+        ctx.globalAlpha = 0.85; ctx.font = `600 16px ${fuente}`;
+        ctx.fillText(`${ui.formatNumber(total ? sub.length / total * 100 : 0, 1)}% de los médicos`, x + cw / 2, y + ch - 44);
+        ctx.font = `500 15px ${fuente}`;
+        ctx.fillText(`Recetas ${ui.compactNum(rx)}  ·  La Santé ${ui.compactNum(phq)}  ·  Part. ${ui.formatNumber(rx ? phq / rx * 100 : 0, 1)}%`, x + cw / 2, y + ch - 20);
+        ctx.globalAlpha = 1;
+    }));
+
+    ctx.textAlign = 'right'; ctx.fillStyle = '#73777f'; ctx.font = `400 15px ${fuente}`;
+    ctx.fillText(`${ui.formatNumber(total)} médicos con recetas · Generado con SegmentApp · La Santé`, W - 60, H - 34);
+    return canvas;
+};
+
 window.App.exports.exportMatrixToPNG = async function() {
     const ui = window.App.ui;
-    const d  = window.App.data;
-    await d.loadLibrary('html2canvas');
-    const target = document.getElementById('matrixCaptureTarget');
     ui.showToast("Generando imagen de la matriz...");
-
-    const origWidth    = target.style.width;
-    const origMinWidth = target.style.minWidth;
-    const origOverflow = target.style.overflow;
-    target.style.width    = target.scrollWidth + 'px';
-    target.style.minWidth = target.scrollWidth + 'px';
-    target.style.overflow = 'visible';
-
-    setTimeout(() => {
-        html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
-            .then(canvas => {
-                target.style.width    = origWidth;
-                target.style.minWidth = origMinWidth;
-                target.style.overflow = origOverflow;
-                const link = document.createElement('a');
-                link.download = 'SegmentApp_Matriz.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                ui.showToast("Imagen descargada exitosamente.");
-            })
-            .catch(err => {
-                target.style.width    = origWidth;
-                target.style.minWidth = origMinWidth;
-                target.style.overflow = origOverflow;
-                console.error("Error generando PNG:", err);
-                ui.showToast("Error al generar la imagen.");
-            });
-    }, 200);
+    try {
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        const canvas = window.App.exports.dibujarMatriz();
+        const link = document.createElement('a');
+        const hoy = new Date().toISOString().slice(0, 10);
+        link.download = `SegmentApp_Matriz_${hoy}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        ui.showToast("Imagen descargada.");
+    } catch (err) {
+        console.error("Error generando PNG:", err);
+        ui.showToast("No se pudo generar la imagen.");
+    }
 };
 
 /* ============================================================
