@@ -31,6 +31,32 @@ paleta `primary` en `tailwind.config.js`.**
 (tarjetas pequeñas) · 20 px · **28 px** (tarjetas grandes y ventanas) ·
 **píldora** (todos los botones).
 
+## Modo oscuro
+Se activa solo si el teléfono o la computadora usan modo oscuro. Cada color
+tiene su versión oscura (fondos oscuros, textos claros), calculada en
+`tailwind.config.js`; no hay que hacer nada en cada pantalla.
+
+## Logo
+`img/logo.svg`: la matriz de 9 cuadrantes. El azul se intensifica hacia
+"alto potencial" y la esquina de la meta (A+) es verde y redonda. Es el mismo
+archivo para la pestaña del navegador y para la app. Al abrir, la pantalla de
+inicio arma el logo cuadro por cuadro.
+
+## Piezas de la experiencia (`js/ux.js`)
+- Menú **Más** (arriba a la derecha; en el teléfono sube desde abajo).
+- **Filtros**: buscador + filtros rápidos (Pendientes, Evaluados, Mayor
+  oportunidad, Sin recetas) + hoja con todos los filtros. Los filtros activos
+  se ven como pastillas con ✕. Los filtros rápidos solo cambian la lista,
+  nunca los cálculos de la matriz.
+- **Matriz**: color más intenso donde hay más médicos, números animados y,
+  al tocar un cuadrante, sus médicos de mayor oportunidad ahí mismo.
+- **Lista**: tabla en computadora; tarjetas en teléfono e iPad vertical.
+- **Evaluación**: respuestas con botones de un toque; las preguntas del
+  médico se responden una vez; "Guardar y siguiente" abre el próximo
+  pendiente.
+- **Barra inferior** en el teléfono: Inicio · Matriz · Médicos · Pendientes · Más.
+- **Deshacer** al eliminar una evaluación; aviso cuando hay una versión nueva.
+
 ## Tipografía
 **Roboto Flex** en toda la app (incluidos los gráficos). Íconos: Material
 Symbols con un único estilo.
