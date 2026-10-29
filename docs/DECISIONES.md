@@ -102,3 +102,31 @@ información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
   (el GD, solo sus visitadores) pero sin botones de editar ni eliminar.
 - **Selector "Datos: Hoy"** para todos: ver una versión anterior solo afecta
   a quien la elige, en esa pestaña.
+- Fase 5 aprobada por el dueño el 29/10/2026 (probó el Preview con su usuario
+  admin). La clave se cambió desde Supabase porque el correo gratuito de
+  Supabase envía muy pocos mensajes por hora (se resolverá con SMTP propio).
+- En Supabase (Authentication → URL Configuration) se puso como Site URL la
+  dirección de Vercel y se permitieron todas las direcciones de prueba de
+  Vercel, para que el enlace de recuperación no lleve a `localhost`.
+
+## 29/10/2026 (Fase 7: velocidad)
+
+- **VM y GD reciben solo sus médicos** (función `datos_equipo` en Supabase):
+  ya no descargan ni procesan las 231 mil filas del país. El admin y el
+  Gerente Nacional siguen usando el archivo completo, porque ven todo.
+- **Mismos resultados:** comprobado con los datos reales (VM NEIVIS PARRA y
+  su GD con 10 visitadores): matriz, recetas, brecha y etiqueta por mercado
+  idénticas. Detalle en `docs/RENDIMIENTO.md`.
+- **Cambios visibles para VM y GD (pequeños):**
+  - "Principal competidor" y el gráfico de competencia se calculan con
+    **sus** médicos (antes, con los de todo el país).
+  - Las listas de los filtros (mercados, regiones, especialidades…) muestran
+    solo lo que existe en **sus** médicos.
+  - Un médico **sin recetas** cuya matrícula también aparece en el fichero de
+    otro visitador ahora muestra el nombre de **su propia** fila del fichero
+    (antes podía mostrar el de la fila del otro visitador). Con los datos
+    actuales: 1 caso para NEIVIS PARRA y 3 en su distrito.
+- El archivo completo ya **no** lo pueden descargar los VM ni los GD
+  (seguridad: antes, con sesión, cualquiera podía bajarlo).
+- Se deja para la Fase 6 (rediseño) quitar el Tailwind en línea y cambiar las
+  fuentes, porque esa fase rehace los estilos.
