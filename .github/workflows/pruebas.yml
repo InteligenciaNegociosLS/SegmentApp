@@ -23,6 +23,11 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Estilos generados al día (css/app.css)
+        run: |
+          npm run css
+          git diff --exit-code css/app.css || (echo "css/app.css está desactualizado: ejecuta 'npm run css' y súbelo" && exit 1)
+
       - name: Pruebas de cálculos, sesión y errores
         run: npm test
 

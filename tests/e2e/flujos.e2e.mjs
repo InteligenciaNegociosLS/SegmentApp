@@ -63,6 +63,8 @@ try {
       return route.fulfill({ contentType: 'application/gzip', body: fs.readFileSync(path.join(RAIZ, ARCHIVOS[archivo[1]])) });
     }
     if (u.includes('localforage')) return route.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(STUB, 'localforage.js')) });
+    // Gráficos simulados (las ventanas que los usan se pueden abrir sin internet)
+    if (u.includes('chart.js')) return route.fulfill({ contentType: 'application/javascript', body: 'window.Chart=function(){return{destroy(){},update(){}}};Chart.register=()=>{};Chart.defaults={font:{}};' });
     return route.fulfill({ contentType: u.includes('css') ? 'text/css' : 'application/javascript', body: '' });
   });
   const vis = id => page.evaluate(i => { const e = document.getElementById(i); return !!e && !e.classList.contains('hidden'); }, id);
@@ -95,6 +97,17 @@ try {
   ok('VM: sin botón de cargar datos', !(await vis('btnUploadData')));
   const nDocs = await page.evaluate(() => App.state.PROCESSED_DATA.length);
   ok('VM: ve solo sus médicos (' + nDocs + ')', nDocs > 0 && nDocs < 2000);
+  // Ventanas y botones principales del VM (sin errores)
+  await page.evaluate(() => { const d = App.state.PROCESSED_DATA.find(x => !x.isZeroRx); App.modals.openDoctorModal(d.id); });
+  ok('VM: abre la ficha de un médico', await page.evaluate(() => !!document.querySelector('.fixed.inset-0:not(.hidden)')));
+  await page.evaluate(() => { document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')); const d = App.state.PROCESSED_DATA[0]; App.evaluation.openEvalModal(d.id, d.name); });
+  ok('VM: abre la evaluación de un médico', await vis('evalModal'));
+  await page.evaluate(() => document.getElementById('evalModal').classList.add('hidden'));
+  await page.evaluate(() => switchMatrixMode('survey'));
+  const modoEncuesta = await page.evaluate(() => [document.getElementById('btnMatrixSurvey').classList.contains('bg-blue-600'), document.getElementById('btnMatrixData').classList.contains('bg-blue-600')]);
+  await page.evaluate(() => switchMatrixMode('closeup'));
+  const modoDatos = await page.evaluate(() => [document.getElementById('btnMatrixSurvey').classList.contains('bg-blue-600'), document.getElementById('btnMatrixData').classList.contains('bg-blue-600')]);
+  ok('matriz: el botón CloseUp/Encuesta marca solo el elegido', modoEncuesta.join() === 'true,false' && modoDatos.join() === 'false,true');
   ok('VM: consulta las evaluaciones', (await page.evaluate(() => window.__calls)).includes('select:evaluaciones'));
 
   await page.reload();
@@ -111,6 +124,7 @@ try {
   await page.evaluate(() => attemptLogin()); await page.waitForTimeout(500);
   ok('usuario sin rol: no entra', (await toast()).includes('permisos') && await page.evaluate(() => App.state.currentUserRole === 'guest'));
 
+  await page.evaluate(() => openLoginModal());
   await page.fill('#loginEmail', 'admin@lasante.com'); await page.fill('#visitadorPwd', 'adminadmin');
   const tAdmin = Date.now();
   await page.evaluate(() => attemptLogin());
@@ -157,6 +171,12 @@ try {
   });
   ok('Excel 3.000 evaluaciones: ' + ms[0] + ' ms, ' + ms[1] + ' filas', ms[1] === 3000 && ms[0] < 15000);
 
+  for (const abrir of ['App.reports.openModal()', "App.exports.showExportModal('excel')", 'App.admin.openSurveyConfigModal()', 'openProductModal()']) {
+    await page.evaluate((a) => { document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')); (0, eval)(a); }, abrir);
+    await page.waitForTimeout(150);
+  }
+  ok('admin: abre reportes, exportar, ponderación y productos', await page.evaluate(() => !!document.querySelector('.fixed.inset-0:not(.hidden)')));
+  await page.evaluate(() => document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')));
   await page.evaluate(() => openAccessManager()); await page.waitForTimeout(500);
   ok('panel accesos: sin claves visibles', !(await page.evaluate(() => document.getElementById('accessListContainer').innerHTML.includes('pwd_input'))));
 
