@@ -199,3 +199,16 @@ Fase 6B aprobada. Ajustes:
 - Casillas de los filtros de tamaño fijo; toda la fila marca la casilla.
 - Los nombres muestran "Ñ" donde el archivo de CloseUp trae "#" (solo al
   mostrar; el dato no cambia).
+
+## 29/10/2026 (Fase 6D: ajustes pequeños)
+
+Fase 6C aprobada. Ajustes:
+- Guía rápida: el resaltado lleva la parte explicada justo debajo de la barra
+  superior y la tarjeta ya no tapa lo resaltado; el paso "Evaluar" señala el
+  botón del primer médico.
+- Pantalla completa de la matriz: sin parpadeo (se quitó la pantalla completa
+  del navegador y una animación que quedaba "pegada"); con subtotales todo cabe.
+- Se quitó la barra de la columna Participación (siempre se veía casi vacía).
+- Volvieron los íconos de Recetas, La Santé, Part. y médicos en cada cuadrante.
+- Botón "Evaluado": muestra la última clasificación y cuántos mercados; al
+  pasar el mouse se ve la clasificación de cada mercado.
