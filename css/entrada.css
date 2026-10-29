@@ -356,6 +356,22 @@
     .item-menu { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 20px; min-height: 48px; font-size: 14px; font-weight: 500; text-align: left; color: inherit; }
     .item-menu .material-symbols-outlined { font-size: 22px; color: var(--md-on-surface-variant); }
 
+    /* Ficha del médico: pestañas M3 y anillo de participación */
+    .ficha-pestanas button {
+        display: inline-flex; align-items: center; gap: 6px; height: 48px; padding: 0 14px; white-space: nowrap; flex-shrink: 0;
+        font-size: 14px; font-weight: 600; color: var(--md-on-surface-variant); border-bottom: 3px solid transparent; border-radius: 12px 12px 0 0;
+    }
+    .ficha-pestanas button .material-symbols-outlined { font-size: 20px; }
+    .ficha-pestanas button[aria-selected="true"] { color: var(--md-primary); border-bottom-color: var(--md-primary); }
+    .dona {
+        --p: 0; width: 88px; height: 88px; border-radius: 9999px; flex-shrink: 0; display: grid; place-items: center;
+        background: conic-gradient(rgb(var(--c-primary-600)) calc(var(--p) * 1%), rgb(var(--c-neutral-200)) 0);
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
+                mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
+    }
+    .dona-caja { position: relative; width: 88px; height: 88px; flex-shrink: 0; }
+    .dona-caja > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 17px; font-weight: 800; color: var(--md-on-surface); }
+
     /* Pastillas (chips M3): filtros rápidos, respuestas de un toque */
     .chip {
         display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 10px;
@@ -388,6 +404,14 @@
     .anillo-texto { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: var(--md-on-surface); }
     .barra-fina { height: 6px; border-radius: 6px; background: var(--md-primary-container); overflow: hidden; }
     .barra-fina > div { height: 100%; border-radius: 6px; background: var(--md-primary); transition: width var(--md-motion-long) var(--md-ease-emphasized); }
+
+    /* Tendencias y movimientos */
+    .tendencia { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .tendencia.sube { color: rgb(var(--c-success-700)); }
+    .tendencia.baja { color: rgb(var(--c-error-700)); }
+    .tendencia.igual { color: var(--md-on-surface-variant); font-weight: 600; }
+    .mov-mejor .material-symbols-outlined { color: rgb(var(--c-success-700)); }
+    .mov-peor .material-symbols-outlined { color: rgb(var(--c-error-700)); }
 
     /* Estado de evaluación (tabla y tarjetas) */
     .eval-estado { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 10px 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 700; white-space: nowrap; }

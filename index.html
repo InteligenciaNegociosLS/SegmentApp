@@ -403,18 +403,22 @@
             <div class="kpi-card bg-white p-4 border border-slate-200">
                 <p class="text-xs text-slate-500 font-semibold flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">groups</span> Médicos con recetas</p>
                 <p class="text-2xl sm:text-3xl font-display font-extrabold text-slate-800 mt-1" id="statTotalDocs">0</p>
+                <div class="mt-1 min-h-[18px]" id="tendDocs"></div>
             </div>
             <div class="kpi-card bg-white p-4 border border-slate-200">
                 <p class="text-xs text-slate-500 font-semibold flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">receipt_long</span> Recetas del mercado</p>
                 <p class="text-2xl sm:text-3xl font-display font-extrabold text-slate-800 mt-1" id="statTotalMkt">0</p>
+                <div class="mt-1 min-h-[18px]" id="tendMkt"></div>
             </div>
             <div class="kpi-card bg-blue-50 p-4">
                 <p class="text-xs text-blue-800 font-semibold flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">pill</span> Recetas La Santé</p>
                 <p class="text-2xl sm:text-3xl font-display font-extrabold text-blue-800 mt-1" id="statMyRx">0</p>
+                <div class="mt-1 min-h-[18px]" id="tendPhq"></div>
             </div>
             <div class="kpi-card bg-green-50 p-4">
                 <p class="text-xs text-green-800 font-semibold flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">donut_large</span> Participación</p>
                 <p class="text-2xl sm:text-3xl font-display font-extrabold text-green-800 mt-1" id="statShare">0%</p>
+                <div class="mt-1 min-h-[18px]" id="tendShare"></div>
             </div>
         </div>
 
@@ -450,6 +454,12 @@
             </div>
         </div>
 
+        <!-- Comparativos: movimientos entre versiones y CloseUp vs. encuesta -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+            <section id="tarjetaMovimientos" class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200" aria-live="polite"></section>
+            <section id="tarjetaConcordancia" class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200" aria-live="polite"></section>
+        </div>
+
         <!-- Matriz estratégica -->
         <section id="seccionMatriz" class="mb-6 scroll-mt-20" aria-labelledby="tituloMatriz">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -459,7 +469,11 @@
                     </h2>
                     <p class="text-xs text-slate-500">Toca un cuadrante para ver sus médicos</p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <label class="relative">
+                        <span class="sr-only">Mercado</span>
+                        <select id="selectorMercado" class="filter-select !rounded-full !py-2 !text-xs !font-bold max-w-[220px]" onchange="App.ux.elegirMercado(this.value)" title="Elegir mercado"></select>
+                    </label>
                     <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-full" role="group" aria-label="Origen de la matriz">
                         <button class="px-3 sm:px-4 py-2 text-xs font-bold rounded-full matrix-toggle-btn bg-blue-600 text-white shadow-sm" id="btnMatrixData" onclick="switchMatrixMode('closeup')" aria-pressed="true">CloseUp</button>
                         <button class="px-3 sm:px-4 py-2 text-xs font-bold rounded-full matrix-toggle-btn text-slate-500" id="btnMatrixSurvey" onclick="switchMatrixMode('survey')" aria-pressed="false">Encuestas</button>
@@ -515,6 +529,7 @@
                     </div>
                 </div>
             </div>
+            <div id="competenciaCuadrante" class="hidden flex-wrap items-center gap-2 mb-3 bg-white rounded-2xl border border-slate-200 px-4 py-3"></div>
             <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden flex flex-col">
                 <div class="hidden lg:block responsive-table-wrapper">
                     <table class="w-full text-left border-collapse" id="mainTable">
@@ -944,6 +959,35 @@
     </div>
 </div>
 
+<!-- Ficha del médico (Fase 6E): pantalla completa en móvil, ventana grande en computadora -->
+<div class="hidden fixed inset-0 bg-black/40 z-[85] flex items-stretch sm:items-center justify-center sm:p-4" id="fichaMedico" role="dialog" aria-modal="true" aria-labelledby="fichaEncabezado" onclick="if (event.target === this) App.ficha.cerrar()">
+    <div class="ficha-hoja bg-white w-full sm:max-w-4xl sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden h-full sm:h-auto sm:max-h-[92vh] animate-fade-in">
+        <div class="ficha-cuerpo overflow-y-auto flex-1 overscroll-contain">
+            <div class="sticky top-0 z-10 bg-white/95 backdrop-blur flex items-center justify-between gap-2 px-3 sm:px-5 pt-3 pb-2">
+                <button class="w-11 h-11 rounded-full flex items-center justify-center text-slate-700" onclick="App.ficha.cerrar()" aria-label="Cerrar la ficha"><span class="material-symbols-outlined">close</span></button>
+                <div class="flex items-center gap-2">
+                    <button class="hidden h-10 px-4 rounded-full bg-blue-700 text-white text-sm font-bold flex items-center gap-2" id="fichaEvaluar" onclick="App.ux.evaluar(this)"><span class="material-symbols-outlined text-[20px]">rate_review</span><span>Evaluar</span></button>
+                    <button class="h-10 px-4 rounded-full border border-slate-300 text-slate-700 text-sm font-bold flex items-center gap-2" onclick="App.ficha.pdf()" title="Descargar la ficha en PDF"><span class="material-symbols-outlined text-[20px]">picture_as_pdf</span><span class="hidden sm:inline">PDF</span></button>
+                </div>
+            </div>
+            <div class="px-4 sm:px-7 pb-4">
+                <div id="fichaEncabezado"></div>
+                <div id="fichaIndicadores" class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4"></div>
+            </div>
+            <div class="sticky top-[60px] z-[9] bg-white border-b border-slate-200">
+                <div id="fichaPestanas" class="ficha-pestanas flex gap-1 overflow-x-auto px-3 sm:px-6" role="tablist">
+                    <button data-pestana="resumen" role="tab" onclick="App.ficha.mostrar('resumen')"><span class="material-symbols-outlined">dashboard</span>Resumen</button>
+                    <button data-pestana="mercados" role="tab" onclick="App.ficha.mostrar('mercados')"><span class="material-symbols-outlined">grid_view</span>Mercados</button>
+                    <button data-pestana="productos" role="tab" onclick="App.ficha.mostrar('productos')"><span class="material-symbols-outlined">pill</span>Productos</button>
+                    <button data-pestana="historial" role="tab" onclick="App.ficha.mostrar('historial')"><span class="material-symbols-outlined">history</span>Historial</button>
+                    <button data-pestana="datos" role="tab" onclick="App.ficha.mostrar('datos')"><span class="material-symbols-outlined">contact_page</span>Datos</button>
+                </div>
+            </div>
+            <div id="fichaContenido" class="px-4 sm:px-7 py-5" role="tabpanel"></div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Gestión de Accesos de Visitadores -->
 <div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="accessModal">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
@@ -1332,6 +1376,8 @@
 <script src="js/supabase-api.js"></script>
 <script src="js/carga-datos.js"></script>
 <script src="js/versiones.js"></script>
+<script src="js/comparar.js"></script>
+<script src="js/ficha.js"></script>
 <script src="js/ux.js"></script>
 
 <!-- 6. Entry point — orquestador (debe ir al final) -->

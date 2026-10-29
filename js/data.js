@@ -240,13 +240,13 @@ window.App.data.parseStoredFicheroData = function(savedArray) {
 /* ============================================================
    PARSEO DE CSV DE AUDITORÍA (CloseUp)
 ============================================================ */
-window.App.data.parseAuditData = function(json) {
-    const st = window.App.state;
-    st.RAW_DATA = [];
+// Convierte filas del archivo de recetas al formato de la app (sin tocar el estado)
+window.App.data.convertirRecetas = function(json) {
+    const salida = [];
     json.forEach(row => {
         const vals = Object.values(row);
         if (vals.length >= 10) {
-            st.RAW_DATA.push({
+            salida.push({
                 doc:      String(vals[0] || "").trim(),
                 license:  String(vals[1] || "").trim(),
                 market:   String(vals[2] || "").trim(),
@@ -264,6 +264,12 @@ window.App.data.parseAuditData = function(json) {
             });
         }
     });
+    return salida;
+};
+
+window.App.data.parseAuditData = function(json) {
+    const st = window.App.state;
+    st.RAW_DATA = window.App.data.convertirRecetas(json);
     st.MARKET_CACHE = {};
 };
 
@@ -330,6 +336,14 @@ async function restaurarCopia(ids, modo) {
    compacto. Aquí se rearman EXACTAMENTE como si vinieran del
    archivo completo, para que todos los cálculos den lo mismo.
 ============================================================ */
+// Recetas de un paquete de datos_equipo, en el mismo orden de columnas que el archivo
+window.App.data.filasDelPaquete = function(p) {
+    return (p.recetas || []).map(([medico, mercado, producto, rx]) => {
+        const m = p.medicos[medico], pr = p.productos[producto];
+        return [m[1], m[0], p.mercados[mercado], pr[0], rx, m[2], m[3], m[4], m[5], m[6], m[7], pr[1], pr[2], pr[3], pr[4]];
+    });
+};
+
 window.App.data.aplicarDatosEquipo = function(p) {
     const st = window.App.state;
     const columnas = p.columnas || [];
@@ -341,12 +355,7 @@ window.App.data.aplicarDatosEquipo = function(p) {
     });
     window.App.data.parseFicheroData(fichero);
 
-    // Mismo orden de columnas que el archivo de recetas
-    const filas = (p.recetas || []).map(([medico, mercado, producto, rx]) => {
-        const m = p.medicos[medico], pr = p.productos[producto];
-        return [m[1], m[0], p.mercados[mercado], pr[0], rx, m[2], m[3], m[4], m[5], m[6], m[7], pr[1], pr[2], pr[3], pr[4]];
-    });
-    window.App.data.parseAuditData(filas);
+    window.App.data.parseAuditData(window.App.data.filasDelPaquete(p));
 
     // Clasificación nacional por mercado (la etiqueta se calcula con los umbrales actuales)
     const porMercado = {};
@@ -429,6 +438,7 @@ window.App.data.cargarDatos = async function() {
         }
     }
     st.MARKET_CACHE = {};
+    if (window.App.comparar) window.App.comparar.estado = null;   // otra versión: se vuelve a comparar
     st._lastUniverseSignature = null;
     st._lastUniverseRows = null;
     st._lastGroups = null;

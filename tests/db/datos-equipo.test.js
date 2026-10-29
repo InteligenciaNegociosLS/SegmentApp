@@ -150,6 +150,24 @@ describe('Un GD recibe solo su distrito y ve lo mismo que antes', () => {
     });
 });
 
+describe('Historial de un médico (migración 10)', () => {
+    it('el VM ve el historial de recetas y de clasificación de SUS médicos; el de otros, no', async () => {
+        const paquete = await datosComo(U.vm);
+        const mat = paquete.fichero[0][paquete.columnas.indexOf('Matricula')];
+        const h = (await como(db, U.vm, 'select public.historial_medico($1) as h', [mat])).rows[0].h;
+        expect(h).toHaveLength(1);
+        expect(h[0].nombre).toBe('Datos enero');
+        const recetas = paquete.recetas.filter(r => String(paquete.medicos[r[0]][0]).trim().replace(/^0+/, '') === String(mat).trim().replace(/^0+/, ''));
+        expect(Number(h[0].total)).toBe(recetas.reduce((s, r) => s + r[3], 0));
+        // Mismos datos de clasificación por mercado que recibe la matriz
+        const deEste = paquete.clasificacion.filter(c => c[1] === String(mat).trim().replace(/^0+/, ''));
+        expect(h[0].mercados.length).toBe(deEste.length);
+        const otro = await datosComo(U.vm2);
+        const matOtro = otro.fichero[0][otro.columnas.indexOf('Matricula')];
+        await expect(como(db, U.vm, 'select public.historial_medico($1)', [matOtro])).rejects.toThrow(/no está en tu fichero/);
+    });
+});
+
 describe('Permisos', () => {
     it('solo el admin prepara versiones', async () => {
         await expect(como(db, U.vm, 'select public.preparar_orden_mercado($1)', [ids.recetas])).rejects.toThrow(/Solo el administrador/);

@@ -68,6 +68,8 @@ window.App.ux.alEntrar = function() {
     const sig = document.getElementById('btnGuardarSiguiente');
     if (sig) sig.classList.toggle('hidden', st.rolReal !== 'vm');
     window.App.ux.ocultarSplash();
+    // Movimientos y tendencias respecto a la versión anterior (si existe)
+    if (window.App.comparar) setTimeout(() => window.App.comparar.cargar(true), 300);
     // La primera vez de cada persona: guía rápida (cuando ya se ve el tablero)
     // (las pruebas automáticas la desactivan con window.__SIN_GUIA)
     setTimeout(() => { if (!window.__SIN_GUIA && window.App.state.currentUserRole !== 'guest') window.App.ux.iniciarGuia(); }, 1400);
@@ -178,7 +180,11 @@ const CUMPLE = {
     pendientes: (d) => !window.App.ux.estaEvaluado(d),
     evaluados: (d) => window.App.ux.estaEvaluado(d),
     oportunidad: (d) => !d.isZeroRx && d.gap > 0,
-    sinrx: (d) => !!d.isZeroRx
+    sinrx: (d) => !!d.isZeroRx,
+    // Desde las tarjetas de comparativos
+    mejoraron: (d) => d.movimiento === 'mejor',
+    bajaron: (d) => d.movimiento === 'peor',
+    discrepan: (d) => !d.isZeroRx && d.surveyLabel && d.surveyLabel !== 'N/A' && d.surveyLabel !== d.closeupLabel
 };
 
 window.App.ux.aplicarFiltroRapido = function(datos) {
@@ -258,9 +264,12 @@ window.App.ux.renderChipsActivos = function() {
 window.App.ux.trasRenderTabla = function() {
     window.App.ux.renderChipsRapidos();
     window.App.ux.renderChipsActivos();
+    window.App.ux.renderSelectorMercado();
+    window.App.ux.renderCompetenciaCuadrante();
     window.App.ux.actualizarBotonResultados();
     const st = window.App.state;
-    const titulos = { pendientes: 'Médicos pendientes por evaluar', evaluados: 'Médicos evaluados', oportunidad: 'Mayor oportunidad', sinrx: 'Médicos sin recetas' };
+    const titulos = { pendientes: 'Médicos pendientes por evaluar', evaluados: 'Médicos evaluados', oportunidad: 'Mayor oportunidad', sinrx: 'Médicos sin recetas',
+        mejoraron: 'Médicos que mejoraron de cuadrante', bajaron: 'Médicos que bajaron de cuadrante', discrepan: 'CloseUp y encuesta no coinciden' };
     window.App.ui.safeSetText('tableTitle', st.groupByInstitution ? 'Instituciones' : (titulos[st.FILTRO_RAPIDO] || 'Médicos'));
 };
 
@@ -291,6 +300,50 @@ window.App.ux.animarNumero = function(id, valor) {
 };
 
 const LOY_SIGNO = { A: '+', B: '', C: '-' };
+
+/* ---------- Elegir el mercado desde la matriz ---------- */
+window.App.ux.renderSelectorMercado = function() {
+    const st = window.App.state;
+    const sel = document.getElementById('selectorMercado');
+    if (!sel) return;
+    const opciones = st.FILTER_OPTIONS.Market || [];
+    const elegidos = st.FILTER_STATE.Market || [];
+    const valor = elegidos.length === opciones.length ? 'todos' : (elegidos.length === 1 ? elegidos[0] : 'varios');
+    const firma = opciones.join('|');
+    if (sel.dataset.firma !== firma) {
+        sel.innerHTML = `<option value="todos">Todos los mercados</option><option value="varios" disabled>Varios mercados</option>`
+            + opciones.map(m => `<option value="${escUx(m)}">${escUx(m)}</option>`).join('');
+        sel.dataset.firma = firma;
+    }
+    sel.value = valor;
+};
+window.App.ux.elegirMercado = function(mercado) {
+    if (mercado === 'varios') return;
+    document.querySelectorAll('#listMarket input[type="checkbox"]').forEach(cb => { cb.checked = mercado === 'todos' || cb.value === mercado; });
+    window.App.filters.updateGenericSelected('Market');
+};
+
+/* ---------- Competencia del cuadrante elegido ---------- */
+window.App.ux.competidoresDe = function(docs, cuantos = 3) {
+    const d = window.App.data, totales = {};
+    docs.forEach(doc => Object.entries(doc.uniqueProds || {}).forEach(([prod, rx]) => { if (!d.isPhq(prod)) totales[prod] = (totales[prod] || 0) + rx; }));
+    return Object.entries(totales).sort((a, b) => b[1] - a[1]).slice(0, cuantos);
+};
+window.App.ux.renderCompetenciaCuadrante = function() {
+    const st = window.App.state;
+    const zona = document.getElementById('competenciaCuadrante');
+    if (!zona) return;
+    if (!st.MATRIX_FILTER) { zona.classList.add('hidden'); return; }
+    const { pot, loy } = st.MATRIX_FILTER;
+    const docs = (st.PROCESSED_DATA || []).filter(x => x.catPotency === pot && x.catLoyalty === loy && !x.isZeroRx);
+    const top = window.App.ux.competidoresDe(docs);
+    if (!top.length) { zona.classList.add('hidden'); return; }
+    zona.innerHTML = `<span class="material-symbols-outlined text-[20px] text-rose-700">swords</span>
+        <span class="text-sm text-slate-700">Competencia en <b>${pot}${LOY_SIGNO[loy]}</b>:</span>
+        ${top.map(([p, rx], i) => `<span class="chip ${i === 0 ? '!border-rose-200 !bg-rose-50 !text-rose-800' : ''}" aria-pressed="false">${escUx(p)} <span class="cuenta">${fmtN(rx)} Rx</span></span>`).join('')}`;
+    zona.classList.remove('hidden');
+    zona.classList.add('flex');
+};
 window.App.ux.claseCuadrante = function(doc) {
     if (!doc || doc.isZeroRx || doc.isInst) return '';
     const p = doc.catPotency, l = doc.catLoyalty;

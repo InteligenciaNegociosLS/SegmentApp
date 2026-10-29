@@ -257,7 +257,13 @@ window.App.matrix.switchMatrixMode = function(mode) {
 /* ============================================================
    AGGREGATE AND CALCULATE — el cálculo más pesado de la app
 ============================================================ */
-window.App.matrix.aggregateAndCalculate = function() {
+/* ------------------------------------------------------------
+   CÁLCULO (sin dibujar nada): de las filas de recetas a la lista de
+   médicos con su cuadrante. Se usa para los datos actuales y, con la
+   misma regla, para la versión anterior (movimientos y tendencias).
+   usarCache: solo para los datos actuales.
+------------------------------------------------------------ */
+window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
     const st = window.App.state;
     const d  = window.App.data;
 
@@ -277,7 +283,7 @@ window.App.matrix.aggregateAndCalculate = function() {
 
     // Si los filtros pesados no cambiaron, usar el universo cacheado
     let universeRows;
-    if (st._lastUniverseSignature === filterSignature && st._lastUniverseRows) {
+    if (usarCache && st._lastUniverseSignature === filterSignature && st._lastUniverseRows) {
         universeRows = st._lastUniverseRows;
     } else {
         // Recalcular universo desde cero
@@ -285,7 +291,7 @@ window.App.matrix.aggregateAndCalculate = function() {
         const fs = st.FILTER_STATE;
         const mk = new Set(fs.Market), rg = new Set(fs.Region), sp = new Set(fs.Spec),
               mo = new Set(fs.Molecule), cl = new Set(fs.Class), lb = new Set(fs.Lab);
-        universeRows = st.RAW_DATA.filter(row => {
+        universeRows = filasFuente.filter(row => {
             if (!mk.has(row.market))   return false;
             if (!rg.has(row.region))   return false;
             if (!sp.has(row.spec))     return false;
@@ -296,15 +302,17 @@ window.App.matrix.aggregateAndCalculate = function() {
             return true;
         });
         // Guardar en cache para próximas llamadas
-        st._lastUniverseSignature = filterSignature;
-        st._lastUniverseRows = universeRows;
+        if (usarCache) {
+            st._lastUniverseSignature = filterSignature;
+            st._lastUniverseRows = universeRows;
+        }
     }
 
     // Agrupación por médico (ID único = matrícula + nombre).
     // Solo depende del universo: si cambian productos, visitadores, umbrales
     // o el modo de la matriz, se reutiliza la agrupación anterior.
     let grupos;
-    if (st._lastGroupsRows === universeRows && st._lastGroups) {
+    if (usarCache && st._lastGroupsRows === universeRows && st._lastGroups) {
         grupos = st._lastGroups;
     } else {
         const docMap = {};
@@ -322,8 +330,10 @@ window.App.matrix.aggregateAndCalculate = function() {
         });
         grupos = Object.values(docMap);
         grupos.forEach(g => { g.prodsLista = Object.entries(g.uniqueProds); });
-        st._lastGroupsRows = universeRows;
-        st._lastGroups = grupos;
+        if (usarCache) {
+            st._lastGroupsRows = universeRows;
+            st._lastGroups = grupos;
+        }
     }
 
     // Totales reales por producto (para "Principal Competidor")
@@ -341,7 +351,7 @@ window.App.matrix.aggregateAndCalculate = function() {
         });
         return doc;
     });
-    st.CURRENT_COMP_BREAKDOWN = Object.entries(realProductTotals)
+    const compBreakdown = Object.entries(realProductTotals)
         .map(([k, v]) => ({ prod: k, rx: v, type: d.isPhq(k) ? 'PHQ' : 'Comp' }))
         .sort((a, b) => b.rx - a.rx);
 
@@ -459,17 +469,27 @@ window.App.matrix.aggregateAndCalculate = function() {
         return doc;
     });
 
+    return { doctors, compBreakdown, grandTotalRx, visTotalFichero, visTotalCruzados };
+};
+
+window.App.matrix.aggregateAndCalculate = function() {
+    const st = window.App.state;
+    const r = window.App.matrix.calcularMedicos(st.RAW_DATA, true);
+    const doctors = r.doctors;
+    st.CURRENT_COMP_BREAKDOWN = r.compBreakdown;
     st.PROCESSED_DATA = doctors;
+    // Comparación con la versión anterior (movimientos y tendencias), si está cargada
+    if (window.App.comparar) window.App.comparar.alRecalcular();
 
     // Principal competidor
     let topCompName = "N/A", topCompRx = 0;
     const competitorsOnly = st.CURRENT_COMP_BREAKDOWN.filter(c => c.type === 'Comp');
     if (competitorsOnly.length > 0) { topCompName = competitorsOnly[0].prod; topCompRx = competitorsOnly[0].rx; }
 
-    window.App.matrix.renderDashboard(grandTotalRx, topCompName, topCompRx);
+    window.App.matrix.renderDashboard(r.grandTotalRx, topCompName, topCompRx);
     window.App.matrix.updateImpactSimulator(doctors);
     if (st.currentUserRole === 'visitador') {
-        if (typeof updateVisitadorDashboard === 'function') updateVisitadorDashboard(visTotalFichero, visTotalCruzados);
+        if (typeof updateVisitadorDashboard === 'function') updateVisitadorDashboard(r.visTotalFichero, r.visTotalCruzados);
     }
 };
 
@@ -715,7 +735,7 @@ window.App.matrix.renderTable = function() {
         let renderLabel = doc.matrixLabel;
         if (st.currentMatrixMode === 'survey' && !doc.isInst) renderLabel = doc.surveyLabel;
         const colorClass = (window.App.ux && window.App.ux.claseCuadrante(doc)) || "bg-slate-100 text-slate-500";
-        const cuadrante = `<span class="inline-flex items-center justify-center min-w-[44px] h-9 px-2 rounded-xl font-display font-extrabold text-sm ${colorClass}">${doc.isZeroRx ? '—' : ui.escapeHtml(renderLabel)}</span>`;
+        const cuadrante = `<div class="flex flex-col items-start gap-0.5"><span class="inline-flex items-center justify-center min-w-[44px] h-9 px-2 rounded-xl font-display font-extrabold text-sm ${colorClass}">${doc.isZeroRx ? '—' : ui.escapeHtml(renderLabel)}</span>${doc.antes && doc.antes !== doc.closeupLabel ? `<span class="text-[10px] font-semibold ${doc.movimiento === 'mejor' ? 'text-green-700' : 'text-rose-700'}">${doc.movimiento === 'mejor' ? '▲' : '▼'} antes ${ui.escapeHtml(doc.antes)}</span>` : ''}</div>`;
 
         // Médico: nombre, especialidad y si está fichado, juntos
         const fichado = doc.ficheroData && doc.ficheroData.length > 0 && !doc.isInst;
@@ -730,7 +750,10 @@ window.App.matrix.renderTable = function() {
             </div>`;
 
         // Participación: número + barrita
-        const part = doc.isZeroRx ? '<span class="text-slate-400">—</span>' : `<span class="font-semibold text-slate-700">${ui.formatNumber(doc.share, 1)}%</span>`;
+        // Tendencia frente a la versión anterior (si se cargó)
+        const tendencia = doc.deltaShare == null || Math.abs(doc.deltaShare) < 0.05 ? ''
+            : `<span class="tendencia ${doc.deltaShare > 0 ? 'sube' : 'baja'} ml-1">${doc.deltaShare > 0 ? '▲' : '▼'}${ui.formatNumber(Math.abs(doc.deltaShare), 1)}</span>`;
+        const part = doc.isZeroRx ? '<span class="text-slate-400">—</span>' : `<span class="font-semibold text-slate-700">${ui.formatNumber(doc.share, 1)}%</span>${tendencia}`;
 
         const gapHtml = doc.isZeroRx
             ? '<span class="text-slate-400">—</span>'
