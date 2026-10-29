@@ -173,12 +173,12 @@ window.App.matrix.generateSingleCellHTML = function(c) {
         </div>
         <div class="flex-1 flex flex-col items-center justify-center py-2 pointer-events-none">
             <div class="celda-letra letter-display">${c.label}</div>
-            <div class="celda-cuenta mt-1 flex items-center gap-1"><span id="count_${key}">0</span><span class="text-[11px] font-semibold opacity-70">méd.</span></div>
+            <div class="celda-cuenta mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-[20px] opacity-70">groups</span><span id="count_${key}">0</span><span class="text-[11px] font-semibold opacity-70">méd.</span></div>
         </div>
         <div class="celda-detalle grid grid-cols-3 gap-1 text-[10px] font-medium text-center opacity-90 pointer-events-none">
-            <div title="Recetas del mercado"><div class="opacity-70">Recetas</div><div class="font-bold font-mono text-[12px]" id="rx_${key}">0</div></div>
-            <div title="Recetas La Santé"><div class="opacity-70">La Santé</div><div class="font-bold font-mono text-[12px]" id="phq_${key}">0</div></div>
-            <div title="Participación"><div class="opacity-70">Part.</div><div class="font-bold text-[12px]" id="ms_${key}">0%</div></div>
+            <div title="Recetas del mercado"><div class="opacity-70 flex items-center justify-center gap-0.5"><span class="material-symbols-outlined text-[13px]">receipt_long</span>Recetas</div><div class="font-bold font-mono text-[12px]" id="rx_${key}">0</div></div>
+            <div title="Recetas La Santé"><div class="opacity-70 flex items-center justify-center gap-0.5"><span class="material-symbols-outlined text-[13px]">pill</span>La Santé</div><div class="font-bold font-mono text-[12px]" id="phq_${key}">0</div></div>
+            <div title="Participación"><div class="opacity-70 flex items-center justify-center gap-0.5"><span class="material-symbols-outlined text-[13px]">donut_large</span>Part.</div><div class="font-bold text-[12px]" id="ms_${key}">0%</div></div>
         </div>
         <div class="stats-drawer text-[10px] flex justify-between px-3 bg-black/5 rounded-xl pointer-events-auto" id="drawer_${key}">
             <div class="flex flex-col items-center py-2 opacity-80"><span class="uppercase tracking-wide text-[8px] font-bold">Media Tot</span><span class="font-bold text-xs font-mono" id="avg_tot_${key}">0</span></div>
@@ -730,10 +730,7 @@ window.App.matrix.renderTable = function() {
             </div>`;
 
         // Participación: número + barrita
-        const part = doc.isZeroRx ? '<span class="text-slate-400">—</span>' : `<div class="flex items-center justify-end gap-2">
-                <span class="font-semibold text-slate-700 w-14 text-right">${ui.formatNumber(doc.share, 1)}%</span>
-                <span class="w-14 h-1.5 rounded-full bg-slate-100 overflow-hidden"><span class="block h-full rounded-full bg-blue-600" style="width:${Math.min(100, doc.share).toFixed(1)}%"></span></span>
-            </div>`;
+        const part = doc.isZeroRx ? '<span class="text-slate-400">—</span>' : `<span class="font-semibold text-slate-700">${ui.formatNumber(doc.share, 1)}%</span>`;
 
         const gapHtml = doc.isZeroRx
             ? '<span class="text-slate-400">—</span>'
