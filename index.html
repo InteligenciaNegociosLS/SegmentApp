@@ -11,6 +11,10 @@
 
     <!-- Logo (el mismo en la pestaña del navegador y dentro de la app) -->
     <link rel="icon" href="img/logo.svg" type="image/svg+xml">
+    <!-- App instalable y sin internet (Fase 8) -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="SegmentApp">
 
     <!-- Entorno y manejo de errores (deben ir primero) -->
     <script src="js/env.js"></script>
@@ -62,6 +66,7 @@
         </a>
         <div class="flex items-center gap-1 sm:gap-2 shrink-0">
             <div id="offlineIndicator" class="hidden bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-full text-xs font-bold items-center gap-1"><span class="material-symbols-outlined text-[16px]">wifi_off</span> <span class="hidden sm:inline">Sin conexión</span></div>
+            <button id="chipPendientes" class="hidden bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-xs font-bold items-center gap-1" onclick="App.offline.subirAhora()"><span class="material-symbols-outlined text-[16px]">cloud_upload</span> <span id="lblPendientes">0</span><span class="hidden sm:inline">por subir</span></button>
             <button id="btnVersionDatos" class="hidden flex items-center gap-1 text-slate-600 border border-slate-200 px-3 py-2 rounded-full text-xs font-bold" onclick="abrirVersiones()" title="Versión de datos">
                 <span class="material-symbols-outlined text-[18px]">history</span> <span id="lblVersionDatos" class="hidden lg:inline whitespace-nowrap">Datos: Hoy</span>
             </button>
@@ -85,6 +90,21 @@
 </header>
 <div id="toast" role="status" aria-live="polite">Notificación</div>
 
+<!-- Instalar en iPhone / iPad (Safari no tiene botón automático) -->
+<div id="instalarIos" class="hidden fixed inset-0 z-[95] hoja-fondo" onclick="if (event.target === this) this.classList.add('hidden')">
+    <div class="hoja p-6" role="dialog" aria-modal="true" aria-labelledby="instalarIosTitulo">
+        <div class="hoja-asa"></div>
+        <h3 id="instalarIosTitulo" class="text-lg font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-700">install_mobile</span> Instalar SegmentApp</h3>
+        <p class="text-sm text-slate-600 mt-2">Así la abres desde la pantalla de inicio, como cualquier app, y funciona sin internet.</p>
+        <ol class="mt-4 space-y-3 text-sm text-slate-800">
+            <li class="flex gap-3 items-start"><span class="w-7 h-7 rounded-full bg-blue-50 text-blue-800 font-bold grid place-items-center shrink-0">1</span><span>Abre esta página en <b>Safari</b> y toca el botón <b>Compartir</b> <span class="material-symbols-outlined text-[18px] align-middle">ios_share</span>.</span></li>
+            <li class="flex gap-3 items-start"><span class="w-7 h-7 rounded-full bg-blue-50 text-blue-800 font-bold grid place-items-center shrink-0">2</span><span>Elige <b>"Agregar a inicio"</b> <span class="material-symbols-outlined text-[18px] align-middle">add_box</span>.</span></li>
+            <li class="flex gap-3 items-start"><span class="w-7 h-7 rounded-full bg-blue-50 text-blue-800 font-bold grid place-items-center shrink-0">3</span><span>Toca <b>"Agregar"</b>. El ícono de SegmentApp aparecerá en tu pantalla.</span></li>
+        </ol>
+        <button class="mt-6 w-full h-11 rounded-full bg-blue-700 text-white text-sm font-bold" onclick="document.getElementById('instalarIos').classList.add('hidden')">Entendido</button>
+    </div>
+</div>
+
 <!-- Menú "Más" (en el teléfono sube desde abajo) -->
 <div id="menuMas" class="hidden fixed inset-0 z-[90] hoja-fondo" onclick="if (event.target === this) App.ux.cerrarMas()">
     <nav class="hoja hoja-menu" role="menu" aria-label="Más opciones">
@@ -94,6 +114,8 @@
             <div class="text-xs text-slate-500" id="masRol"></div>
         </div>
         <div class="py-2">
+            <button class="item-menu hidden text-blue-800" id="btnActualizarApp" role="menuitem" onclick="App.ux.cerrarMas(); App.offline.actualizarApp()"><span class="material-symbols-outlined">system_update</span> Actualizar la app (hay versión nueva)</button>
+            <button class="item-menu hidden" id="btnInstalarApp" role="menuitem" onclick="App.ux.cerrarMas(); App.offline.instalar()"><span class="material-symbols-outlined">install_mobile</span> Instalar la app en este dispositivo</button>
             <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); abrirVersiones()"><span class="material-symbols-outlined">history</span> Versión de datos</button>
             <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); App.ux.exportar('excel')"><span class="material-symbols-outlined">table_view</span> Exportar a Excel</button>
             <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); App.ux.exportar('pdf')"><span class="material-symbols-outlined">picture_as_pdf</span> Exportar a PDF</button>
