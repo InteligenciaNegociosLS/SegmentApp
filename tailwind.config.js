@@ -1,3 +1,5 @@
+import plugin from 'tailwindcss/plugin';
+
 /* ============================================================
    SegmentApp · Sistema de diseño Material 3 Expressive
    Un solo lugar para colores, formas, sombras, tipografía y
@@ -40,6 +42,41 @@ const warning = {
     500: '#b06f00', 600: '#8b5000', 700: '#6a3c00', 800: '#4a2800', 900: '#2e1500', 950: '#1f0d00'
 };
 
+// ---------- Modo oscuro ----------
+// En oscuro, los tonos claros (fondos) pasan a ser oscuros y los oscuros
+// (textos) pasan a ser claros. Así cada clase sigue teniendo sentido:
+// "bg-blue-50" es un fondo suave y "text-blue-700" un texto legible.
+const SUPERFICIE_OSCURA = '#121316';
+const hex = (c) => c.replace('#', '').match(/../g).map(x => parseInt(x, 16));
+const mezclar = (a, b, t) => '#' + hex(a).map((v, i) => Math.round(v * (1 - t) + hex(b)[i] * t).toString(16).padStart(2, '0')).join('');
+function oscuro(p) {
+    return {
+        50: mezclar(p[900], SUPERFICIE_OSCURA, 0.55), 100: mezclar(p[800], SUPERFICIE_OSCURA, 0.35), 200: p[700],
+        300: p[500], 400: p[400], 500: p[300], 600: p[200], 700: mezclar(p[200], p[100], 0.5),
+        800: p[100], 900: p[50], 950: '#ffffff'
+    };
+}
+const neutralOscuro = {
+    50: '#1a1c20', 100: '#1f2226', 200: '#2a2d32', 300: '#3b3e44', 400: '#8e9199',
+    500: '#a9acb4', 600: '#c4c6ce', 700: '#dadce3', 800: '#e7e8ee', 900: '#f1f2f7', 950: '#ffffff'
+};
+const PALETAS = { primary, neutral, tertiary, success, error, warning };
+const PALETAS_OSCURAS = {
+    primary: oscuro(primary), neutral: neutralOscuro, tertiary: oscuro(tertiary),
+    success: oscuro(success), error: oscuro(error), warning: oscuro(warning)
+};
+const rgb = (c) => hex(c).join(' ');
+function variables(paletas, blanco) {
+    const v = { '--c-white': rgb(blanco) };
+    for (const [nombre, tonos] of Object.entries(paletas)) {
+        for (const [t, c] of Object.entries(tonos)) v[`--c-${nombre}-${t}`] = rgb(c);
+    }
+    return v;
+}
+// Cada color de la app lee su variable, así cambia solo en modo oscuro
+const usarVariables = (nombre) => Object.fromEntries(Object.keys(primary).map(t => [t, `rgb(var(--c-${nombre}-${t}) / <alpha-value>)`]));
+const C = Object.fromEntries(Object.keys(PALETAS).map(n => [n, usarVariables(n)]));
+
 export default {
     content: ['./index.html', './js/**/*.js'],
     // Clases que el panel de carga arma con variables (bg-${color}-50…)
@@ -52,15 +89,15 @@ export default {
         colors: {
             transparent: 'transparent',
             current: 'currentColor',
-            white: '#ffffff',
+            white: 'rgb(var(--c-white) / <alpha-value>)',
             black: '#000000',
-            primary, neutral, tertiary, success, error, warning,
-            blue: primary, indigo: primary, sky: primary, cyan: primary,
-            slate: neutral, gray: neutral, zinc: neutral, stone: neutral,
-            purple: tertiary, violet: tertiary, fuchsia: tertiary,
-            emerald: success, green: success, teal: success, lime: success,
-            rose: error, red: error, pink: error,
-            amber: warning, yellow: warning, orange: warning
+            ...C,
+            blue: C.primary, indigo: C.primary, sky: C.primary, cyan: C.primary,
+            slate: C.neutral, gray: C.neutral, zinc: C.neutral, stone: C.neutral,
+            purple: C.tertiary, violet: C.tertiary, fuchsia: C.tertiary,
+            emerald: C.success, green: C.success, teal: C.success, lime: C.success,
+            rose: C.error, red: C.error, pink: C.error,
+            amber: C.warning, yellow: C.warning, orange: C.warning
         },
         // Tipografía: Roboto Flex en toda la app
         fontFamily: {
@@ -93,5 +130,13 @@ export default {
             }
         }
     },
-    plugins: []
+    plugins: [
+        // Variables de color: claro por defecto, oscuro si el teléfono/computadora lo usa
+        plugin(({ addBase }) => addBase({
+            ':root': { ...variables(PALETAS, '#ffffff'), colorScheme: 'light' },
+            '@media (prefers-color-scheme: dark)': {
+                ':root': { ...variables(PALETAS_OSCURAS, '#16181c'), colorScheme: 'dark' }
+            }
+        }))
+    ]
 };
