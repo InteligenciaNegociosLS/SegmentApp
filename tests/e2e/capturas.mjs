@@ -63,15 +63,19 @@ async function rutas(page) {
     });
 }
 
-const PANTALLAS = { telefono: { width: 390, height: 844 }, ipad: { width: 820, height: 1180 }, computadora: { width: 1440, height: 900 } };
+const PANTALLAS = {
+    telefono: { width: 390, height: 844 }, ipad: { width: 820, height: 1180 }, computadora: { width: 1440, height: 900 },
+    'telefono-oscuro': { width: 390, height: 844, oscuro: true }
+};
 const browser = await chromium.launch();
 const hechas = [];
 try {
     for (const [nombre, viewport] of Object.entries(PANTALLAS)) {
-        const page = await browser.newPage({ viewport, deviceScaleFactor: 1, hasTouch: nombre !== 'computadora' });
+        const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1,
+            hasTouch: nombre !== 'computadora', colorScheme: viewport.oscuro ? 'dark' : 'light' });
         await rutas(page);
         const foto = async (id, opciones = {}) => {
-            await page.waitForTimeout(700);
+            await page.waitForTimeout(opciones.espera ?? 700);
             const archivo = path.join(SALIDA, `${nombre}-${id}.png`);
             await page.screenshot({ path: archivo, fullPage: opciones.completa === true });
             hechas.push(archivo);
@@ -87,7 +91,8 @@ try {
                 console.log(`AVISO ${nombre}-${id}: la página mide ${ancho[0]} px de ancho en una pantalla de ${ancho[1]} px → ${culpables.join(' | ')}`);
             }
         };
-        await page.goto(BASE);
+        await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+        await foto('0-splash', { espera: 550 });
         await page.waitForFunction(() => { const e = document.getElementById('loginRequiredState'); return e && !e.classList.contains('hidden'); });
         await foto('1-inicio');
         await page.evaluate(() => openLoginModal());
@@ -96,6 +101,13 @@ try {
         await page.evaluate(() => attemptLogin());
         await page.waitForFunction(() => App.state.currentUserRole === 'visitador');
         await foto('3-vm-tablero', { completa: true });
+        await page.evaluate(() => filterByMatrix('C', 'C'));
+        await foto('3a-vm-cuadrante');
+        await page.evaluate(() => { clearMatrixFilter(); App.ux.abrirFiltros(); });
+        await foto('3d-vm-filtros');
+        await page.evaluate(() => { App.ux.cerrarFiltros(); App.ux.abrirMas(); });
+        await foto('3e-vm-mas');
+        await page.evaluate(() => App.ux.cerrarMas());
         await page.evaluate(() => { const d = App.state.PROCESSED_DATA.find(x => !x.isZeroRx); App.modals.openDoctorModal(d.id); });
         await foto('3b-vm-medico');
         await page.evaluate(() => { document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')); const d = App.state.PROCESSED_DATA[0]; App.evaluation.openEvalModal(d.id, d.name); });

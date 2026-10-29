@@ -14,7 +14,7 @@ export const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 // Mismo orden que index.html
 const SCRIPTS = ['entorno', 'errores', 'config', 'state', 'ui', 'data', 'filters', 'matrix',
     'evaluation', 'admin', 'auth', 'modals', 'exports', 'offline', 'reports',
-    'supabase-api', 'carga-datos', 'versiones', 'main'];
+    'supabase-api', 'carga-datos', 'versiones', 'ux', 'main'];
 
 export function localforageEnMemoria() {
     const m = new Map();
