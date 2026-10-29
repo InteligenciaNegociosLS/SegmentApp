@@ -130,6 +130,8 @@ try {
         }
         await page.evaluate(() => { const d = App.state.PROCESSED_DATA.find(x => !x.isZeroRx); App.modals.openDoctorModal(d.id); });
         await foto('3b-vm-medico');
+        for (const t of ['mercados', 'productos', 'historial', 'datos']) { await page.evaluate((x) => App.ficha.mostrar(x), t); await page.waitForTimeout(300); await foto('3b-vm-ficha-' + t); }
+        await page.evaluate(() => App.ficha.cerrar());
         await page.evaluate(() => { document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')); const d = App.state.PROCESSED_DATA[0]; App.evaluation.openEvalModal(d.id, d.name); });
         await foto('3c-vm-evaluar');
         await page.evaluate(() => document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')));

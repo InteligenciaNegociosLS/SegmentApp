@@ -246,6 +246,7 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261030120000_datos_por_equipo.sql` | Fase 7: `datos_equipo` (cada VM/GD recibe solo lo suyo) y archivo completo solo para admin y Gte. Nacional |
 | `supabase/migrations/20261030130000_orden_mercado.sql` | Arreglo Fase 7: orden nacional por mercado precalculado una vez por versión (`recetas_orden_mercado`) |
 | `supabase/migrations/20261031120000_historial_equipo.sql` | Fase 6C: cada VM ve el historial de sus evaluaciones y cada GD el de su distrito |
+| `supabase/migrations/20261031130000_historial_medico.sql` | Fase 6E: `historial_medico` (recetas y clasificación de un médico en cada versión publicada; solo si está en tu fichero) |
 | `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 

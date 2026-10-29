@@ -212,3 +212,27 @@ Fase 6C aprobada. Ajustes:
 - Volvieron los íconos de Recetas, La Santé, Part. y médicos en cada cuadrante.
 - Botón "Evaluado": muestra la última clasificación y cuántos mercados; al
   pasar el mouse se ve la clasificación de cada mercado.
+
+## 29/10/2026 (Fase 6E: ficha del médico y comparativos)
+
+Pedido del dueño: rediseño completo de la ventana del médico y las ideas 1 a 6.
+- **Ficha del médico** (reemplaza la ventana anterior): pantalla completa en
+  el teléfono y ventana grande en computadora. Encabezado con nombre,
+  cuadrante (y el de antes si cambió), matrícula, cédula, especialidad y
+  visitador; 4 indicadores; pestañas Resumen, Mercados, Productos, Historial
+  y Datos. El gráfico grande se cambió por un anillo pequeño.
+  - Resumen: producto más recetado, mercado favorito, producto La Santé más
+    recetado, principal competidor y todos los lugares donde atiende.
+  - Historial: recetas y clasificación por mercado en cada versión publicada
+    (migración 10, `historial_medico`) y las evaluaciones con sus cambios.
+  - Datos: todos los campos del fichero, por cada institución.
+  - Botón **PDF** para descargar la ficha.
+- **Movimientos**: cuántos médicos mejoraron o bajaron de cuadrante desde la
+  versión anterior (mismos filtros); se pueden filtrar. VM y GD lo ven solos;
+  el admin pulsa "Comparar" (descarga la versión anterior completa).
+- **Tendencias ▲▼** en los indicadores y en la participación de cada médico.
+- **CloseUp vs. encuesta**: cuántos coinciden y filtro "no coinciden".
+- **Selector de mercado** encima de la matriz (usa los mismos filtros).
+- **Competencia por cuadrante**: al tocar un cuadrante se ven los productos
+  de la competencia más recetados por esos médicos.
+- La regla de la matriz no cambió (las pruebas de resultados siguen iguales).

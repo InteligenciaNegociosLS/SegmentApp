@@ -99,7 +99,20 @@ try {
   ok('VM: ve solo sus médicos (' + nDocs + ')', nDocs > 0 && nDocs < 2000);
   // Ventanas y botones principales del VM (sin errores)
   await page.evaluate(() => { const d = App.state.PROCESSED_DATA.find(x => !x.isZeroRx); App.modals.openDoctorModal(d.id); });
-  ok('VM: abre la ficha de un médico', await page.evaluate(() => !!document.querySelector('.fixed.inset-0:not(.hidden)')));
+  ok('VM: abre la ficha de un médico', await vis('fichaMedico') && await page.evaluate(() => document.querySelectorAll('#fichaIndicadores > div').length === 4));
+  ok('ficha: matrícula, mercado favorito y producto más recetado', await page.evaluate(() => /Matrícula/.test(fichaEncabezado.innerText) && /Mercado favorito/.test(fichaContenido.innerText) && /Producto más recetado/.test(fichaContenido.innerText)));
+  ok('ficha: botón Evaluar para el VM', await vis('fichaEvaluar'));
+  const pestanas = [];
+  for (const t of ['mercados', 'productos', 'datos']) { await page.evaluate((x) => App.ficha.mostrar(x), t); pestanas.push(await page.evaluate(() => fichaContenido.innerText.trim().length > 20)); }
+  ok('ficha: pestañas Mercados, Productos y Datos con contenido', pestanas.every(Boolean));
+  await page.evaluate(() => App.ficha.mostrar('historial')); await page.waitForTimeout(400);
+  ok('ficha: historial de recetas por versión', await page.evaluate(() => window.__calls.some(c => c.startsWith('rpc:historial_medico')) && !/Cargando/.test(fichaHistRecetas.innerText)));
+  ok('ficha: función de PDF disponible', await page.evaluate(() => typeof App.ficha.pdf === 'function'));
+  await page.evaluate(() => App.ficha.cerrar());
+  ok('ficha: se cierra', !(await vis('fichaMedico')));
+  // Ideas 1 a 5: comparativos, selector de mercado y competencia por cuadrante
+  ok('comparativos: tarjetas de movimientos y concordancia', await page.evaluate(() => /Movimientos/.test(tarjetaMovimientos.innerText) && /CloseUp vs/.test(tarjetaConcordancia.innerText)));
+  ok('matriz: selector de mercado con opciones', await page.evaluate(() => document.querySelectorAll('#selectorMercado option').length >= 2));
   await page.evaluate(() => { document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')); const d = App.state.PROCESSED_DATA[0]; App.evaluation.openEvalModal(d.id, d.name); });
   ok('VM: abre la evaluación de un médico', await vis('evalModal'));
   await page.evaluate(() => document.getElementById('evalModal').classList.add('hidden'));

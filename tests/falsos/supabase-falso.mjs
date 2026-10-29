@@ -183,6 +183,33 @@ export function createClient(url, clave, opciones = {}) {
                 visibles, phq: cfg ? cfg.valor : [] });
             return { data: JSON.parse(JSON.stringify(datos)), error: null };
         },
+        historial_medico({ p_matricula }) {
+            const s = leerSesion();
+            if (!s) return { data: null, error: { message: 'Tu usuario no tiene permisos' } };
+            registrar(`rpc:historial_medico:${p_matricula}`);
+            const cfg = bd.configuracion.find(c => c.clave === 'productos_phq');
+            const phq = (cfg ? cfg.valor : []).map(x => String(x).toUpperCase());
+            const norm = (v) => String(v || '').trim().replace(/^0+/, '');
+            const versiones = bd.data_snapshots.filter(v => v.tipo === 'recetas' && v.estado === 'publicado' && bd.fuentes[v.id])
+                .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+            const data = versiones.map(v => {
+                const { encabezados: e, filas } = bd.fuentes[v.id];
+                const [cM, cK, cP, cR] = ['Matricula', 'Mercado', 'Producto', 'Px_Product'].map(n => e.indexOf(n));
+                const mercados = {};
+                let total = 0, rxPhq = 0;
+                filas.forEach(f => {
+                    const rx = Number(f[cR]) || 0;
+                    const m = mercados[f[cK]] || (mercados[f[cK]] = { total: 0, phq: 0, mk: 0 });
+                    m.mk += rx;
+                    if (norm(f[cM]) !== norm(p_matricula)) return;
+                    const esPhq = phq.some(x => String(f[cP]).toUpperCase().includes(x));
+                    total += rx; m.total += rx; if (esPhq) { rxPhq += rx; m.phq += rx; }
+                });
+                return { id: v.id, nombre: v.nombre, fecha: v.fecha, total, phq: rxPhq,
+                    mercados: Object.entries(mercados).filter(([, m]) => m.total > 0).map(([k, m]) => [k, m.total, m.phq, m.total, m.mk]) };
+            }).filter(v => v.total > 0);
+            return { data, error: null };
+        },
         preparar_orden_mercado() {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador' } };
             return { data: 0, error: null };
