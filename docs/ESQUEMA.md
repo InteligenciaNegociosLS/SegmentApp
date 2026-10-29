@@ -1,8 +1,8 @@
 # Esquema de la base de datos (Supabase) — PROPUESTA
 
-> **Estado: aprobado el 28/10/2026.** Migraciones 1 a 5 aplicadas en el
-> Supabase de pruebas. La migración 6 (carga de datos desde la app, Fase 5)
-> falta aplicarla.
+> **Estado: aprobado el 28/10/2026.** Migraciones 1 a 6 aplicadas en el
+> Supabase de pruebas. La migración 7 (datos por equipo, Fase 7) falta
+> aplicarla.
 
 ## Resumen en 6 puntos
 
@@ -160,9 +160,10 @@ Reglas adicionales:
   conservan.
 - **Quien se registre por su cuenta** queda **inactivo** hasta que el admin le
   asigne un rol. Además, el registro abierto se apaga en Supabase.
-- Las **cifras de mercado** (totales, Pareto y competidores, que necesitan las
-  recetas de todos los médicos) se calcularán **en el servidor** (Fase 7). Cada
-  usuario recibe solo el resultado que le corresponde, nunca las filas ajenas.
+- Las **cifras nacionales de mercado** (la etiqueta A+/B/C- de cada médico en
+  cada mercado, que necesita las recetas de todo el país) se calculan **en el
+  servidor** (Fase 7, función `datos_equipo`). Cada VM o GD recibe solo sus
+  médicos y esos totales, nunca las filas ajenas.
 
 **Probado:** 25 pruebas automáticas en un Postgres 16 real demuestran cada fila
 de esta tabla (`tests/db/seguridad-por-rol.test.js`). Entre ellas: que un GD
@@ -197,8 +198,9 @@ Carga nueva ──► BORRADOR ──(admin revisa y compara)──► PUBLICADO
   Los borradores solo los ve el admin, en el panel de carga.
 - Cada versión guarda además su **archivo comprimido** en un almacén
   **privado** de Supabase (`datos`). La app lo descarga solo con sesión
-  iniciada, mediante un enlace que vence en 1 hora (Fase 5). En la Fase 7 la
-  app pasará a consultar la base directamente, sin descargar el archivo.
+  iniciada, mediante un enlace que vence en 1 hora (Fase 5). Desde la Fase 7
+  ese archivo completo solo lo descargan el admin y el Gerente Nacional; los VM
+  y GD reciben únicamente sus médicos con `datos_equipo` (pocos KB).
 - Los **datos actuales** se migrarán (Fase 4) como **"Datos enero"**, una
   versión de fichero y otra de recetas, intactas.
 - Fichero y recetas tienen versiones **independientes**: se puede actualizar
@@ -241,6 +243,7 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261028120300_seguridad_rls.sql` | Todas las reglas de seguridad por fila |
 | `supabase/migrations/20261028130000_un_gd_por_distrito.sql` | Regla: cada distrito tiene un solo GD |
 | `supabase/migrations/20261029120000_carga_de_datos.sql` | Fase 5: archivo de cada versión, almacén privado `datos`, carga por lotes, comparar versiones |
+| `supabase/migrations/20261030120000_datos_por_equipo.sql` | Fase 7: `datos_equipo` (cada VM/GD recibe solo lo suyo) y archivo completo solo para admin y Gte. Nacional |
 | `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 

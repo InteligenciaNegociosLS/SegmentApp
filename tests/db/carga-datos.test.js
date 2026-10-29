@@ -8,7 +8,8 @@ import { crearBase, como } from './supabase-simulado.js';
 
 const U = {
     admin: '00000000-0000-0000-0000-0000000000a1',
-    vm: '00000000-0000-0000-0000-0000000000b1'
+    vm: '00000000-0000-0000-0000-0000000000b1',
+    gte: '00000000-0000-0000-0000-0000000000c1'
 };
 let db;
 const ids = {};
@@ -23,7 +24,7 @@ const receta = (fila, medico, matricula, mercado, producto, rx, extra = {}) => (
 
 beforeAll(async () => {
     db = await crearBase();
-    await db.query(`insert into auth.users (id, email, raw_app_meta_data) values ($1,'a@x.com','{"rol":"admin"}'), ($2,'v@x.com','{"rol":"vm"}')`, [U.admin, U.vm]);
+    await db.query(`insert into auth.users (id, email, raw_app_meta_data) values ($1,'a@x.com','{"rol":"admin"}'), ($2,'v@x.com','{"rol":"vm"}'), ($3,'g@x.com','{"rol":"gte_nacional"}')`, [U.admin, U.vm, U.gte]);
     const s = await como(db, U.admin, `insert into public.data_snapshots (nombre, tipo, fecha) values
         ('Datos enero','recetas','2026-01-31'), ('Datos febrero','recetas','2026-02-28'), ('Fichero febrero','fichero','2026-02-28')
         returning id`);
@@ -101,9 +102,11 @@ describe('Almacén privado de archivos', () => {
         await como(db, U.admin, `insert into storage.objects (bucket_id, name) values ('datos', 'snapshots/' || $1 || '/datos.csv.gz')`, [ids.r2]);
         expect(await falla(U.vm, `insert into storage.objects (bucket_id, name) values ('datos', 'otro.gz')`)).toBe(true);
     });
-    it('con sesión se lee el archivo de una versión PUBLICADA; el borrador solo lo ve el admin', async () => {
-        const vmVe = (await como(db, U.vm, `select name from storage.objects`)).rows.map(r => r.name);
-        expect(vmVe).toEqual([`snapshots/${ids.r1}/datos.csv.gz`]);
+    it('el archivo COMPLETO de una versión publicada: solo admin y Gerente Nacional (Fase 7)', async () => {
+        const gteVe = (await como(db, U.gte, `select name from storage.objects`)).rows.map(r => r.name);
+        expect(gteVe).toEqual([`snapshots/${ids.r1}/datos.csv.gz`]);
+        const vmVe = (await como(db, U.vm, `select name from storage.objects`)).rows;
+        expect(vmVe).toEqual([]);
         const adminVe = (await como(db, U.admin, `select name from storage.objects`)).rows;
         expect(adminVe).toHaveLength(2);
     });

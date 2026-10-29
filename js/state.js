@@ -14,6 +14,7 @@ window.App.state = {
     PROCESSED_DATA: [],           // Médicos agregados y calculados
     CURRENT_TABLE_DATA: [],       // Datos actualmente mostrados en la tabla
     MARKET_CACHE: {},             // Cache de clasificaciones por mercado
+    MARKET_SERVIDOR: null,        // VM/GD: totales nacionales por mercado (vienen del servidor)
     FICHERO_MAP: new Map(),       // Mapa Matricula -> filas del fichero médico
     REP_MANAGER_MAP: {},          // Mapa Visitador -> Gerente de Distrito
     CURRENT_COMP_BREAKDOWN: [],   // Ranking de productos (para tarjeta competencia)

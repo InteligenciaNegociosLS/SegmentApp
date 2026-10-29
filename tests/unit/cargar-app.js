@@ -53,6 +53,10 @@ export function cargarApp({ datos, env } = {}) {
     }
     // Conectar el Supabase simulado
     const bd = datos || datosDePrueba();
+    const csv = (t) => { const [e, ...f] = t.trim().split('\n').map(l => l.split(';')); return { encabezados: e, filas: f }; };
+    bd.fuentes['s-rec-1'] = bd.fuentes['s-rec-0'] = csv(RECETAS_EJEMPLO);
+    bd.fuentes['s-fic-1'] = csv(FICHERO_EJEMPLO);
+    bd.configuracion.push({ clave: 'productos_phq', valor: ['DESLER PHQ'] });
     window.App.supabase._cliente = createClient('', '', { datos: bd });
     window.App.data.fetchFileAsJson = async (url) => {
         window.__calls.push('descargar:' + url);
