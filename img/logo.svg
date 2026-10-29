@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="SegmentApp">
+  <!-- Matriz de 9 cuadrantes: el azul se intensifica hacia "alto potencial";
+       la esquina de la meta (A+, alta adopción) es verde y redonda -->
+  <rect x="3"  y="3"  width="12" height="12" rx="3.5" fill="#4c8df6"/>
+  <rect x="18" y="3"  width="12" height="12" rx="3.5" fill="#0b57d0"/>
+  <circle cx="39" cy="9" r="6.5" fill="#1e9e5a"/>
+  <rect x="3"  y="18" width="12" height="12" rx="3.5" fill="#a8c7fa"/>
+  <rect x="18" y="18" width="12" height="12" rx="3.5" fill="#4c8df6"/>
+  <rect x="33" y="18" width="12" height="12" rx="3.5" fill="#0b57d0"/>
+  <rect x="3"  y="33" width="12" height="12" rx="3.5" fill="#d3e3fd"/>
+  <rect x="18" y="33" width="12" height="12" rx="3.5" fill="#a8c7fa"/>
+  <rect x="33" y="33" width="12" height="12" rx="3.5" fill="#4c8df6"/>
+</svg>
