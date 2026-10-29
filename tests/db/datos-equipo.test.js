@@ -17,7 +17,8 @@ const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const U = {
     vm:  '00000000-0000-0000-0000-00000000f001',
     gd:  '00000000-0000-0000-0000-00000000f002',
-    vm2: '00000000-0000-0000-0000-00000000f003'
+    vm2: '00000000-0000-0000-0000-00000000f003',
+    admin: '00000000-0000-0000-0000-00000000f004'
 };
 const VM = 'NEIVIS PARRA';
 let db, ids, visitadoresDistrito, otroVm;
@@ -72,7 +73,7 @@ beforeAll(async () => {
     MERCADOS = (await db.query(`select nombre from public.cat_mercados order by nombre`)).rows.map(r => r.nombre);
 
     await db.query(`insert into auth.users (id, email, raw_app_meta_data) values
-        ($1, 'vm@x.com', '{"rol":"vm"}'), ($2, 'gd@x.com', '{"rol":"gd"}'), ($3, 'vm2@x.com', '{"rol":"vm"}')`, [U.vm, U.gd, U.vm2]);
+        ($1, 'vm@x.com', '{"rol":"vm"}'), ($2, 'gd@x.com', '{"rol":"gd"}'), ($3, 'vm2@x.com', '{"rol":"vm"}'), ($4, 'admin@x.com', '{"rol":"admin"}')`, [U.vm, U.gd, U.vm2, U.admin]);
     const vis = (await db.query(`select id, distrito_id from public.visitadores where nombre_sector = $1`, [VM])).rows[0];
     await db.query(`update public.visitadores set perfil_id = $1 where id = $2`, [U.vm, vis.id]);
     await db.query(`insert into public.perfil_distritos (perfil_id, distrito_id) values ($1, $2)`, [U.gd, vis.distrito_id]);
@@ -80,6 +81,17 @@ beforeAll(async () => {
     // Un VM de OTRO distrito
     otroVm = (await db.query(`select id, nombre_sector from public.visitadores where distrito_id <> $1 order by nombre_sector limit 1`, [vis.distrito_id])).rows[0];
     await db.query(`update public.visitadores set perfil_id = $1 where id = $2`, [U.vm2, otroVm.id]);
+
+    // Antes de preparar la versión, el VM recibe un aviso claro (no un "timeout")
+    await expect(datosComo(U.vm)).rejects.toThrow(/aún no está preparada/);
+    // El admin la prepara: un mercado por llamada hasta que no falte ninguno
+    const pasos = [];
+    for (let faltan = -1; faltan !== 0;) {
+        faltan = (await como(db, U.admin, 'select public.preparar_orden_mercado($1) as n', [ids.recetas])).rows[0].n;
+        pasos.push(faltan);
+    }
+    expect(pasos).toHaveLength(MERCADOS.length);
+    expect(pasos.at(-2)).toBe(1);
 }, 600000);
 
 describe('Un VM recibe solo lo suyo y ve lo mismo que antes', () => {
@@ -139,6 +151,10 @@ describe('Un GD recibe solo su distrito y ve lo mismo que antes', () => {
 });
 
 describe('Permisos', () => {
+    it('solo el admin prepara versiones', async () => {
+        await expect(como(db, U.vm, 'select public.preparar_orden_mercado($1)', [ids.recetas])).rejects.toThrow(/Solo el administrador/);
+        await expect(como(db, U.vm, 'select public._calcular_orden_mercado($1, 1)', [ids.recetas])).rejects.toThrow();
+    });
     it('sin sesión no se puede pedir', async () => {
         await expect(como(db, null, 'select public.datos_equipo($1, $2)', [ids.recetas, ids.fichero])).rejects.toThrow();
     });
