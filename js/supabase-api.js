@@ -69,8 +69,24 @@ window.App.sb.cerrarSesion = async function() {
 
 window.App.sb.usuarioActual = async function() {
     const sb = await window.App.sb.cliente();
-    const { data } = await sb.auth.getSession();
-    return data && data.session ? data.session.user : null;
+    const { data, error } = await sb.auth.getSession();
+    if (data && data.session) return data.session.user;
+    // Sin internet y con la sesión vencida (dura 1 hora): Supabase no puede renovarla
+    // hasta que vuelva la conexión (lo hace solo). Mientras, se usa la persona guardada
+    // en este dispositivo para abrir su copia local; el servidor sigue exigiendo sesión.
+    const sinRed = !navigator.onLine || /fetch|network|retryable/i.test(String(error && (error.name + ' ' + error.message)));
+    return error && sinRed ? window.App.sb.usuarioGuardado() : null;
+};
+
+// Usuario de la última sesión guardada por Supabase en este navegador
+window.App.sb.usuarioGuardado = function() {
+    try {
+        const ref = new URL(window.App.env.SUPABASE_URL).hostname.split('.')[0];
+        const guardada = JSON.parse(localStorage.getItem(`sb-${ref}-auth-token`) || 'null');
+        return guardada && guardada.user && guardada.refresh_token ? guardada.user : null;
+    } catch (e) {
+        return null;
+    }
 };
 
 window.App.sb.alCambiarSesion = async function(fn) {

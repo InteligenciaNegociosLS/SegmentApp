@@ -66,7 +66,7 @@ window.App.supabase = {
             if (r.status === 404) return 'URL no encontrada: revisa SUPABASE_URL';
             return `error ${r.status}`;
         } catch (e) {
-            return 'sin respuesta (¿proyecto en pausa o URL mal escrita?)';
+            return navigator.onLine ? 'sin respuesta (¿proyecto en pausa o URL mal escrita?)' : 'sin conexión (trabajando con lo guardado)';
         }
     }
 };
