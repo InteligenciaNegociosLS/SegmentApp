@@ -71,6 +71,7 @@ window.App.main.cargarTodo = async function() {
         return true;
     } catch (e) {
         console.error('[SegmentApp] No se pudieron cargar los datos:', e);
+        if (window.App.ux) window.App.ux.ocultarSplash();
         document.getElementById('restoringSession').classList.add('hidden');
         const vacio = document.getElementById('emptyState');
         vacio.classList.remove('hidden');
@@ -137,6 +138,9 @@ window.App.main.initApp = function() {
 
     // 7) Sesión: si hay, carga configuración y datos; si no, pide ingresar
     window.App.auth.checkAuthentication();
+
+    // 8) Avisar si se publica una versión nueva mientras la app está abierta
+    if (window.App.ux) window.App.ux.vigilarVersion();
 };
 
 /* ============================================================

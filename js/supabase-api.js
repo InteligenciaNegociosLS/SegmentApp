@@ -285,6 +285,14 @@ window.App.sb.eliminarEvaluacion = async function(id) {
     if (error) throw fallo(error, 'Eliminar evaluación');
 };
 
+// Deshacer un "eliminar": la evaluación vuelve a estar activa
+window.App.sb.restaurarEvaluacion = async function(id) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.from('evaluaciones').update({ eliminado_en: null }).eq('id', id).select(COLUMNAS_EVAL).single();
+    if (error) throw fallo(error, 'Restaurar evaluación');
+    return window.App.sb.aFormatoApp(data);
+};
+
 /* ============================================================
    VISITADORES Y USUARIOS (panel de accesos del admin)
 ============================================================ */

@@ -154,6 +154,7 @@ window.App.evaluation.openEvalModal = function(docId, docName) {
     }
     window.App.evaluation.loadEvalForMarket();
     document.getElementById('evalModal').classList.remove('hidden');
+    if (window.App.ux) window.App.ux.alAbrirEvaluacion(docKey);
 };
 
 /* ============================================================
@@ -192,9 +193,10 @@ window.App.evaluation.loadEvalForMarket = function() {
     }
     document.getElementById('surveyQ1').value = globalQ1;
     document.getElementById('surveyQ5').value = globalQ5;
+    const sincronizar = () => { if (window.App.ux) window.App.ux.sincronizarEvaluacion(); };
 
     // Si no hay mercado seleccionado, salir (no hay datos específicos que cargar)
-    if (!selectedMarket) return;
+    if (!selectedMarket) { sincronizar(); return; }
 
     if (docEvalsMap[selectedMarket]) {
         const prev = docEvalsMap[selectedMarket];
@@ -211,6 +213,7 @@ window.App.evaluation.loadEvalForMarket = function() {
             document.getElementById('surveyQ4').value = prev.survey.q4 || "";
         }
     }
+    sincronizar();
 };
 
 /* ============================================================
@@ -254,7 +257,8 @@ window.App.evaluation.saveEvaluation = async function() {
 
 // --- Validaciones visuales (resaltado + scroll + toast) ---
     const flashError = (elementId, message) => {
-        const el = document.getElementById(elementId);
+        // Si la pregunta se responde con botones, se resalta el grupo de botones
+        const el = document.getElementById(elementId + '_chips') || document.getElementById(elementId);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const originalStyle = el.style.cssText;
@@ -268,16 +272,17 @@ window.App.evaluation.saveEvaluation = async function() {
         flashError('evalMarketSelect', '⚠️ Debes seleccionar un mercado para continuar');
         return;
     }
-    if (!q1) { flashError('surveyQ1', '⚠️ Pregunta 1 sin responder'); return; }
-    if (!q5) { flashError('surveyQ5', '⚠️ Pregunta 2 (costo) sin responder'); return; }
-    if (!q2) { flashError('surveyQ2', '⚠️ Pregunta 3 sin responder'); return; }
-    if (!q3) { flashError('surveyQ3', '⚠️ Pregunta 4 sin responder'); return; }
+    const faltaMedico = (id, msg) => { if (window.App.ux) window.App.ux.editarDatosMedico(true); flashError(id, msg); };
+    if (!q1) { faltaMedico('surveyQ1', 'Falta: pacientes por semana'); return; }
+    if (!q5) { faltaMedico('surveyQ5', 'Falta: costo de la consulta'); return; }
+    if (!q2) { flashError('surveyQ2', 'Falta: pacientes con esta clase terapéutica'); return; }
+    if (!q3) { flashError('surveyQ3', 'Falta: pacientes con nuestro producto'); return; }
     if (!quadrant) {
-        flashError('evalGrid', '⚠️ Selecciona un cuadrante en la matriz (Paso 2)');
+        flashError('evalGrid', 'Falta: elige tu clasificación');
         return;
     }
     if (!notas) {
-        flashError('evalNotas', '⚠️ La justificación es obligatoria (Paso 3)');
+        flashError('evalNotas', 'Falta: cuéntanos por qué (es obligatorio)');
         return;
     }
 
@@ -420,6 +425,8 @@ window.App.evaluation.updateVisitadorDashboard = function(totalFichero, totalCru
     const barEval = document.getElementById('visBarEvaluados');
     if (barEval) barEval.style.width = `${pctEvaluados}%`;
     ui.safeSetText('visPctEvaluados', `${ui.formatNumber(pctEvaluados, 0)}%`);
+    const anillo = document.getElementById('anilloProgreso');
+    if (anillo) anillo.style.setProperty('--p', Math.min(100, pctEvaluados).toFixed(1));
 };
 
 /* ============================================================
@@ -447,6 +454,14 @@ window.App.evaluation.continueOrCloseAfterSave = function() {
 
     // Capturar el mercado recién guardado ANTES de cambiar el dropdown
     const savedMarket = marketSelect.value;
+
+    // "Guardar y siguiente": pasar directo al próximo médico pendiente
+    if (st._irAlSiguiente) {
+        st._irAlSiguiente = false;
+        window.App.evaluation.closeEvalModal();
+        if (window.App.ux) window.App.ux.abrirSiguientePendiente(document.getElementById('evalDocId').value, savedMarket);
+        return;
+    }
 
     const docId = document.getElementById('evalDocId').value;
     const allMarkets = st.FILTER_OPTIONS['Market'] || [];
@@ -477,6 +492,7 @@ window.App.evaluation.continueOrCloseAfterSave = function() {
     // Auto-seleccionar el siguiente mercado pendiente y cargar form
     marketSelect.value = nextMarket;
     window.App.evaluation.loadEvalForMarket();
+    if (window.App.ux) window.App.ux.alAbrirEvaluacion(normalizeKey(docId));
 
     // Mostrar banner prominente
     showSaveBanner({
@@ -486,9 +502,10 @@ window.App.evaluation.continueOrCloseAfterSave = function() {
         allDone: false
     });
 
-    // Resaltar visualmente el dropdown
-    marketSelect.classList.add('ring-2', 'ring-emerald-400');
-    setTimeout(() => marketSelect.classList.remove('ring-2', 'ring-emerald-400'), 2000);
+    // Resaltar visualmente el mercado que sigue
+    const chipsMercado = document.getElementById('evalMarketSelect_chips') || marketSelect;
+    chipsMercado.classList.add('ring-2', 'ring-emerald-400', 'rounded-xl');
+    setTimeout(() => chipsMercado.classList.remove('ring-2', 'ring-emerald-400', 'rounded-xl'), 2000);
 };
 
 /* ------------------------------------------------------------
@@ -678,14 +695,12 @@ window.App.evaluation.updateSaveButtonLabel = function() {
     const btnSave = document.getElementById('btnSaveEval');
     if (!btnSave) return;
     const isCruceErrado = document.getElementById('evalModal').dataset.cruceErrado === 'true';
-    if (isCruceErrado) {
-        btnSave.classList.remove('bg-indigo-600');
-        btnSave.classList.add('bg-rose-600');
-        btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">block</span> Confirmar Cruce Errado';
-    } else {
-        btnSave.classList.remove('bg-rose-600');
-        btnSave.classList.add('bg-indigo-600');
-        btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación';
-    }
+    btnSave.classList.toggle('bg-rose-600', isCruceErrado);
+    btnSave.classList.toggle('text-white', isCruceErrado);
+    btnSave.classList.toggle('bg-blue-50', !isCruceErrado);
+    btnSave.classList.toggle('text-blue-800', !isCruceErrado);
+    btnSave.innerHTML = isCruceErrado
+        ? '<span class="material-symbols-outlined text-[18px]">block</span> Confirmar Cruce Errado'
+        : '<span class="material-symbols-outlined text-[18px]">save</span> Guardar';
 };
 console.log('[SegmentApp] evaluation.js cargado.');
