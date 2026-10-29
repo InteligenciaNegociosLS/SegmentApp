@@ -356,7 +356,7 @@ window.App.carga.renderRevision = function(v, tipo, origen) {
             </div>` : `<div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-3 font-bold text-emerald-800 text-sm">✅ Sin errores. El archivo se puede subir.</div>`}
         ${v.avisos.length ? `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-3 text-xs text-amber-900 space-y-1">${v.avisos.map(a => `<div>⚠️ ${esc(a)}</div>`).join('')}</div>` : ''}
         <div class="flex justify-end">
-            <button id="btnCargaSubir" onclick="App.carga.iniciarSubida()" ${v.ok ? '' : 'disabled'} class="px-6 py-3 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2 ${v.ok ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}">
+            <button id="btnCargaSubir" onclick="App.carga.iniciarSubida()" ${v.ok ? '' : 'disabled'} class="px-6 py-3 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2 ${v.ok ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}">
                 <span class="material-symbols-outlined text-[18px]">cloud_upload</span> Subir como borrador
             </button>
         </div>`;
@@ -394,7 +394,7 @@ window.App.carga.iniciarSubida = async function() {
         zona.innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-sm text-rose-700">
             <div class="font-bold mb-2">La subida se interrumpió: ${esc(e.message)}</div>
             <div class="mb-3">Lo que ya se subió está guardado como borrador. Reintentar continúa sin duplicar.</div>
-            <button onclick="App.carga.iniciarSubida()" class="bg-rose-600 hover:bg-rose-700 text-white px-5 py-2 rounded-full font-bold">Reintentar</button></div>`;
+            <button onclick="App.carga.iniciarSubida()" class="bg-rose-600 text-white px-5 py-2 rounded-full font-bold">Reintentar</button></div>`;
         if (btn) btn.disabled = false;
     }
 };
@@ -445,8 +445,8 @@ window.App.carga.mostrarComparacion = async function(id, tipo, destino = 'cargaP
 function botonesPublicar(id, version) {
     if (!version.archivo) return '<div class="text-xs text-rose-600 font-bold">Esta versión no tiene su archivo completo; termina la subida antes de publicarla.</div>';
     return `<div class="flex flex-wrap justify-end gap-2">
-        <button onclick="App.carga.mostrarPestana('versiones')" class="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-full text-sm font-bold">Dejar como borrador</button>
-        <button onclick="App.carga.publicar('${id}')" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-sm font-bold shadow-md flex items-center gap-2">
+        <button onclick="App.carga.mostrarPestana('versiones')" class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold">Dejar como borrador</button>
+        <button onclick="App.carga.publicar('${id}')" class="px-6 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-bold shadow-md flex items-center gap-2">
             <span class="material-symbols-outlined text-[18px]">publish</span> Publicar (pasa a ser "Hoy")</button></div>`;
 }
 
@@ -515,10 +515,10 @@ window.App.carga.renderVersiones = async function() {
                  archivado: '<span class="text-[10px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">Archivado</span>' })[v.estado];
         const acciones = (v) => {
             const b = [];
-            if (!v.es_vigente && v.estado !== 'archivado') b.push(`<button onclick="App.carga.compararDesdeLista('${v.id}','${v.tipo}')" class="text-xs font-bold text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-full">Comparar</button>`);
-            if (!v.es_vigente && v.estado !== 'archivado' && v.archivo) b.push(`<button onclick="App.carga.publicar('${v.id}')" class="text-xs font-bold text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-full">${v.estado === 'publicado' ? 'Volver a esta versión' : 'Publicar'}</button>`);
-            b.push(`<button onclick="App.carga.renombrar('${v.id}')" class="text-xs font-bold text-slate-600 hover:bg-slate-100 px-3 py-1.5 rounded-full">Renombrar</button>`);
-            if (v.estado === 'borrador') b.push(`<button onclick="App.carga.archivar('${v.id}')" class="text-xs font-bold text-slate-500 hover:bg-slate-100 px-3 py-1.5 rounded-full">Archivar</button>`);
+            if (!v.es_vigente && v.estado !== 'archivado') b.push(`<button onclick="App.carga.compararDesdeLista('${v.id}','${v.tipo}')" class="text-xs font-bold text-indigo-700 px-3 py-1.5 rounded-full">Comparar</button>`);
+            if (!v.es_vigente && v.estado !== 'archivado' && v.archivo) b.push(`<button onclick="App.carga.publicar('${v.id}')" class="text-xs font-bold text-emerald-700 px-3 py-1.5 rounded-full">${v.estado === 'publicado' ? 'Volver a esta versión' : 'Publicar'}</button>`);
+            b.push(`<button onclick="App.carga.renombrar('${v.id}')" class="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-full">Renombrar</button>`);
+            if (v.estado === 'borrador') b.push(`<button onclick="App.carga.archivar('${v.id}')" class="text-xs font-bold text-slate-500 px-3 py-1.5 rounded-full">Archivar</button>`);
             return b.join('');
         };
         const grupo = (tipo, titulo) => {

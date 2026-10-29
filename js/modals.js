@@ -31,7 +31,7 @@ window.App.modals.showMarketDetails = function() {
 
     st.CURRENT_COMP_BREAKDOWN.forEach((item, idx) => {
         const share = totalMkt > 0 ? (item.rx / totalMkt) * 100 : 0;
-        let rowStyle  = "text-slate-600 hover:bg-slate-50 transition";
+        let rowStyle  = "text-slate-600 transition";
         let nameStyle = "";
         let shareStyle = "text-slate-500";
         if (item.type === 'PHQ') {
@@ -144,19 +144,19 @@ window.App.modals.openDoctorModal = function(docId) {
         `;
 
         doc.ficheroData.forEach((repData, idx) => {
-            let html = `<div class="mb-4 bg-slate-50 rounded-[1.5rem] border border-slate-200 shadow-sm relative group overflow-hidden transition hover:border-purple-300">`;
+            let html = `<div class="mb-4 bg-slate-50 rounded-3xl border border-slate-200 shadow-sm relative group overflow-hidden transition">`;
             const lat = d.getValueCaseInsensitive(repData, 'GPS_LAT');
             const lon = d.getValueCaseInsensitive(repData, 'GPS_LON');
             let mapBtn = '';
             if (lat && lon) {
-                mapBtn = `<a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="flex items-center gap-1 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:text-blue-600 hover:border-blue-300 transition shadow-sm"><span class="material-symbols-outlined text-[16px] text-rose-500">location_on</span> Ver Ubicación</a>`;
+                mapBtn = `<a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="flex items-center gap-1 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-sm"><span class="material-symbols-outlined text-[16px] text-rose-500">location_on</span> Ver Ubicación</a>`;
             }
             html += `<div class="flex justify-between items-center p-4 border-b border-slate-200 bg-white"><div class="flex items-center gap-2"><span class="bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-purple-200">Asesor #${idx + 1}</span></div>${mapBtn}</div>`;
             html += `<div class="p-5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center">`;
             Object.entries(repData).forEach(([k, v]) => {
                 if (v && !k.toUpperCase().includes('GPS')) {
                     html += `
-                        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center transition hover:border-purple-200">
+                        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center transition">
                             <span class="block text-slate-400 font-mono uppercase text-[9px] tracking-widest truncate w-full mb-1" title="${k}">${k}</span>
                             <span class="font-semibold text-slate-700 break-words text-sm text-center">${v}</span>
                         </div>
@@ -183,7 +183,7 @@ window.App.modals.openDoctorModal = function(docId) {
             labels: ['Lab (PHQ)', 'Resto'],
             datasets: [{
                 data: [doc.rxPhq, restRx],
-                backgroundColor: ['#0A56D1', '#E2E8F0'],
+                backgroundColor: ['#0b57d0', '#e1e5ec'],
                 borderWidth: 2,
                 borderColor: '#ffffff',
                 hoverOffset: 4
@@ -196,7 +196,7 @@ window.App.modals.openDoctorModal = function(docId) {
             plugins: {
                 legend: { display: false },
                 datalabels: {
-                    color: (context) => context.dataIndex === 0 ? '#ffffff' : '#64748b',
+                    color: (context) => context.dataIndex === 0 ? '#ffffff' : '#5d6068',
                     font: { weight: 'bold', size: 12 },
                     formatter: (value, ctx) => {
                         let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
@@ -228,7 +228,7 @@ window.App.modals.openDoctorModal = function(docId) {
     });
     for (const [mkt, rows] of Object.entries(markets)) {
         const mktDiv = document.createElement('div');
-        mktDiv.className = "mb-6 border border-slate-200 rounded-[1.5rem] overflow-hidden shadow-sm";
+        mktDiv.className = "mb-6 border border-slate-200 rounded-3xl overflow-hidden shadow-sm";
         const mktTotal = rows.reduce((s, r) => s + r.rx, 0);
         const mktPhq   = rows.reduce((s, r) => s + (d.isPhq(r.prod) ? r.rx : 0), 0);
         const mktShare = mktTotal > 0 ? (mktPhq / mktTotal) * 100 : 0;
@@ -263,7 +263,7 @@ window.App.modals.openDoctorModal = function(docId) {
                         const rxLabVal = isMyProd ? `<span class="font-bold text-blue-600 font-mono">${ui.formatNumber(r.rx)}</span>` : '<span class="text-slate-300">-</span>';
                         const typeBadge = isMyProd ? '<span class="text-[9px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">PHQ</span>' : '<span class="text-[9px] text-slate-400">Comp</span>';
                         return `
-                            <tr class="${rowClass} hover:bg-slate-50 transition">
+                            <tr class="${rowClass} transition">
                                 <td class="p-3 text-slate-700 font-medium truncate" title="${r.prod}">${r.prod}</td>
                                 <td class="p-3 text-right font-mono text-slate-600">${ui.formatNumber(r.rx)}</td>
                                 <td class="p-3 text-right font-mono">${rxLabVal}</td>

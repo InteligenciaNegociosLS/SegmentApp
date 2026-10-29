@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <meta name="theme-color" content="#f8fafc">
+    <meta name="theme-color" content="#f8f9fc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>SegmentApp v30 (Supabase) - Dev. Hernando Sanoja</title>
@@ -16,60 +16,60 @@
     <script src="js/entorno.js"></script>
     <script src="js/errores.js"></script>
 
-    <!-- Tailwind + Fuentes + Material Symbols -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <!-- Estilos (Material 3 Expressive, generados con "npm run css") y fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,75..125,300..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
+    <link rel="stylesheet" href="css/app.css">
 
     <!-- Core Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
-    <!-- Estilos propios -->
-    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="text-slate-800">
 
 <!-- Top Navigation M3 -->
 <nav class="bg-white text-slate-800 shadow-sm fixed w-full z-50 no-print border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="bg-blue-50 text-blue-600 p-2 rounded-xl flex items-center justify-center relative">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="hidden sm:flex bg-blue-50 text-blue-600 p-2 rounded-xl items-center justify-center relative">
                 <span class="material-symbols-outlined text-2xl">apps</span>
             </div>
             <div class="flex flex-col justify-center">
-                <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v30 (Supabase) • Dev. Hernando Sanoja</span>
+                <h1 class="font-display font-bold text-lg sm:text-xl leading-tight text-slate-800 tracking-tight truncate">SegmentApp</h1>
+                <span class="hidden sm:block text-[11px] text-slate-500 font-medium">Segmentación Estratégica • v30 • Dev. Hernando Sanoja</span>
             </div>
         </div>
-        <div class="flex items-center gap-2 md:gap-4">
+        <div class="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0">
             <div id="offlineIndicator" class="hidden bg-rose-50 border border-rose-200 text-rose-600 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm items-center gap-1 animate-pulse"><span class="material-symbols-outlined text-[16px]">wifi_off</span> <span class="hidden sm:inline">Sin Conexión</span></div>
-            <div id="navUserInfo" class="hidden flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full shadow-sm">
+            <div id="navUserInfo" class="hidden flex items-center gap-1 sm:gap-2 bg-indigo-50 border border-indigo-100 px-2 sm:px-3 py-1.5 rounded-full shadow-sm">
                 <span class="material-symbols-outlined text-indigo-600 text-[18px]">account_circle</span>
                 <span id="navUserName" class="text-xs font-bold text-indigo-800 hidden sm:inline">Visitador</span>
                 <div class="w-px h-4 bg-indigo-200 mx-1"></div>
-                <button onclick="logoutSession()" class="text-indigo-400 hover:text-rose-500 transition" title="Cerrar Sesión">
+                <button onclick="logoutSession()" class="text-indigo-400 transition" title="Cerrar Sesión">
                     <span class="material-symbols-outlined text-[16px]">logout</span>
                 </button>
             </div>
             <div id="btnLoginNavContainer" class="flex items-center">
-                <button class="flex items-center gap-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full text-sm font-bold transition shadow-sm border border-indigo-100" onclick="openLoginModal()" title="Ingresar">
+                <button class="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-full text-sm font-bold transition shadow-sm border border-indigo-100" onclick="openLoginModal()" title="Ingresar">
                     <span class="material-symbols-outlined text-[18px]">login</span> <span class="hidden sm:inline">Ingresar</span>
                 </button>
             </div>
-            <button class="hidden md:flex items-center gap-1 text-slate-500 hover:text-slate-800 text-sm font-semibold transition p-2" onclick="showConfirmClearModal()">
+            <button class="hidden md:flex items-center gap-1 text-slate-500 text-sm font-semibold transition p-2" onclick="showConfirmClearModal()">
                 <span class="material-symbols-outlined text-lg">restart_alt</span> <span class="hidden lg:inline">Recargar</span>
             </button>
             <div class="h-6 w-px bg-slate-200 hidden md:block"></div>
-            <button id="btnProductsNav" class="text-slate-500 hover:text-slate-800 flex items-center gap-1 text-sm font-semibold transition p-2" onclick="openProductModal()">
-                <span class="material-symbols-outlined text-lg">medication</span> <span class="hidden sm:inline">Productos</span>
+            <button id="btnProductsNav" class="text-slate-500 flex items-center gap-1 text-sm font-semibold transition p-2" onclick="openProductModal()">
+                <span class="material-symbols-outlined text-lg">medication</span> <span class="hidden lg:inline whitespace-nowrap">Productos</span>
             </button>
-            <button id="btnVersionDatos" class="hidden flex items-center gap-1 text-slate-600 hover:bg-slate-100 border border-slate-200 px-3 py-2 rounded-full text-xs font-bold transition" onclick="abrirVersiones()" title="Versión de datos">
-                <span class="material-symbols-outlined text-[18px]">history</span> <span id="lblVersionDatos" class="hidden sm:inline">Datos: Hoy</span>
+            <button id="btnVersionDatos" class="hidden flex items-center gap-1 text-slate-600 border border-slate-200 px-3 py-2 rounded-full text-xs font-bold transition" onclick="abrirVersiones()" title="Versión de datos">
+                <span class="material-symbols-outlined text-[18px]">history</span> <span id="lblVersionDatos" class="hidden lg:inline whitespace-nowrap">Datos: Hoy</span>
             </button>
-            <button id="btnUploadData" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-md transition items-center gap-2" onclick="abrirCargaDatos()">
-                <span class="material-symbols-outlined text-sm">upload</span> <span class="hidden sm:inline">Cargar Datos</span>
+            <button id="btnUploadData" class="hidden bg-blue-600 text-white px-3 sm:px-5 py-2.5 rounded-full text-sm font-bold shadow-md transition items-center gap-2" onclick="abrirCargaDatos()">
+                <span class="material-symbols-outlined text-sm">upload</span> <span class="hidden lg:inline whitespace-nowrap">Cargar Datos</span>
             </button>
         </div>
     </div>
@@ -83,7 +83,7 @@
         <span class="material-symbols-outlined text-5xl text-blue-600 animate-spin-reverse">sync</span>
         <p class="text-slate-600 text-sm mt-3 font-medium font-display" id="loadingText">Iniciando sistema...</p>
         <div class="w-64 max-w-full mx-auto mt-4 bg-slate-200 rounded-full h-2 overflow-hidden hidden shadow-inner" id="loadingBarContainer">
-            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" id="loadingBarFill" style="width: 0%"></div>
+            <div class="bg-blue-600 h-2 rounded-full transition-all" id="loadingBarFill" style="width: 0%"></div>
         </div>
         <p class="text-[10px] text-slate-400 mt-1 font-mono font-bold hidden tracking-widest uppercase" id="loadingBytes">0 MB / 0 MB</p>
     </div>
@@ -113,13 +113,13 @@
                 </div>
                 <div class="h-20 w-px bg-slate-200 hidden lg:block"></div>
                 <div class="flex flex-wrap sm:flex-nowrap justify-center gap-3 w-full sm:w-auto h-full mt-2 lg:mt-0">
-                    <button onclick="openAccessManager()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
+                    <button onclick="openAccessManager()" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-3 rounded-full text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
                         <span class="material-symbols-outlined text-[20px]">vpn_key</span> Claves
                     </button>
-                    <button onclick="openSurveyConfigModal()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
+                    <button onclick="openSurveyConfigModal()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-3 rounded-full text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
                         <span class="material-symbols-outlined text-[20px]">tune</span> Ponderación
                     </button>
-                    <button onclick="descargarRegistroFallas()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap" title="Descargar el registro de fallas de este dispositivo">
+                    <button onclick="descargarRegistroFallas()" class="bg-slate-50 text-slate-700 border border-slate-200 px-4 py-3 rounded-full text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap" title="Descargar el registro de fallas de este dispositivo">
                         <span class="material-symbols-outlined text-[20px]">bug_report</span> Registro de fallas
                     </button>
                 </div>
@@ -148,17 +148,17 @@
                 Panel de Control del Equipo
             </h3>
     <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="openReportsModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-700 px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition flex items-center justify-center gap-2">
+                <button onclick="openReportsModal()" class="bg-indigo-600 text-white border border-indigo-700 px-4 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-[18px]">monitoring</span> Reportes Avanzados
                 </button>
-                <button onclick="exportAdminEvaluationsExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2">
+                <button onclick="exportAdminEvaluationsExcel()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-full text-sm font-bold shadow-sm transition flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-[18px]">download_for_offline</span> Descargar
                 </button>
             </div>
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white rounded-[2rem] p-6 md:p-8 border border-slate-200 shadow-sm flex flex-col">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+            <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4 border-b border-slate-100 pb-3">
                     <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2 uppercase tracking-widest">
                         <span class="material-symbols-outlined text-blue-500">checklist</span> Progreso de Evaluación
                     </h4>
@@ -180,7 +180,7 @@
                     <div class="p-4 text-center text-xs text-slate-500">Cargando métricas de equipo...</div>
                 </div>
             </div>
-            <div class="bg-white rounded-[2rem] p-6 md:p-8 border border-rose-200 shadow-sm relative flex flex-col">
+            <div class="bg-white rounded-3xl p-6 md:p-8 border border-rose-200 shadow-sm relative flex flex-col">
                 <div class="flex items-center justify-between mb-4 border-b border-rose-100 pb-3">
                     <h4 class="text-sm font-bold text-rose-800 flex items-center gap-2 uppercase tracking-widest">
                         <span class="material-symbols-outlined text-rose-500">warning</span> Alertas de Discrepancia
@@ -199,19 +199,19 @@
             <div class="flex items-center gap-3 text-slate-700">
                 <div class="bg-slate-100 p-2 rounded-full"><span class="material-symbols-outlined text-xl">filter_list</span></div>
                 <span class="font-display font-bold text-base tracking-wide">Panel de Filtros</span>
-                <button onclick="resetAllFilters()" class="ml-2 text-[11px] text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-full font-bold transition flex items-center gap-1 border border-rose-200">
+                <button onclick="resetAllFilters()" class="ml-2 text-[11px] text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full font-bold transition flex items-center gap-1 border border-rose-200">
                     <span class="material-symbols-outlined text-[14px]">restart_alt</span> Restablecer filtros
                 </button>
             </div>
             <div class="w-full md:w-80 relative">
                 <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400 text-sm">search</span>
-                <input type="text" id="globalSearch" placeholder="Buscar por Nombre Médico o Matrícula..." class="w-full pl-9 pr-4 py-3 md:py-2 border border-slate-300 rounded-full text-sm focus:ring-2 focus:ring-blue-500 outline-none transition bg-slate-50 hover:bg-white" onkeyup="resetPaginationAndRender()">
+                <input type="text" id="globalSearch" placeholder="Buscar por Nombre Médico o Matrícula..." class="w-full pl-9 pr-4 py-3 md:py-2 border border-slate-300 rounded-full text-sm focus:ring-2 focus:ring-blue-500 outline-none transition bg-slate-50" onkeyup="resetPaginationAndRender()">
             </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Mercados</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Market')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Market')">
                     <span id="textMarket" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelMarket">
@@ -221,7 +221,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Producto (PHQ)</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Product')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Product')">
                     <span id="textProduct" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelProduct">
@@ -231,7 +231,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Asesor Consultivo</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Rep')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Rep')">
                     <span id="textRep" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelRep">
@@ -247,7 +247,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Región</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Region')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Region')">
                     <span id="textRegion" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelRegion">
@@ -257,7 +257,7 @@
             </div>
              <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Especialidad</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Spec')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Spec')">
                     <span id="textSpec" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelSpec">
@@ -267,7 +267,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Molécula</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Molecule')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Molecule')">
                     <span id="textMolecule" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelMolecule">
@@ -277,7 +277,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Clase Terapéutica</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Class')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Class')">
                     <span id="textClass" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelClass">
@@ -293,7 +293,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Laboratorio</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Lab')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Lab')">
                     <span id="textLab" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelLab">
@@ -302,10 +302,10 @@
                 </div>
             </div>
             <div class="flex gap-2 items-end justify-end col-span-1 sm:col-span-2 lg:col-span-4 xl:col-span-5 mt-2">
-                <button class="flex items-center gap-1 px-5 py-3 bg-green-50 text-green-700 hover:bg-green-100 rounded-xl text-sm font-bold transition border border-green-200 justify-center shadow-sm" onclick="showExportModal('excel')">
+                <button class="flex items-center gap-1 px-5 py-3 bg-green-50 text-green-700 rounded-full text-sm font-bold transition border border-green-200 justify-center shadow-sm" onclick="showExportModal('excel')">
                     <span class="material-symbols-outlined text-sm">table_view</span> Generar Excel
                 </button>
-                <button class="flex items-center gap-1 px-5 py-3 bg-red-50 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition border border-red-200 justify-center shadow-sm" onclick="showExportModal('pdf')">
+                <button class="flex items-center gap-1 px-5 py-3 bg-red-50 text-red-700 rounded-full text-sm font-bold transition border border-red-200 justify-center shadow-sm" onclick="showExportModal('pdf')">
                     <span class="material-symbols-outlined text-sm">picture_as_pdf</span> Generar PDF
                 </button>
             </div>
@@ -314,16 +314,16 @@
 
     <!-- Empty State M3 -->
     <div class="hidden flex flex-col items-center justify-center py-16 text-center" id="emptyState">
-        <div class="bg-white p-12 rounded-[2rem] shadow-sm max-w-lg w-full border border-slate-200">
+        <div class="bg-white p-12 rounded-3xl shadow-sm max-w-lg w-full border border-slate-200">
             <div class="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span class="material-symbols-outlined text-5xl">cloud_sync</span>
             </div>
             <h2 class="text-3xl font-display font-bold text-slate-800 mb-3">Matriz Estratégica</h2>
             <p class="text-slate-500 mb-8 text-sm leading-relaxed" id="emptyStateMsg">Todavía no hay datos cargados en este dispositivo.</p>
-            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="reintentarCarga()">
+            <button class="w-full bg-blue-600 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="reintentarCarga()">
                 <span class="material-symbols-outlined">sync</span> Intentar de nuevo
             </button>
-            <button id="btnCargaDesdeVacio" class="hidden w-full mt-3 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold py-4 rounded-full transition shadow-sm flex items-center justify-center gap-2" onclick="abrirCargaDatos()">
+            <button id="btnCargaDesdeVacio" class="hidden w-full mt-3 bg-white text-indigo-700 border border-indigo-200 font-bold py-4 rounded-full transition shadow-sm flex items-center justify-center gap-2" onclick="abrirCargaDatos()">
                 <span class="material-symbols-outlined">upload</span> Cargar datos (administrador)
             </button>
         </div>
@@ -331,13 +331,13 @@
 
     <!-- Login requerido (sin sesión no se muestran datos) -->
     <div class="hidden flex-col items-center justify-center py-16 text-center" id="loginRequiredState">
-        <div class="bg-white p-12 rounded-[2rem] shadow-sm max-w-lg w-full border border-slate-200 mx-auto">
+        <div class="bg-white p-12 rounded-3xl shadow-sm max-w-lg w-full border border-slate-200 mx-auto">
             <div class="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span class="material-symbols-outlined text-5xl">lock</span>
             </div>
             <h2 class="text-3xl font-display font-bold text-slate-800 mb-3">Inicia sesión</h2>
             <p class="text-slate-500 mb-8 text-sm leading-relaxed">Para ver la información ingresa con tu correo corporativo y tu clave.</p>
-            <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="openLoginModal()">
+            <button class="w-full bg-indigo-600 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="openLoginModal()">
                 <span class="material-symbols-outlined">login</span> Ingresar
             </button>
         </div>
@@ -347,7 +347,7 @@
     <div class="hidden animate-fade-in" id="dashboardContent">
 
         <!-- Dashboard del Visitador -->
-        <div id="visitadorDashboard" class="hidden mb-6 bg-white p-6 md:p-8 rounded-[2rem] border border-indigo-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
+        <div id="visitadorDashboard" class="hidden mb-6 bg-white p-6 md:p-8 rounded-3xl border border-indigo-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
             <div class="flex-1 w-full">
                 <h3 class="font-display font-bold text-indigo-900 text-xl mb-6 flex items-center gap-2">
                     <span class="material-symbols-outlined text-indigo-500">monitoring</span> Tu Progreso de Evaluación
@@ -359,11 +359,11 @@
                     </div>
                     <div>
                         <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">2. Cruzados en Panel (CloseUp)</span><span class="text-blue-600 font-mono text-sm" id="visTotalCruzados">0</span></div>
-                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full transition-all duration-1000" id="visBarCruzados" style="width: 0%"></div></div>
+                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full transition-all" id="visBarCruzados" style="width: 0%"></div></div>
                     </div>
                     <div>
                         <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">3. Evaluados/Encuestados</span><span class="text-emerald-600 font-mono text-sm" id="visTotalEvaluados">0 </span></div>
-                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-emerald-500 h-2.5 rounded-full transition-all duration-1000" id="visBarEvaluados" style="width: 0%"></div></div>
+                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-emerald-500 h-2.5 rounded-full transition-all" id="visBarEvaluados" style="width: 0%"></div></div>
                     </div>
                 </div>
             </div>
@@ -388,7 +388,7 @@
                     <p class="text-sm text-slate-500 mt-2"><span class="font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded" id="topCompRx">0</span> Rx en mercado</p>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm col-span-1 md:col-span-2 flex flex-col justify-center cursor-pointer group hover:border-blue-300 transition" onclick="showMarketDetails()">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm col-span-1 md:col-span-2 flex flex-col justify-center cursor-pointer group transition" onclick="showMarketDetails()">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-slate-600 text-xs uppercase tracking-widest">Composición del Mercado</h3>
                     <span class="text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full font-semibold opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
@@ -396,9 +396,9 @@
                     </span>
                 </div>
                 <div class="w-full h-8 flex rounded-full overflow-hidden mb-3 bg-slate-100 shadow-inner">
-                    <div class="bg-blue-600 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" id="barPhq" style="width: 0%">PHQ</div>
-                    <div class="bg-rose-400 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" id="barComp" style="width: 0%">Top Comp</div>
-                    <div class="bg-slate-300 h-full flex items-center justify-center text-[10px] font-bold text-slate-600 transition-all duration-1000" id="barRest" style="width: 100%">Resto</div>
+                    <div class="bg-blue-600 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all" id="barPhq" style="width: 0%">PHQ</div>
+                    <div class="bg-rose-400 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all" id="barComp" style="width: 0%">Top Comp</div>
+                    <div class="bg-slate-300 h-full flex items-center justify-center text-[10px] font-bold text-slate-600 transition-all" id="barRest" style="width: 100%">Resto</div>
                 </div>
                 <div class="flex justify-between text-xs font-medium text-slate-500 px-2">
                     <span id="labelPhq" class="text-blue-700">PHQ: 0%</span>
@@ -449,28 +449,28 @@
                         Matriz Estratégica
                         <span class="text-[10px] font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full ml-3 tracking-widest uppercase">Haz clic para filtrar</span>
                     </h3>
-                    <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200 w-max shadow-inner">
-                        <button class="px-4 py-1.5 text-xs font-bold rounded-lg transition matrix-toggle-btn bg-blue-600 text-white shadow-sm" id="btnMatrixData" onclick="switchMatrixMode('closeup')">
+                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200 w-max">
+                        <button class="px-4 py-1.5 text-xs font-bold rounded-full transition matrix-toggle-btn bg-blue-600 text-white shadow-sm" id="btnMatrixData" onclick="switchMatrixMode('closeup')">
                             Datos (CloseUp)
                         </button>
-                        <button class="px-4 py-1.5 text-xs font-bold rounded-lg transition matrix-toggle-btn text-slate-500 hover:text-slate-700 hover:bg-white" id="btnMatrixSurvey" onclick="switchMatrixMode('survey')">
+                        <button class="px-4 py-1.5 text-xs font-bold rounded-full transition matrix-toggle-btn text-slate-500" id="btnMatrixSurvey" onclick="switchMatrixMode('survey')">
                             Encuestas (Asesor)
                         </button>
                     </div>
                 </div>
                 <div class="flex gap-2 items-end">
-                    <button onclick="exportMatrixToPNG()" class="text-slate-500 hover:text-blue-600 hover:bg-blue-50 bg-white border border-slate-200 px-4 py-2.5 rounded-full shadow-sm transition flex items-center justify-center gap-1.5" title="Exportar Matriz como Imagen">
+                    <button onclick="exportMatrixToPNG()" class="text-slate-500 bg-white border border-slate-200 px-4 py-2.5 rounded-full shadow-sm transition flex items-center justify-center gap-1.5" title="Exportar Matriz como Imagen">
                         <span class="material-symbols-outlined text-[20px]">photo_camera</span>
                         <span class="text-xs font-bold">Descargar Matriz</span>
                     </button>
-                    <button onclick="toggleSummaryCells()" class="text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-3 rounded-full transition flex items-center gap-2">
+                    <button onclick="toggleSummaryCells()" class="text-xs font-bold bg-slate-200 text-slate-700 px-5 py-3 rounded-full transition flex items-center gap-2">
                         <span class="material-symbols-outlined text-sm">functions</span>
                         <span id="btnSummaryText">Ver Subtotales</span>
                     </button>
                 </div>
             </div>
 
-            <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200 min-w-[850px]" id="matrixCaptureTarget">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 min-w-[850px]" id="matrixCaptureTarget">
                 <div class="matrix-grid" id="matrixGridElement">
                     <div></div>
                     <div class="matrix-header-col"><div class="text-red-400 mb-2"><span class="material-symbols-outlined bg-red-50 p-1 rounded-full">remove</span></div>Baja Adopción (-)<br><span class="text-[10px] font-medium text-slate-400" id="header_label_C">≤ 33%</span></div>
@@ -503,7 +503,7 @@
                             <span class="slider-toggle"></span>
                         </label>
                     </div>
-                    <button class="hidden text-xs bg-slate-200 hover:bg-slate-300 px-5 py-2.5 rounded-full text-slate-700 font-bold transition flex items-center gap-1" id="clearFilterBtn" onclick="clearMatrixFilter()">
+                    <button class="hidden text-xs bg-slate-200 px-5 py-2.5 rounded-full text-slate-700 font-bold transition flex items-center gap-1" id="clearFilterBtn" onclick="clearMatrixFilter()">
                         <span class="material-symbols-outlined text-[14px]">filter_alt_off</span> Limpiar Filtro
                     </button>
                 </div>
@@ -528,10 +528,10 @@
             <div class="p-5 border-t border-slate-200 bg-slate-50 flex justify-between items-center rounded-b-[1.5rem]" id="paginationContainer">
                 <span class="text-sm text-slate-600 font-medium" id="pageInfo">Mostrando 0 de 0</span>
                 <div class="flex gap-3">
-                    <button id="btnPrevPage" onclick="prevPage()" class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shadow-sm">
+                    <button id="btnPrevPage" onclick="prevPage()" class="px-4 py-2 bg-white border border-slate-300 rounded-full text-sm font-bold text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shadow-sm">
                         <span class="material-symbols-outlined text-[20px]">chevron_left</span> Anterior
                     </button>
-                    <button id="btnNextPage" onclick="nextPage()" class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shadow-sm">
+                    <button id="btnNextPage" onclick="nextPage()" class="px-4 py-2 bg-white border border-slate-300 rounded-full text-sm font-bold text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shadow-sm">
                         Siguiente <span class="material-symbols-outlined text-[20px]">chevron_right</span>
                     </button>
                 </div>
@@ -557,8 +557,8 @@
             <input type="hidden" id="hiddenRepToDelete">
         </div>
         <div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="document.getElementById('confirmClearRepModal').classList.add('hidden')">Cancelar</button>
-            <button class="px-5 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-rose-700 transition flex items-center gap-1" onclick="executeClearRepEvals()" id="btnConfirmClearRep">Borrar Datos</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="document.getElementById('confirmClearRepModal').classList.add('hidden')">Cancelar</button>
+            <button class="px-5 py-2.5 bg-rose-600 text-white rounded-full text-sm font-bold shadow-sm transition flex items-center gap-1" onclick="executeClearRepEvals()" id="btnConfirmClearRep">Borrar Datos</button>
         </div>
     </div>
 </div>
@@ -576,15 +576,15 @@
             <p class="text-xs text-rose-500 font-bold bg-rose-50 p-2 rounded-lg border border-rose-100">Usa esto solo para limpiar datos de prueba. No hay vuelta atrás.</p>
         </div>
         <div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="document.getElementById('confirmClearAllModal').classList.add('hidden')">Cancelar</button>
-            <button class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-red-700 transition flex items-center gap-1" onclick="executeClearAllEvals()" id="btnConfirmClearAll">Sí, Limpiar Todo</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="document.getElementById('confirmClearAllModal').classList.add('hidden')">Cancelar</button>
+            <button class="px-5 py-2.5 bg-red-600 text-white rounded-full text-sm font-bold shadow-sm transition flex items-center gap-1" onclick="executeClearAllEvals()" id="btnConfirmClearAll">Sí, Limpiar Todo</button>
         </div>
     </div>
 </div>
 
 <!-- Export Columns Modal -->
 <div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="exportColumnsModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <div>
                 <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
@@ -592,18 +592,18 @@
                 </h3>
                 <p class="text-xs font-medium text-slate-500 mt-1">Selecciona qué columnas quieres incluir en el archivo definitivo.</p>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="p-6 overflow-y-auto flex-1 bg-white">
             <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
                 <span class="text-xs font-bold uppercase tracking-widest text-slate-500">Columnas Disponibles</span>
-                <button class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition bg-blue-50 px-3 py-1 rounded-full" onclick="toggleAllExportCB(true)">Marcar Todas</button>
+                <button class="text-[11px] font-bold text-blue-600 transition bg-blue-50 px-3 py-1 rounded-full" onclick="toggleAllExportCB(true)">Marcar Todas</button>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="exportCheckboxContainer"></div>
         </div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end items-center gap-3">
-            <button class="text-slate-600 hover:bg-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold transition" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')">Cancelar</button>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2" onclick="executeExport()" id="exportModalActionBtn">
+            <button class="text-slate-600 px-5 py-2.5 rounded-full text-sm font-bold transition" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')">Cancelar</button>
+            <button class="bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2" onclick="executeExport()" id="exportModalActionBtn">
                 <span class="material-symbols-outlined text-[18px]">download</span> Descargar
             </button>
         </div>
@@ -612,7 +612,7 @@
 
 <!-- Survey Config Modal M3 -->
 <div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="surveyConfigModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <div>
                 <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
@@ -620,16 +620,16 @@
                 </h3>
                 <p class="text-xs font-medium text-slate-500 mt-1">Ajusta los puntos asignados a cada respuesta y los umbrales para clasificar en A, B o C.</p>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('surveyConfigModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('surveyConfigModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="p-6 overflow-y-auto flex-1 bg-white space-y-6" id="surveyConfigBody"></div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-            <button onclick="restoreDefaultWeights()" class="text-xs font-bold text-slate-500 hover:text-rose-600 transition flex items-center gap-1">
+            <button onclick="restoreDefaultWeights()" class="text-xs font-bold text-slate-500 transition flex items-center gap-1">
                 <span class="material-symbols-outlined text-[16px]">restart_alt</span> Restaurar Valores por Defecto
             </button>
             <div class="flex gap-2">
-                <button class="text-slate-600 hover:bg-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold transition" onclick="document.getElementById('surveyConfigModal').classList.add('hidden')">Cancelar</button>
-                <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="saveSurveyConfig()">Guardar Cambios</button>
+                <button class="text-slate-600 px-5 py-2.5 rounded-full text-sm font-bold transition" onclick="document.getElementById('surveyConfigModal').classList.add('hidden')">Cancelar</button>
+                <button class="bg-emerald-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="saveSurveyConfig()">Guardar Cambios</button>
             </div>
         </div>
     </div>
@@ -649,8 +649,8 @@
             <p id="adminAuthError" class="text-rose-500 text-xs font-bold hidden">Clave incorrecta.</p>
         </div>
         <div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="document.getElementById('adminAuthModal').classList.add('hidden')">Cancelar</button>
-            <button class="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-blue-700 transition" onclick="processAdminAuth()">Acceder</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="document.getElementById('adminAuthModal').classList.add('hidden')">Cancelar</button>
+            <button class="px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-sm transition" onclick="processAdminAuth()">Acceder</button>
         </div>
     </div>
 </div>
@@ -667,24 +667,24 @@
             <p class="text-sm text-slate-600">Esto borrará la memoria local y recargará la página. Tendrás que procesar los archivos base nuevamente si no están en el repositorio.</p>
         </div>
         <div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="document.getElementById('confirmResetModal').classList.add('hidden')">Cancelar</button>
-            <button class="px-5 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-rose-700 transition" onclick="executeClearSession()">Borrar Memoria</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="document.getElementById('confirmResetModal').classList.add('hidden')">Cancelar</button>
+            <button class="px-5 py-2.5 bg-rose-600 text-white rounded-full text-sm font-bold shadow-sm transition" onclick="executeClearSession()">Borrar Memoria</button>
         </div>
     </div>
 </div>
 
 <!-- Carga de datos (solo administrador) -->
 <div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="cargaDatosModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 gap-3">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="p-4 sm:p-6 border-b border-slate-100 flex flex-wrap justify-between items-center bg-slate-50 gap-3">
             <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
-                <span class="material-symbols-outlined text-blue-600">database</span> Datos (Admin)
+                <span class="material-symbols-outlined text-blue-600">database</span> Datos
             </h3>
-            <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
-                <button id="cargaTabBtn_nueva" class="px-4 py-1.5 rounded-full text-xs font-bold transition" onclick="App.carga.mostrarPestana('nueva')">Cargar nueva</button>
-                <button id="cargaTabBtn_versiones" class="px-4 py-1.5 rounded-full text-xs font-bold transition" onclick="App.carga.mostrarPestana('versiones')">Versiones</button>
+            <div class="order-last w-full sm:order-none sm:w-auto flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+                <button id="cargaTabBtn_nueva" class="flex-1 sm:flex-none px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap" onclick="App.carga.mostrarPestana('nueva')">Cargar nueva</button>
+                <button id="cargaTabBtn_versiones" class="flex-1 sm:flex-none px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap" onclick="App.carga.mostrarPestana('versiones')">Versiones</button>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="App.carga.cerrarPanel()" title="Cerrar"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="App.carga.cerrarPanel()" title="Cerrar"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="p-6 md:p-8 overflow-y-auto">
             <div id="cargaTab_nueva">
@@ -695,10 +695,10 @@
                 <div class="mb-5">
                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">1. ¿Qué archivo es?</span>
                     <div class="flex flex-wrap gap-3">
-                        <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 cursor-pointer hover:bg-slate-50 transition text-sm font-bold text-slate-700">
+                        <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 cursor-pointer transition text-sm font-bold text-slate-700">
                             <input type="radio" name="cargaTipo" value="recetas" class="accent-indigo-600"> Recetas (CloseUp)
                         </label>
-                        <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 cursor-pointer hover:bg-slate-50 transition text-sm font-bold text-slate-700">
+                        <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 cursor-pointer transition text-sm font-bold text-slate-700">
                             <input type="radio" name="cargaTipo" value="fichero" class="accent-indigo-600"> Fichero médico
                         </label>
                     </div>
@@ -717,7 +717,7 @@
                     <label class="block"><span class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">4. Fecha de corte</span>
                         <input type="date" id="cargaFecha" class="w-full border border-slate-300 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"></label>
                 </div>
-                <button class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-full font-bold shadow-md transition flex items-center justify-center gap-2 mb-5" onclick="App.carga.revisar()">
+                <button class="w-full sm:w-auto bg-indigo-600 text-white px-8 py-3 rounded-full font-bold shadow-md transition flex items-center justify-center gap-2 mb-5" onclick="App.carga.revisar()">
                     <span class="material-symbols-outlined text-sm">fact_check</span> Revisar archivo
                 </button>
                 <div id="cargaResultado"></div>
@@ -733,32 +733,32 @@
 
 <!-- Versión de datos (todos) -->
 <div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="versionModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-600">history</span> Versión de datos</h3>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="App.versiones.cerrar()" title="Cerrar"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="App.versiones.cerrar()" title="Cerrar"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="p-6 overflow-y-auto" id="versionModalCuerpo"></div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex flex-wrap justify-between gap-2">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-full text-sm font-bold transition" onclick="App.versiones.volverAHoy()">Volver a "Hoy"</button>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="App.versiones.aplicar()">Ver esta versión</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="App.versiones.volverAHoy()">Volver a "Hoy"</button>
+            <button class="bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="App.versiones.aplicar()">Ver esta versión</button>
         </div>
     </div>
 </div>
 
 <!-- Nueva clave (después del enlace de recuperación) -->
 <div class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 transition-opacity" id="nuevaClaveModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in">
         <div class="p-6 bg-indigo-600 text-center">
             <h2 class="text-xl font-display font-bold text-white">Crea tu nueva clave</h2>
             <p class="text-indigo-100 text-xs mt-1">Mínimo 8 caracteres.</p>
         </div>
         <div class="p-8 bg-slate-50">
             <label class="block mb-4"><span class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Nueva clave</span>
-                <input type="password" id="nuevaClave1" autocomplete="new-password" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-mono"></label>
+                <input type="password" id="nuevaClave1" autocomplete="new-password" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></label>
             <label class="block mb-6"><span class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Repite la clave</span>
-                <input type="password" id="nuevaClave2" autocomplete="new-password" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-mono" onkeypress="if(event.key==='Enter') guardarNuevaClave()"></label>
-            <button id="btnGuardarNuevaClave" onclick="guardarNuevaClave()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2">
+                <input type="password" id="nuevaClave2" autocomplete="new-password" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white" onkeypress="if(event.key==='Enter') guardarNuevaClave()"></label>
+            <button id="btnGuardarNuevaClave" onclick="guardarNuevaClave()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-full transition shadow-md flex items-center justify-center gap-2">
                 <span class="material-symbols-outlined">key</span> Guardar clave
             </button>
         </div>
@@ -767,13 +767,13 @@
 
 <!-- Products/Config Modal M3 -->
 <div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="productModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <div>
                 <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-600">category</span> Productos (PHQ)</h3>
                 <p class="text-xs font-medium text-slate-500 mt-1">Selecciona los productos objetivo para el análisis.</p>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('productModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('productModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="p-6 overflow-y-auto flex-1 bg-white">
             <div class="mb-4">
@@ -789,17 +789,17 @@
             </div>
         </div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-            <button onclick="showConfirmClearModal()" class="text-rose-500 text-xs font-bold hover:text-rose-700 flex items-center gap-1 bg-white px-4 py-2.5 rounded-xl border border-rose-100 shadow-sm transition">
+            <button onclick="showConfirmClearModal()" class="text-rose-500 text-xs font-bold flex items-center gap-1 bg-white px-4 py-2.5 rounded-full border border-rose-100 shadow-sm transition">
                 <span class="material-symbols-outlined text-[18px]">delete_forever</span> Borrar Memoria
             </button>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="saveProductsConfig()">Guardar Configuración</button>
+            <button class="bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="saveProductsConfig()">Guardar Configuración</button>
         </div>
     </div>
 </div>
 
 <!-- Institution Detail Modal M3 -->
 <div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 transition-opacity" id="institutionModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex flex-col gap-4">
             <div class="flex justify-between items-start">
                 <div>
@@ -813,7 +813,7 @@
                         <span class="bg-white px-2 py-1 rounded border border-slate-200">0 Médicos</span>
                     </p>
                 </div>
-                <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('institutionModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+                <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('institutionModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
             </div>
             <div class="flex flex-col md:flex-row gap-4 items-end justify-between border-t border-slate-200/60 pt-4">
                 <div class="w-full md:w-1/2">
@@ -847,7 +847,7 @@
 
 <!-- Doctor Detail Modal M3 -->
 <div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4" id="doctorDetailModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
         <div class="p-6 md:p-8 border-b border-slate-100 bg-slate-50 flex justify-between items-start">
             <div>
                 <div class="flex flex-wrap items-center gap-2 mb-3" id="modalBadges"></div>
@@ -858,7 +858,7 @@
                     <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg border border-blue-200 font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">pie_chart</span> <span id="modalDocShare">Share: 0%</span></span>
                 </div>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('doctorDetailModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('doctorDetailModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="bg-slate-50 border-b border-slate-200 px-6 md:px-8 flex gap-2">
             <button class="tab-btn active" id="tabBtnFichaje" onclick="switchDocTab('fichaje')">
@@ -886,7 +886,7 @@
                 <div class="hidden" id="modalGapContainer"></div>
                 <div id="modalFicheroData" class="hidden mb-4">
                     <details class="group border border-purple-200 rounded-2xl bg-purple-50 overflow-hidden shadow-sm">
-                        <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-purple-100 transition text-purple-800 font-display font-bold text-sm" id="ficheroSummaryHeader"></summary>
+                        <summary class="flex items-center justify-between p-4 cursor-pointer select-none transition text-purple-800 font-display font-bold text-sm" id="ficheroSummaryHeader"></summary>
                         <div class="p-5 border-t border-purple-100 bg-white" id="modalFicheroContainer"></div>
                     </details>
                 </div>
@@ -903,7 +903,7 @@
 
 <!-- Modal de Gestión de Accesos de Visitadores -->
 <div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="accessModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <div>
                 <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
@@ -911,7 +911,7 @@
                 </h3>
                 <p class="text-xs font-medium text-slate-500 mt-1">Visitadores del fichero y si ya tienen usuario. Las claves ya no se ven aquí: cada persona la recupera desde "¿Olvidaste tu clave?".</p>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('accessModal').classList.add('hidden')">
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('accessModal').classList.add('hidden')">
                 <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
         </div>
@@ -925,16 +925,16 @@
             <div id="accessListContainer" class="space-y-2"></div>
         </div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-            <button class="text-slate-600 hover:bg-slate-200 px-6 py-2.5 rounded-full text-sm font-bold transition" onclick="document.getElementById('accessModal').classList.add('hidden')">Cerrar</button>
+            <button class="text-slate-600 px-6 py-2.5 rounded-full text-sm font-bold transition" onclick="document.getElementById('accessModal').classList.add('hidden')">Cerrar</button>
         </div>
     </div>
 </div>
 
 <!-- Login Modal M3 -->
 <div class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 transition-opacity" id="loginModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in relative">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in relative">
         <div class="p-8 text-center bg-indigo-600 relative overflow-hidden">
-            <button onclick="document.getElementById('loginModal').classList.add('hidden')" class="absolute top-4 right-4 text-white/70 hover:text-white transition z-20 bg-black/10 hover:bg-black/20 p-1.5 rounded-full flex items-center justify-center">
+            <button onclick="document.getElementById('loginModal').classList.add('hidden')" class="absolute top-4 right-4 text-white/70 transition z-20 bg-black/10 p-1.5 rounded-full flex items-center justify-center">
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
             <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
@@ -957,14 +957,14 @@
                 <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">2. Contraseña</label>
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400">lock</span>
-                    <input type="password" id="visitadorPwd" autocomplete="current-password" class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-mono transition shadow-sm" placeholder="Tu clave de acceso..." onkeypress="if(event.key==='Enter') attemptLogin()">
+                    <input type="password" id="visitadorPwd" autocomplete="current-password" class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition shadow-sm" placeholder="Tu clave de acceso..." onkeypress="if(event.key==='Enter') attemptLogin()">
                 </div>
             </div>
-            <button onclick="attemptLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2 mb-6" id="btnLoginBtn">
+            <button onclick="attemptLogin()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-full transition shadow-md flex items-center justify-center gap-2 mb-6" id="btnLoginBtn">
                 <span class="material-symbols-outlined">login</span> Entrar al Panel
             </button>
             <div class="text-center pt-4 border-t border-slate-200">
-                <button onclick="sendPasswordReset()" id="btnForgotPwd" class="text-xs font-bold text-slate-500 hover:text-indigo-600 transition flex items-center justify-center gap-1 mx-auto py-2">
+                <button onclick="sendPasswordReset()" id="btnForgotPwd" class="text-xs font-bold text-slate-500 transition flex items-center justify-center gap-1 mx-auto py-2">
                     <span class="material-symbols-outlined text-[14px]">help</span> ¿Olvidaste tu clave? Te enviamos un correo
                 </button>
             </div>
@@ -974,7 +974,7 @@
 
 <!-- Modal de Evaluación -->
 <div class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 transition-opacity" id="evalModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fade-in">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fade-in">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start shrink-0">
             <div>
                 <div class="flex items-center gap-2 mb-1">
@@ -983,7 +983,7 @@
                 </div>
                 <h3 class="text-xl font-display font-bold text-slate-800 mt-2" id="evalModalDocName">Nombre del Médico</h3>
             </div>
-            <button class="text-slate-400 hover:text-rose-500 bg-slate-200 hover:bg-rose-100 p-2 rounded-full transition" onclick="closeEvalModal()"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-400 bg-slate-200 p-2 rounded-full transition" onclick="closeEvalModal()"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
      <div class="p-6 overflow-y-auto bg-white flex-1 space-y-6">
             <input type="hidden" id="evalDocId">
@@ -999,7 +999,7 @@
                             Esta evaluación (y las siguientes de este médico) se guardarán marcadas como <strong>cruce errado</strong>.<br>
                             <span class="text-slate-600">Nombre en tu fichero:</span> <span id="cruceErradoFicheroName" class="font-bold text-amber-900">—</span>
                         </div>
-                        <button type="button" onclick="window.App.evaluation.toggleCruceErradoMode(false)" class="mt-2 text-xs text-amber-700 hover:text-amber-900 underline font-bold">
+                        <button type="button" onclick="window.App.evaluation.toggleCruceErradoMode(false)" class="mt-2 text-xs text-amber-700 underline font-bold">
                             ← Cancelar y volver a evaluar normal
                         </button>
                     </div>
@@ -1091,31 +1091,31 @@
             <div>
                 <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">grid_view</span> 2. Clasificación en Matriz (Subjetiva)</h4>
                 <div class="grid grid-cols-3 gap-3" id="evalGrid">
-                    <button class="eval-btn relative bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-transparent hover:border-rose-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display mb-1">A-</span><span class="text-[9px] uppercase tracking-wider text-rose-500">Conquistar</span></button>
-                    <button class="eval-btn relative bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-transparent hover:border-blue-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display mb-1">A</span><span class="text-[9px] uppercase tracking-wider text-blue-500">Desarrollar</span></button>
-                    <button class="eval-btn relative bg-purple-50 hover:bg-purple-100 text-purple-700 border-2 border-transparent hover:border-purple-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display mb-1">A+</span><span class="text-[9px] uppercase tracking-wider text-purple-500">Defender</span></button>
-                    <button class="eval-btn relative bg-orange-50 hover:bg-orange-100 text-orange-700 border-2 border-transparent hover:border-orange-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display mb-1">B-</span><span class="text-[9px] uppercase tracking-wider text-orange-500">Conquistar</span></button>
-                    <button class="eval-btn relative bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-transparent hover:border-slate-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display mb-1">B</span><span class="text-[9px] uppercase tracking-wider text-slate-500">Desarrollar</span></button>
-                    <button class="eval-btn relative bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-2 border-transparent hover:border-indigo-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display mb-1">B+</span><span class="text-[9px] uppercase tracking-wider text-indigo-500">Defender</span></button>
-                    <button class="eval-btn relative bg-red-50 hover:bg-red-100 text-red-700 border-2 border-transparent hover:border-red-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display mb-1">C-</span><span class="text-[9px] uppercase tracking-wider text-red-500">Revisar</span></button>
-                    <button class="eval-btn relative bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-2 border-transparent hover:border-yellow-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display mb-1">C</span><span class="text-[9px] uppercase tracking-wider text-yellow-600">Desarrollar</span></button>
-                    <button class="eval-btn relative bg-teal-50 hover:bg-teal-100 text-teal-700 border-2 border-transparent hover:border-teal-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display mb-1">C+</span><span class="text-[9px] uppercase tracking-wider text-teal-500">Defender</span></button>
+                    <button class="eval-btn relative bg-rose-50 text-rose-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display mb-1">A-</span><span class="text-[9px] uppercase tracking-wider text-rose-500">Conquistar</span></button>
+                    <button class="eval-btn relative bg-blue-50 text-blue-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display mb-1">A</span><span class="text-[9px] uppercase tracking-wider text-blue-500">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-purple-50 text-purple-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display mb-1">A+</span><span class="text-[9px] uppercase tracking-wider text-purple-500">Defender</span></button>
+                    <button class="eval-btn relative bg-orange-50 text-orange-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display mb-1">B-</span><span class="text-[9px] uppercase tracking-wider text-orange-500">Conquistar</span></button>
+                    <button class="eval-btn relative bg-slate-50 text-slate-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display mb-1">B</span><span class="text-[9px] uppercase tracking-wider text-slate-500">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-indigo-50 text-indigo-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display mb-1">B+</span><span class="text-[9px] uppercase tracking-wider text-indigo-500">Defender</span></button>
+                    <button class="eval-btn relative bg-red-50 text-red-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display mb-1">C-</span><span class="text-[9px] uppercase tracking-wider text-red-500">Revisar</span></button>
+                    <button class="eval-btn relative bg-yellow-50 text-yellow-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display mb-1">C</span><span class="text-[9px] uppercase tracking-wider text-yellow-600">Desarrollar</span></button>
+                    <button class="eval-btn relative bg-teal-50 text-teal-700 border-2 border-transparent p-3 rounded-full font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display mb-1">C+</span><span class="text-[9px] uppercase tracking-wider text-teal-500">Defender</span></button>
                 </div>
                 <input type="hidden" id="evalSelectedQuadrant" value="">
             </div>
             <div class="w-full h-px bg-slate-100"></div>
             <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> 3. Justificación de la selección (Obligatorio)</label>
-                <textarea id="evalNotas" rows="2" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50 hover:bg-white transition" placeholder="Añade contexto adicional aquí..."></textarea>
+                <textarea id="evalNotas" rows="2" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50 transition" placeholder="Añade contexto adicional aquí..."></textarea>
             </div>
         </div>
 <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3 shrink-0 flex-wrap">
-            <button id="btnCruceErrado" type="button" class="px-5 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-rose-300 rounded-xl text-sm font-bold transition flex items-center gap-2" onclick="window.App.evaluation.toggleCruceErradoMode(true)">
+            <button id="btnCruceErrado" type="button" class="px-5 py-3 bg-rose-50 text-rose-700 border-2 border-rose-300 rounded-full text-sm font-bold transition flex items-center gap-2" onclick="window.App.evaluation.toggleCruceErradoMode(true)">
                 <span class="material-symbols-outlined text-[18px]">block</span> Marcar como Cruce Errado
             </button>
             <div class="flex gap-3 ml-auto">
-                <button class="px-6 py-3 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="closeEvalModal()">Cancelar</button>
-                <button class="px-8 py-3 bg-indigo-600 text-white rounded-full text-sm font-bold shadow-md hover:bg-indigo-700 transition flex items-center gap-2" onclick="saveEvaluation()" id="btnSaveEval">
+                <button class="px-6 py-3 text-slate-600 rounded-full text-sm font-bold transition" onclick="closeEvalModal()">Cancelar</button>
+                <button class="px-8 py-3 bg-indigo-600 text-white rounded-full text-sm font-bold shadow-md transition flex items-center gap-2" onclick="saveEvaluation()" id="btnSaveEval">
                     <span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación
                 </button>
             </div>
@@ -1126,7 +1126,7 @@
      MODAL DE REPORTES AVANZADOS
      ========================================================== -->
 <div class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-opacity" id="reportsModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col overflow-hidden animate-fade-in">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col overflow-hidden animate-fade-in">
 
         <!-- HEADER -->
         <div class="p-5 md:p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
@@ -1140,11 +1140,11 @@
                 </div>
             </div>
             <div class="flex gap-2 items-center">
-                <button onclick="exportReportsExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                <button onclick="exportReportsExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-sm transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">download</span>
                     <span class="hidden sm:inline">Descargar Excel</span>
                 </button>
-                <button onclick="closeReportsModal()" class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition">
+                <button onclick="closeReportsModal()" class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition">
                     <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
@@ -1201,10 +1201,10 @@
                         <span class="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full" id="rpt_reps_count">0 de 0</span>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="reportsSelectAllReps()" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-lg transition border border-emerald-200">
+                        <button onclick="reportsSelectAllReps()" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full transition border border-emerald-200">
                             ✓ Todos
                         </button>
-                        <button onclick="reportsDeselectAllReps()" class="text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-lg transition border border-rose-200">
+                        <button onclick="reportsDeselectAllReps()" class="text-[10px] font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-full transition border border-rose-200">
                             ✗ Ninguno
                         </button>
                     </div>
@@ -1224,13 +1224,13 @@
                         <span class="text-xs font-bold text-slate-700 uppercase tracking-widest">Vista del Gráfico</span>
                     </div>
                     <div class="flex gap-1 bg-slate-200 p-1 rounded-xl">
-                        <button id="rpt_btn_view_manager" onclick="reportsSwitchView('manager')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition bg-indigo-600 text-white">
+                        <button id="rpt_btn_view_manager" onclick="reportsSwitchView('manager')" class="px-3 py-1.5 text-xs font-bold rounded-full transition bg-indigo-600 text-white">
                             Por Gerente
                         </button>
-                 <button id="rpt_btn_view_linea" onclick="reportsSwitchView('linea')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition bg-slate-100 text-slate-600">
+                 <button id="rpt_btn_view_linea" onclick="reportsSwitchView('linea')" class="px-3 py-1.5 text-xs font-bold rounded-full transition bg-slate-100 text-slate-600">
                             Por Línea
                         </button>
-                        <button id="rpt_btn_view_rep" onclick="reportsSwitchView('rep')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition bg-slate-100 text-slate-600">
+                        <button id="rpt_btn_view_rep" onclick="reportsSwitchView('rep')" class="px-3 py-1.5 text-xs font-bold rounded-full transition bg-slate-100 text-slate-600">
                             Por Representante
                         </button>
                     </div>

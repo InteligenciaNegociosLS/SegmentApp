@@ -136,3 +136,21 @@ información**. Instrucciones en `docs/URGENTE_SEGURIDAD.md`.
   orden se calcula **una vez por versión** (migración 8) y se guarda en
   `recetas_orden_mercado`. Al subir o publicar recetas, la app lo prepara
   sola ("Preparando la versión para los visitadores: mercado X de 32").
+- Arreglo aplicado por el dueño en PRUEBAS: el VM ya entra bien. Fase 7
+  aprobada.
+
+## 29/10/2026 (Fase 6: rediseño Material 3 Expressive)
+
+- Los estilos se **generan antes de publicar** (`css/app.css`) en vez de
+  armarse en el navegador con el Tailwind en línea: la página ya no aparece
+  sin estilo al abrir y pesa menos (≈ 55 KB de estilos).
+- **Un solo color principal (azul)**: antes la app mezclaba azul e índigo.
+  Todos los colores salen de roles de Material 3 (ver `docs/DISENO.md`).
+- **Roboto Flex** reemplaza a Outfit e Inter.
+- **Mismo efecto** al pasar el mouse / tocar / presionar en todos los
+  botones, filas y casillas; mismos tiempos de animación en todas las
+  ventanas; todos los botones en forma de píldora.
+- Se corrigió el botón "Datos (CloseUp) / Encuestas (Asesor)", que podía
+  quedar con el estilo mal después de varios cambios (hallazgo M6 de la
+  auditoría).
+- Solo modo claro por ahora (el modo oscuro no se pidió).

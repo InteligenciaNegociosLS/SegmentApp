@@ -1,0 +1,334 @@
+/* ============================================================
+   SegmentApp · Estilos (Material 3 Expressive)
+   Archivo FUENTE. El navegador carga css/app.css, que se genera con:
+       npm run css
+   Aquí van:
+     1. Tokens (colores, formas, movimiento) como variables CSS
+     2. Base: tipografía Roboto Flex, fondo, foco accesible
+     3. Capa de estado: el MISMO efecto al pasar el mouse / tocar / presionar
+        en todos los elementos interactivos
+     4. Componentes propios de la app (matriz, filtros, toast, etc.)
+     5. Movimiento: los mismos tiempos en todas las ventanas
+============================================================ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- 1. Tokens ---------- */
+@layer base {
+    :root {
+        --md-primary: theme('colors.primary.600');
+        --md-on-primary: #ffffff;
+        --md-primary-container: theme('colors.primary.100');
+        --md-on-primary-container: theme('colors.primary.900');
+        --md-tertiary: theme('colors.tertiary.600');
+        --md-tertiary-container: theme('colors.tertiary.100');
+        --md-error: theme('colors.error.600');
+        --md-surface: #f8f9fc;
+        --md-surface-container-lowest: #ffffff;
+        --md-surface-container-low: theme('colors.neutral.50');
+        --md-surface-container: theme('colors.neutral.100');
+        --md-surface-container-high: theme('colors.neutral.200');
+        --md-on-surface: theme('colors.neutral.900');
+        --md-on-surface-variant: theme('colors.neutral.600');
+        --md-outline: theme('colors.neutral.400');
+        --md-outline-variant: theme('colors.neutral.300');
+        --md-inverse-surface: #2e3036;
+        --md-inverse-on-surface: #eff0f7;
+
+        /* Movimiento: duraciones y curvas únicas para toda la app */
+        --md-motion-short: 150ms;        /* estados: hover, presionar, casillas */
+        --md-motion-medium: 300ms;       /* tarjetas, paneles */
+        --md-motion-long: 450ms;         /* ventanas (diálogos), pantallas */
+        --md-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --md-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+        --md-ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+        --md-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+        /* Capas de estado (Material 3) */
+        --md-state-hover: 8%;
+        --md-state-focus: 12%;
+        --md-state-pressed: 12%;
+    }
+
+    /* ---------- 2. Base ---------- */
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+        font-family: theme('fontFamily.sans');
+        font-optical-sizing: auto;
+        background-color: var(--md-surface);
+        color: var(--md-on-surface);
+        -webkit-tap-highlight-color: transparent;
+        -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4 { letter-spacing: -0.01em; }
+    /* Cifras alineadas en tablas y contadores */
+    .font-mono, td, .kpi-card { font-variant-numeric: tabular-nums; }
+
+    /* Foco visible y accesible (teclado): 2 px con 2 px de separación */
+    :focus-visible {
+        outline: 2px solid var(--md-primary);
+        outline-offset: 2px;
+    }
+    input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 0; }
+
+    ::selection { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+}
+
+/* ---------- 3. Capa de estado (idéntica en todo) ----------
+   Se pinta ENCIMA del color de fondo, con el color del texto del propio
+   elemento (currentColor). Así el efecto es el mismo en un botón azul,
+   en uno blanco o en una fila de lista. */
+@layer components {
+    .md-estado,
+    button,
+    a[href],
+    [role="button"],
+    [onclick]:not(input):not(select):not(textarea):not(.fixed),
+    label.cursor-pointer,
+    .tab-btn,
+    .checkbox-item,
+    .export-cb-label,
+    .file-drop-area,
+    summary {
+        transition:
+            background-color var(--md-motion-short) var(--md-ease-standard),
+            background-image var(--md-motion-short) var(--md-ease-standard),
+            color var(--md-motion-short) var(--md-ease-standard),
+            border-color var(--md-motion-short) var(--md-ease-standard),
+            box-shadow var(--md-motion-short) var(--md-ease-standard),
+            transform var(--md-motion-short) var(--md-ease-standard),
+            opacity var(--md-motion-short) var(--md-ease-standard);
+    }
+    @media (hover: hover) {
+        .md-estado:hover,
+        button:not(:disabled):hover,
+        a[href]:hover,
+        [role="button"]:hover,
+        [onclick]:not(input):not(select):not(textarea):not(.fixed):not(.matrix-cell):hover,
+        label.cursor-pointer:hover,
+        .tab-btn:hover,
+        .checkbox-item:hover,
+        .export-cb-label:hover,
+        .file-drop-area:hover {
+            background-image: linear-gradient(
+                color-mix(in srgb, currentColor var(--md-state-hover), transparent),
+                color-mix(in srgb, currentColor var(--md-state-hover), transparent));
+        }
+    }
+    .md-estado:focus-visible,
+    button:focus-visible,
+    [role="button"]:focus-visible {
+        background-image: linear-gradient(
+            color-mix(in srgb, currentColor var(--md-state-focus), transparent),
+            color-mix(in srgb, currentColor var(--md-state-focus), transparent));
+    }
+    .md-estado:active,
+    button:not(:disabled):active,
+    [role="button"]:active,
+    .tab-btn:active {
+        background-image: linear-gradient(
+            color-mix(in srgb, currentColor var(--md-state-pressed), transparent),
+            color-mix(in srgb, currentColor var(--md-state-pressed), transparent));
+        transform: scale(0.97);
+    }
+
+    /* Deshabilitado: claro y sin interacción */
+    button:disabled,
+    button[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    /* No seleccionar texto en controles; sí en datos */
+    button, .tab-btn, .eval-btn, .matrix-cell, .fake-btn, .checkbox-item,
+    .export-cb-label, [role="button"], nav {
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .medico-name, .medico-address, .medico-matricula, #evalModalDocName, .evaluacion-notas,
+    input[type="text"], input[type="email"], input[type="number"], textarea {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+
+    /* Áreas táctiles cómodas (teléfono / iPad): mínimo 44–48 px */
+    @media (pointer: coarse) {
+        button, [role="button"], select, .tab-btn { min-height: 44px; min-width: 44px; }
+        input[type="text"], input[type="number"], input[type="email"], input[type="password"],
+        input[type="search"], input[type="date"], textarea { min-height: 48px; }
+    }
+
+    /* ---------- 4. Componentes de la app ---------- */
+
+    /* Matriz 9 celdas */
+    .matrix-grid {
+        display: grid;
+        grid-template-columns: auto minmax(200px, 1fr) minmax(200px, 1fr) minmax(200px, 1fr);
+        grid-template-rows: auto 1fr 1fr 1fr;
+        gap: 16px;
+        transition: all var(--md-motion-medium) var(--md-ease-standard);
+    }
+    .matrix-grid.expanded {
+        grid-template-columns: auto minmax(200px, 1fr) minmax(200px, 1fr) minmax(200px, 1fr) 200px;
+        grid-template-rows: auto 1fr 1fr 1fr auto;
+    }
+    .matrix-header-col { text-align: center; font-weight: 600; color: var(--md-on-surface-variant); padding-bottom: 8px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .matrix-header-row { display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--md-on-surface-variant); writing-mode: vertical-rl; transform: rotate(180deg); font-size: 0.8rem; text-transform: uppercase; gap: 4px; letter-spacing: 0.06em; }
+    .summary-header-title { font-weight: 700; color: var(--md-on-surface-variant); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; text-align: center; padding: 8px; display: flex; align-items: flex-end; justify-content: center; height: 100%; }
+
+    .matrix-cell {
+        border-radius: 28px;
+        padding: 16px; display: flex; flex-direction: column;
+        cursor: pointer; position: relative; min-height: 220px;
+        overflow: visible; box-sizing: border-box; opacity: 0;
+        transition: transform var(--md-motion-medium) var(--md-ease-emphasized),
+                    box-shadow var(--md-motion-medium) var(--md-ease-standard),
+                    border-radius var(--md-motion-medium) var(--md-ease-emphasized);
+        animation: md-aparecer-celda var(--md-motion-long) var(--md-ease-spring) forwards;
+        border: none;
+        box-shadow: theme('boxShadow.sm');
+        background-color: var(--md-surface-container-lowest);
+    }
+    /* Colores de cada cuadrante: contenedores tonales de Material 3 */
+    .cell-A_A { background-color: theme('colors.success.100'); color: theme('colors.success.900'); }
+    .cell-A_B { background-color: theme('colors.warning.100'); color: theme('colors.warning.900'); }
+    .cell-A_C { background-color: theme('colors.error.100'); color: theme('colors.error.900'); }
+    .cell-B_A { background-color: theme('colors.primary.100'); color: theme('colors.primary.900'); }
+    .cell-B_B { background-color: #fdeca6; color: #221b00; }
+    .cell-B_C { background-color: theme('colors.error.50'); color: theme('colors.error.900'); }
+    .cell-C_A { background-color: theme('colors.tertiary.100'); color: theme('colors.tertiary.900'); }
+    .cell-C_B { background-color: theme('colors.neutral.200'); color: theme('colors.neutral.900'); }
+    .cell-C_C { background-color: theme('colors.neutral.100'); color: theme('colors.neutral.900'); }
+    /* Forma "expresiva": al pasar el mouse la esquina se suaviza y la celda se eleva */
+    @media (hover: hover) {
+        .matrix-cell:hover { transform: translateY(-4px); box-shadow: theme('boxShadow.lg'); border-radius: 36px; z-index: 20; }
+    }
+    .matrix-cell:active { transform: scale(0.98); }
+    .matrix-cell.selected { box-shadow: 0 0 0 3px var(--md-primary), theme('boxShadow.lg'); border-radius: 36px; z-index: 25; }
+
+    .cell-tooltip {
+        position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-10px);
+        background: var(--md-inverse-surface); color: var(--md-inverse-on-surface); padding: 8px 12px; border-radius: 8px; font-size: 0.75rem;
+        width: max-content; max-width: 220px; pointer-events: none; opacity: 0;
+        transition: opacity var(--md-motion-short) var(--md-ease-standard), transform var(--md-motion-short) var(--md-ease-standard);
+        z-index: 50; box-shadow: theme('boxShadow.md');
+    }
+    .cell-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: var(--md-inverse-surface) transparent transparent transparent; }
+    .matrix-cell:hover .cell-tooltip { opacity: 1; transform: translateX(-50%) translateY(-5px); }
+    .matrix-cell-summary { background: var(--md-surface-container-high); border-radius: 28px; padding: 16px; flex-direction: column; justify-content: center; min-height: 220px; color: var(--md-on-surface-variant); }
+
+    .stats-drawer { max-height: 0; overflow: hidden; transition: max-height var(--md-motion-medium) var(--md-ease-standard), opacity var(--md-motion-medium) var(--md-ease-standard); opacity: 0; }
+    .stats-drawer.open { max-height: 50px; opacity: 1; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,0.12); }
+
+    .checkbox-item { display: flex; align-items: center; padding: 12px; cursor: pointer; border-radius: 12px; }
+    .checkbox-item input { margin-right: 12px; accent-color: var(--md-primary); width: 20px; height: 20px; }
+
+    .modal-badge { padding: 4px 8px; border-radius: 8px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.04em; }
+    .badge-gap { background-color: theme('colors.error.100'); color: theme('colors.error.900'); font-weight: 800; font-size: 0.75rem; padding: 4px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; }
+
+    /* Deslizadores (umbrales) */
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; background: transparent; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: var(--md-primary); cursor: pointer; margin-top: -7px; border: 0; box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-primary) 12%, transparent); transition: box-shadow var(--md-motion-short) var(--md-ease-standard); }
+    input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 0 0 10px color-mix(in srgb, var(--md-primary) 12%, transparent); }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: var(--md-primary-container); border-radius: 3px; }
+    input[type=range]::-moz-range-thumb { height: 20px; width: 20px; border-radius: 50%; background: var(--md-primary); border: 0; cursor: pointer; }
+    input[type=range]::-moz-range-track { height: 6px; background: var(--md-primary-container); border-radius: 3px; }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    /* Zona para soltar archivos */
+    .file-drop-area { position: relative; display: flex; align-items: center; padding: 20px; border: 2px dashed var(--md-outline); border-radius: 16px; background: var(--md-surface-container-low); }
+    .file-drop-area:hover { border-color: var(--md-primary); }
+    .fake-btn { background: var(--md-primary); border-radius: 9999px; padding: 10px 20px; margin-right: 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.01em; color: var(--md-on-primary); white-space: nowrap; }
+    .file-msg { font-size: 13px; color: var(--md-on-surface-variant); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+    .file-input { position: absolute; left: 0; top: 0; height: 100%; width: 100%; cursor: pointer; opacity: 0; }
+
+    .kpi-card { transition: transform var(--md-motion-medium) var(--md-ease-emphasized), box-shadow var(--md-motion-medium) var(--md-ease-standard); border-radius: 28px; border: none; box-shadow: theme('boxShadow.sm'); }
+    @media (hover: hover) { .kpi-card:hover { transform: translateY(-2px); box-shadow: theme('boxShadow.md'); } }
+
+    .filter-group-label { font-size: 0.72rem; font-weight: 600; color: var(--md-on-surface-variant); text-transform: uppercase; margin-bottom: 6px; margin-left: 4px; letter-spacing: 0.06em; }
+    .filter-select { font-size: 0.875rem; padding: 12px 40px 12px 14px; border-radius: 12px; border: 1px solid var(--md-outline); width: 100%; background-color: var(--md-surface-container-lowest); color: var(--md-on-surface); outline: none;
+        appearance: none; -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2344474e'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat; background-position: right 10px center; background-size: 20px; transition: border-color var(--md-motion-short) var(--md-ease-standard), box-shadow var(--md-motion-short) var(--md-ease-standard); }
+    .filter-select:focus { border-color: var(--md-primary); box-shadow: 0 0 0 1px var(--md-primary); }
+    .icon-inline { font-size: 14px; vertical-align: middle; margin-right: 2px; margin-bottom: 2px; }
+    .letter-display { font-weight: 800; letter-spacing: -0.02em; font-variation-settings: "wdth" 110; }
+
+    /* Aviso inferior (snackbar M3) */
+    #toast {
+        visibility: hidden; min-width: 250px; max-width: calc(100vw - 32px); background-color: var(--md-inverse-surface); color: var(--md-inverse-on-surface); text-align: left; border-radius: 8px; padding: 14px 16px; position: fixed; z-index: 100; left: 50%; bottom: 24px; transform: translate(-50%, 16px); font-size: 14px; line-height: 1.4; box-shadow: theme('boxShadow.lg'); opacity: 0;
+        transition: opacity var(--md-motion-medium) var(--md-ease-standard), transform var(--md-motion-medium) var(--md-ease-emphasized), visibility 0s linear var(--md-motion-medium);
+    }
+    #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, 0); transition-delay: 0s; }
+
+    .responsive-table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Interruptor (switch M3) */
+    .toggle-switch { position: relative; display: inline-block; width: 52px; height: 32px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider-toggle { position: absolute; cursor: pointer; inset: 0; background-color: var(--md-surface-container-high); border: 2px solid var(--md-outline); transition: background-color var(--md-motion-short) var(--md-ease-standard), border-color var(--md-motion-short) var(--md-ease-standard); border-radius: 9999px; }
+    .slider-toggle:before { position: absolute; content: ""; height: 16px; width: 16px; left: 6px; top: 6px; background-color: var(--md-outline); transition: transform var(--md-motion-medium) var(--md-ease-spring), width var(--md-motion-short), height var(--md-motion-short), background-color var(--md-motion-short); border-radius: 50%; }
+    input:checked + .slider-toggle { background-color: var(--md-primary); border-color: var(--md-primary); }
+    input:checked + .slider-toggle:before { transform: translateX(18px) translateY(-4px); width: 24px; height: 24px; left: 2px; top: 6px; background-color: var(--md-on-primary); }
+
+    .export-cb-label { display: flex; align-items: center; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--md-outline-variant); background: var(--md-surface-container-lowest); cursor: pointer; }
+    .export-cb-label input { margin-right: 12px; width: 18px; height: 18px; accent-color: var(--md-primary); }
+    .export-cb-label.checked-style { border-color: var(--md-primary); background: var(--md-primary-container); color: var(--md-on-primary-container); }
+
+    /* Pestañas */
+    .tab-btn { padding: 12px 20px; font-weight: 600; font-size: 13px; color: var(--md-on-surface-variant); border-bottom: 3px solid transparent; letter-spacing: 0.01em; border-radius: 12px 12px 0 0; }
+    .tab-btn.active { color: var(--md-primary); border-bottom-color: var(--md-primary); }
+
+    .survey-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 1em;
+    }
+
+    /* Íconos Material Symbols: un solo estilo en toda la app */
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+}
+
+/* ---------- 5. Movimiento (mismos tiempos en todas las pantallas) ---------- */
+@layer utilities {
+    .animate-fade-in { animation: md-entrar var(--md-motion-long) var(--md-ease-emphasized) both; }
+    .animate-spin-reverse { animation: md-girar 1.2s linear infinite; }
+}
+
+/* Toda ventana emergente (diálogo) entra igual: sube y aparece */
+.fixed.inset-0:not(.hidden) > div:first-child,
+.fixed.inset-0:not(.hidden) > form:first-child {
+    animation: md-dialogo var(--md-motion-long) var(--md-ease-emphasized) both;
+}
+.fixed.inset-0:not(.hidden) { animation: md-velo var(--md-motion-medium) var(--md-ease-standard) both; }
+
+@keyframes md-entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes md-dialogo { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes md-velo { from { opacity: 0; } to { opacity: 1; } }
+@keyframes md-aparecer-celda { 0% { opacity: 0; transform: scale(0.92) translateY(8px); } 100% { opacity: 1; transform: none; } }
+@keyframes md-girar { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+
+/* Respeta a quien pide menos movimiento en su dispositivo */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+    .matrix-cell { opacity: 1; }
+}
+
+@media print {
+    .no-print { display: none !important; }
+    body { background: white; }
+    .matrix-cell { border: 1px solid #000 !important; break-inside: avoid; opacity: 1 !important; animation: none !important; }
+    #matrixCaptureTarget { background: white !important; }
+}

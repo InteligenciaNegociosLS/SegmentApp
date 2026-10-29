@@ -50,7 +50,7 @@ window.App.versiones.abrir = async function() {
         if (!publicadas.length) return `<div class="mb-4"><div class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">${titulo}</div><div class="text-xs text-slate-400 italic">Sin versiones publicadas.</div></div>`;
         const actual = enUso[tipo] && enUso[tipo].id;
         return `<label class="block mb-4"><span class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">${titulo}</span>
-            <select id="versionSel_${tipo}" class="w-full border border-slate-300 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+            <select id="versionSel_${tipo}" class="filter-select">
                 ${publicadas.map(v => `<option value="${escV(v.id)}" data-vigente="${v.es_vigente ? 1 : 0}" ${v.id === actual ? 'selected' : ''}>${v.es_vigente ? '(Hoy) ' : ''}${escV(v.nombre)} · corte ${escV(v.fecha)}</option>`).join('')}
             </select></label>`;
     };

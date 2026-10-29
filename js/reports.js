@@ -246,7 +246,7 @@ window.App.reports.renderRepSelector = function() {
         const lineaTag = linea ? `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded ${linea === 'OTC' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}">${linea}</span>` : '';
         const safeId = `rpt_rep_${rep.replace(/[^a-zA-Z0-9]/g, '_')}`;
         html += `
-            <label class="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-indigo-50 rounded-lg border border-slate-200 cursor-pointer transition text-xs">
+            <label class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-slate-200 cursor-pointer transition text-xs">
                 <input type="checkbox" id="${safeId}" ${checked} data-rep="${rep}" class="rpt-rep-cb accent-indigo-600 w-4 h-4">
                 <span class="truncate font-medium text-slate-700 flex-1" title="${rep}">${rep}</span>
                 ${lineaTag}
@@ -349,9 +349,9 @@ window.App.reports.renderChart = function(stats) {
     const labels = dataSource.map(d => d.name.length > 25 ? d.name.substring(0, 22) + '...' : d.name);
     const pcts = dataSource.map(d => d.pct);
     const bgColors = pcts.map(p => {
-        if (p >= 75) return '#10b981';
-        if (p >= 40) return '#f59e0b';
-        return '#ef4444';
+        if (p >= 75) return '#2a8e52';   // éxito (Material 3)
+        if (p >= 40) return '#d98c00';   // advertencia
+        return '#de3730';                // error
     });
 
     // Si ya hay chart, hacer update (mucho más rápido que destroy+create)
@@ -491,7 +491,7 @@ window.App.reports.renderSummaryCards = function(dataSource, view) {
                         <span class="text-slate-700">${pct.toFixed(1)}%</span>
                     </div>
                     <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                        <div class="${barColor} h-3 rounded-full transition-all duration-500" style="width: ${Math.min(pct, 100)}%"></div>
+                        <div class="${barColor} h-3 rounded-full transition-all" style="width: ${Math.min(pct, 100)}%"></div>
                     </div>
                 </div>
             </div>

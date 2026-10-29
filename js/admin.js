@@ -156,7 +156,7 @@ filteredEvals.forEach(ev => {
             const safeName = stat.name.replace(/'/g, "\\'");
             progressParts.push(`
                 <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden mb-2 shadow-sm">
-                    <div class="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-100 transition" onclick="toggleRepDetails('${safeName}')">
+                    <div class="flex items-center justify-between p-3 cursor-pointer transition" onclick="toggleRepDetails('${safeName}')">
                         <div class="w-1/3 font-bold text-xs text-slate-700 truncate pr-2" title="${stat.name}">${stat.name}</div>
                         <div class="w-1/3 px-2 flex flex-col gap-1.5 flex-1">
                             <div class="flex items-center gap-2" title="Total Médicos">
@@ -195,11 +195,11 @@ filteredEvals.forEach(ev => {
         if (subPot && objPot !== subPot) {
             discCount++;
             discParts.push(`
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 mb-2 bg-white hover:bg-rose-50 rounded-xl border border-rose-100 transition shadow-sm gap-2 group cursor-pointer" onclick="openDoctorModal('${doc.id}')">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 mb-2 bg-white rounded-xl border border-rose-100 transition shadow-sm gap-2 group cursor-pointer" onclick="openDoctorModal('${doc.id}')">
                     <div class="flex flex-col"><span class="text-xs font-bold text-slate-800">${doc.name}</span><span class="text-[10px] text-slate-500">Evaluado por: <b class="text-indigo-600">${ev.visitador}</b> en <b class="text-indigo-600">${ev.mercado || 'General'}</b></span></div>
                     <div class="flex items-center gap-3 text-[10px] font-bold">
                         <div class="flex flex-col items-center bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-sm"><span class="text-slate-400 uppercase tracking-widest text-[8px]">Datos (Rx)</span><span class="text-slate-700 text-xs">${doc.closeupLabel}</span></div>
-                        <span class="material-symbols-outlined text-rose-300 text-[16px] group-hover:rotate-180 transition duration-500">sync_problem</span>
+                        <span class="material-symbols-outlined text-rose-300 text-[16px] group-hover:rotate-180 transition">sync_problem</span>
                         <div class="flex flex-col items-center bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-lg shadow-sm"><span class="text-rose-400 uppercase tracking-widest text-[8px]">Subjetivo</span><span class="text-rose-700 text-xs">${ev.cuadrante}</span></div>
                     </div>
                 </div>
@@ -255,8 +255,8 @@ window.App.admin.toggleRepDetails = function(repName) {
                             ${ceFicheroHtml}
                         </div>
                         <div class="flex gap-1 shrink-0 ${window.App.state.soloLectura ? 'hidden' : ''}">
-                            <button onclick="adminEditEval('${e.firebaseId}')" class="text-blue-500 hover:bg-blue-100 p-1 rounded transition" title="Editar"><span class="material-symbols-outlined text-[14px]">edit</span></button>
-                            <button onclick="adminDeleteEval('${e.firebaseId}')" class="text-rose-500 hover:bg-rose-100 p-1 rounded transition" title="Eliminar"><span class="material-symbols-outlined text-[14px]">delete</span></button>
+                            <button onclick="adminEditEval('${e.firebaseId}')" class="text-blue-500 p-1 rounded-full transition" title="Editar"><span class="material-symbols-outlined text-[14px]">edit</span></button>
+                            <button onclick="adminDeleteEval('${e.firebaseId}')" class="text-rose-500 p-1 rounded-full transition" title="Eliminar"><span class="material-symbols-outlined text-[14px]">delete</span></button>
                         </div>
                     </div>
                 `;
@@ -388,11 +388,11 @@ window.App.admin.renderSurveyConfigForm = function() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     `;
     for (const [qKey, qLabel] of Object.entries(cfg.SURVEY_QUESTION_LABELS)) {
-        html += `<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition"><h4 class="font-bold text-slate-700 text-xs mb-3 truncate" title="${qLabel}">${qLabel}</h4><div class="space-y-2">`;
+        html += `<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-sm transition"><h4 class="font-bold text-slate-700 text-xs mb-3 truncate" title="${qLabel}">${qLabel}</h4><div class="space-y-2">`;
         for (const [option, score] of Object.entries(st.SURVEY_WEIGHTS[qKey])) {
             const safeId = `w_${qKey}_${option.replace(/[^a-zA-Z0-9]/g, "_")}`;
             html += `
-                <div class="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm hover:border-blue-300 transition">
+                <div class="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm transition">
                     <span class="text-xs font-medium text-slate-600 truncate mr-2" title="${option}">${option}</span>
                     <input type="number" inputmode="numeric" pattern="[0-9]*" id="${safeId}" data-q="${qKey}" data-opt="${option}" value="${score}" class="w-16 px-2 py-1 border border-slate-200 rounded-lg text-xs font-mono text-center focus:ring-1 focus:ring-emerald-500 outline-none transition">
                 </div>
@@ -477,7 +477,7 @@ window.App.admin.renderProductCheckboxes = function() {
     const allProds = st.RAW_DATA.length > 0 ? [...new Set(st.RAW_DATA.map(d => d.prod).filter(x => x))] : [];
     const combined = [...new Set([...allProds, ...st.PHQ_PRODUCTS])].map(p => p.toUpperCase()).sort();
     container.innerHTML = combined.map(p => `
-        <label class="flex items-center gap-3 p-3 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 cursor-pointer transition shadow-sm">
+        <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer transition shadow-sm">
             <input type="checkbox" value="${p}" ${st.PHQ_PRODUCTS.includes(p) ? 'checked' : ''} class="phq-prod-cb accent-blue-600 w-5 h-5 rounded">
             <span class="text-sm font-semibold text-slate-700 truncate" title="${p}">${p}</span>
         </label>
@@ -575,7 +575,7 @@ window.App.admin._ensureCruceErradoFilter = function() {
     if (!managerSelect) return;
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'inline-flex items-center ml-2';
+    wrapper.className = 'inline-flex items-center';
     wrapper.innerHTML = `
         <select id="adminCruceErradoFilter" class="px-3 py-1.5 border border-amber-300 rounded-lg text-xs font-medium bg-white focus:ring-2 focus:ring-amber-400 outline-none">
             <option value="all">⚠️ Cruce Errado: Todos</option>

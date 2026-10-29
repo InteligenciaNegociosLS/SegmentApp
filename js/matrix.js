@@ -155,7 +155,7 @@ window.App.matrix.generateMatrixGridHTML = function() {
     html += window.App.matrix.generateSummaryCellHTML('col_C', 'Adopción Baja');
     html += window.App.matrix.generateSummaryCellHTML('col_B', 'Adopción Media');
     html += window.App.matrix.generateSummaryCellHTML('col_A', 'Adopción Alta');
-    html += `<div class="summary-element hidden bg-slate-100 rounded-[24px] items-center justify-center text-xs text-slate-500 font-display font-bold uppercase tracking-widest border border-slate-200">Universo<br>Total</div>`;
+    html += `<div class="summary-element hidden bg-slate-100 rounded-3xl items-center justify-center text-xs text-slate-500 font-display font-bold uppercase tracking-widest border border-slate-200">Universo<br>Total</div>`;
 
     container.innerHTML = html;
 };
@@ -178,7 +178,7 @@ window.App.matrix.generateSingleCellHTML = function(c) {
             <div class="flex flex-col items-center py-2 opacity-80"><span class="uppercase tracking-wide text-[8px] font-bold">Media Tot</span><span class="font-bold text-xs font-mono" id="avg_tot_${key}">0</span></div>
             <div class="flex flex-col items-center py-2 opacity-80"><span class="uppercase tracking-wide text-[8px] font-bold">Media Lab</span><span class="font-bold text-xs font-mono" id="avg_phq_${key}">0</span></div>
         </div>
-        <div class="flex-1 flex flex-col items-center justify-center my-3 pointer-events-none drop-shadow-sm"><div class="text-6xl font-display font-black tracking-tighter letter-display transition-transform duration-300 group-hover:scale-110">${c.label}</div></div>
+        <div class="flex-1 flex flex-col items-center justify-center my-3 pointer-events-none drop-shadow-sm"><div class="text-6xl font-display font-black tracking-tighter letter-display transition-transform group-">${c.label}</div></div>
         <div class="flex items-center justify-center gap-1 text-xl font-display font-bold leading-none mb-1 mt-auto border-t border-black/5 pt-3 pointer-events-none"><span class="material-symbols-outlined opacity-60 text-[22px]" style="vertical-align: -3px;">groups</span><span id="count_${key}">0</span></div>
         <div class="text-center pointer-events-none"><div class="text-[11px] font-bold opacity-70"><span id="pct_drs_${key}">0%</span></div></div>
     </div>`;
@@ -236,24 +236,14 @@ window.App.matrix.switchMatrixMode = function(mode) {
     const btnData   = document.getElementById('btnMatrixData');
     const btnSurvey = document.getElementById('btnMatrixSurvey');
 
-    if (mode === 'closeup') {
-        btnData.classList.replace('text-slate-500', 'text-white');
-        btnData.classList.replace('hover:text-slate-700', 'bg-blue-600');
-        btnData.classList.replace('hover:bg-white', 'shadow-sm');
-        btnData.classList.add('bg-blue-600');
-
-        btnSurvey.classList.replace('bg-blue-600', 'hover:bg-white');
-        btnSurvey.classList.replace('text-white', 'text-slate-500');
-        btnSurvey.classList.remove('shadow-sm');
-    } else {
-        btnSurvey.classList.replace('text-slate-500', 'text-white');
-        btnSurvey.classList.replace('hover:bg-white', 'bg-blue-600');
-        btnSurvey.classList.add('shadow-sm', 'bg-blue-600');
-
-        btnData.classList.replace('bg-blue-600', 'hover:bg-white');
-        btnData.classList.replace('text-white', 'text-slate-500');
-        btnData.classList.remove('shadow-sm');
-    }
+    // Botón segmentado: el elegido queda relleno (primary) y el otro sin fondo
+    [[btnData, mode === 'closeup'], [btnSurvey, mode !== 'closeup']].forEach(([btn, activo]) => {
+        btn.classList.toggle('bg-blue-600', activo);
+        btn.classList.toggle('text-white', activo);
+        btn.classList.toggle('shadow-sm', activo);
+        btn.classList.toggle('text-slate-500', !activo);
+        btn.setAttribute('aria-pressed', activo ? 'true' : 'false');
+    });
 
     window.App.ui.showToast(mode === 'closeup' ? 'Viendo Matriz: Datos de Rx' : 'Viendo Matriz: Encuestas Asesor');
     window.App.matrix.aggregateAndCalculate();
@@ -730,9 +720,9 @@ window.App.matrix.renderTable = function() {
                 if (evalsList.length > 0) {
                     const hasNotes = evalsList.some(e => e.notas && String(e.notas).trim() !== '');
                     const countText = evalsList.length > 1 ? `${evalsList.length} Mercados` : `${evalsList.length} Mercado`;
-                    evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${doc.id}', '${doc.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex flex-col items-center justify-center gap-0.5 mx-auto"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">EVALUADO</span>${hasNotes ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</div><span class="text-[9px] font-medium text-indigo-500">${countText}</span></button></td>`;
+                    evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${doc.id}', '${doc.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-full shadow-sm transition flex flex-col items-center justify-center gap-0.5 mx-auto"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">EVALUADO</span>${hasNotes ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</div><span class="text-[9px] font-medium text-indigo-500">${countText}</span></button></td>`;
                 } else {
-                    evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${doc.id}', '${doc.name.replace(/'/g, "\\'")}')"><button class="bg-white hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-slate-600 hover:text-blue-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1 mx-auto group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`;
+                    evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${doc.id}', '${doc.name.replace(/'/g, "\\'")}')"><button class="bg-white border border-slate-300 text-slate-600 font-bold px-3 py-1.5 rounded-full shadow-sm transition flex items-center justify-center gap-1 mx-auto"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`;
                 }
             } else if (st.currentUserRole === 'admin') {
                 const evalsForDoc = (typeof getEvaluationsForDoc === 'function') ? getEvaluationsForDoc(doc.id) : [];
@@ -749,9 +739,9 @@ window.App.matrix.renderTable = function() {
         if (st.currentMatrixMode === 'survey' && !doc.isInst) renderLabel = doc.surveyLabel;
 
         htmlBuffer.push(`
-            <tr class="hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer group" onclick="handleRowClick(${!!doc.isInst}, ${realIndex}, '${doc.id}')">
+            <tr class=" transition border-b border-slate-100 cursor-pointer group" onclick="handleRowClick(${!!doc.isInst}, ${realIndex}, '${doc.id}')">
                 <td class="p-4 ${fichClass}"><span class="font-bold font-display text-xs px-2 py-1.5 rounded-lg ${colorClass}">${doc.isZeroRx ? 'N/A' : renderLabel}</span></td>
-                <td class="p-4 ${fichClass}"><div class="flex flex-col sm:flex-row sm:items-center gap-2 group-hover:text-blue-600 transition"><div class="font-bold text-sm text-slate-700 truncate max-w-[150px] md:max-w-[250px]" title="${doc.name}">${doc.name} ${doc.isZeroRx ? '<span class="text-[9px] bg-slate-200 text-slate-500 px-1 rounded ml-1">Sin Rx</span>' : ''}</div><div class="flex flex-shrink-0 items-center gap-1">${fichIcon} ${instIconHtml}</div></div></td>
+                <td class="p-4 ${fichClass}"><div class="flex flex-col sm:flex-row sm:items-center gap-2 transition"><div class="font-bold text-sm text-slate-700 truncate max-w-[150px] md:max-w-[250px]" title="${doc.name}">${doc.name} ${doc.isZeroRx ? '<span class="text-[9px] bg-slate-200 text-slate-500 px-1 rounded ml-1">Sin Rx</span>' : ''}</div><div class="flex flex-shrink-0 items-center gap-1">${fichIcon} ${instIconHtml}</div></div></td>
                 <td class="p-4 text-xs font-medium text-slate-500 ${fichClass}">${doc.spec}</td>
                 <td class="p-4 text-right font-mono font-medium text-sm text-slate-600 ${fichClass}">${doc.isZeroRx ? '-' : ui.formatNumber(doc.totalRx)}</td>
                 <td class="p-4 text-right font-mono text-sm font-bold text-blue-600 ${fichClass}">${doc.isZeroRx ? '-' : ui.formatNumber(doc.rxPhq)}</td>
