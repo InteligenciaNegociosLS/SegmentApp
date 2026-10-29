@@ -71,6 +71,17 @@ window.App.matrix.getDoctorMarketClassification = function(docId, targetMarket) 
     const d  = window.App.data;
     if (!targetMarket || targetMarket === 'General') return "";
 
+    // VM y GD: los totales nacionales vienen del servidor; aquí solo se aplican los umbrales
+    if (st.MARKET_SERVIDOR) {
+        const g = st.MARKET_SERVIDOR[targetMarket] && st.MARKET_SERVIDOR[targetMarket].get(d.normalizeKey(docId));
+        if (!g) return "";
+        const pct = g.totalMercado > 0 ? (g.acumulado / g.totalMercado) * 100 : 100;
+        const p = pct <= st.TH_POT_LOW ? 'A' : (pct <= st.TH_POT_HIGH ? 'B' : 'C');
+        const share = g.total > 0 ? (g.phq / g.total) * 100 : 0;
+        const l = share >= st.TH_LOY_HIGH ? 'A' : (share > st.TH_LOY_LOW ? 'B' : 'C');
+        return p + (l === 'C' ? '-' : (l === 'A' ? '+' : ''));
+    }
+
     if (!st.MARKET_CACHE[targetMarket]) {
         const mktRows = st.RAW_DATA.filter(r => r.market === targetMarket);
         const grouped = {};
@@ -275,13 +286,17 @@ window.App.matrix.aggregateAndCalculate = function() {
         universeRows = st._lastUniverseRows;
     } else {
         // Recalcular universo desde cero
+        // Conjuntos (búsqueda instantánea) en vez de recorrer cada lista por fila
+        const fs = st.FILTER_STATE;
+        const mk = new Set(fs.Market), rg = new Set(fs.Region), sp = new Set(fs.Spec),
+              mo = new Set(fs.Molecule), cl = new Set(fs.Class), lb = new Set(fs.Lab);
         universeRows = st.RAW_DATA.filter(row => {
-            if (!st.FILTER_STATE.Market.includes(row.market))     return false;
-            if (!st.FILTER_STATE.Region.includes(row.region))     return false;
-            if (!st.FILTER_STATE.Spec.includes(row.spec))         return false;
-            if (!st.FILTER_STATE.Molecule.includes(row.molecule)) return false;
-            if (!st.FILTER_STATE.Class.includes(row.class))       return false;
-            if (!st.FILTER_STATE.Lab.includes(row.lab))           return false;
+            if (!mk.has(row.market))   return false;
+            if (!rg.has(row.region))   return false;
+            if (!sp.has(row.spec))     return false;
+            if (!mo.has(row.molecule)) return false;
+            if (!cl.has(row.class))    return false;
+            if (!lb.has(row.lab))      return false;
             if (fGeneric !== 'all' && row.generic !== fGeneric)   return false;
             return true;
         });
@@ -290,35 +305,53 @@ window.App.matrix.aggregateAndCalculate = function() {
         st._lastUniverseRows = universeRows;
     }
 
-    // Agrupación por médico (ID único = matrícula + nombre)
-    const docMap = {};
-    universeRows.forEach(row => {
-        const cleanLicense = row.license ? String(row.license).trim().replace(/^0+/, '') : "";
-        const id = cleanLicense + "_" + row.doc.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (!docMap[id]) {
-            docMap[id] = { id, name: row.doc, address: row.address, spec: row.spec, rxPhq: 0, rxTotalSum: 0, rows: [], uniqueProds: {} };
-        }
-        docMap[id].rows.push(row);
-        docMap[id].uniqueProds[row.prod] = Math.max(docMap[id].uniqueProds[row.prod] || 0, row.rx);
-    });
+    // Agrupación por médico (ID único = matrícula + nombre).
+    // Solo depende del universo: si cambian productos, visitadores, umbrales
+    // o el modo de la matriz, se reutiliza la agrupación anterior.
+    let grupos;
+    if (st._lastGroupsRows === universeRows && st._lastGroups) {
+        grupos = st._lastGroups;
+    } else {
+        const docMap = {};
+        universeRows.forEach(row => {
+            // El id no cambia entre filtros: se calcula una vez y se guarda en la fila
+            let id = row._id;
+            if (id === undefined) {
+                const cleanLicense = row.license ? String(row.license).trim().replace(/^0+/, '') : "";
+                id = row._id = cleanLicense + "_" + row.doc.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            }
+            let g = docMap[id];
+            if (!g) g = docMap[id] = { id, name: row.doc, address: row.address, spec: row.spec, rows: [], uniqueProds: {} };
+            g.rows.push(row);
+            g.uniqueProds[row.prod] = Math.max(g.uniqueProds[row.prod] || 0, row.rx);
+        });
+        grupos = Object.values(docMap);
+        grupos.forEach(g => { g.prodsLista = Object.entries(g.uniqueProds); });
+        st._lastGroupsRows = universeRows;
+        st._lastGroups = grupos;
+    }
 
     // Totales reales por producto (para "Principal Competidor")
     const realProductTotals = {};
-    Object.values(docMap).forEach(doc => {
-        Object.entries(doc.uniqueProds).forEach(([prod, rx]) => {
+    const todosLosProductos = st.FILTER_STATE.Product.length === st.FILTER_OPTIONS.Product.length;
+    const productosElegidos = new Set(st.FILTER_STATE.Product);
+    const docMap = grupos.map(g => {
+        const doc = { id: g.id, name: g.name, address: g.address, spec: g.spec, rxPhq: 0, rxTotalSum: 0, rows: g.rows, uniqueProds: g.uniqueProds };
+        g.prodsLista.forEach(([prod, rx]) => {
             doc.rxTotalSum += rx;
-            if (d.isPhq(prod) && (st.FILTER_STATE.Product.length === st.FILTER_OPTIONS.Product.length || st.FILTER_STATE.Product.includes(prod))) {
+            if (d.isPhq(prod) && (todosLosProductos || productosElegidos.has(prod))) {
                 doc.rxPhq += rx;
             }
             realProductTotals[prod] = (realProductTotals[prod] || 0) + rx;
         });
+        return doc;
     });
     st.CURRENT_COMP_BREAKDOWN = Object.entries(realProductTotals)
         .map(([k, v]) => ({ prod: k, rx: v, type: d.isPhq(k) ? 'PHQ' : 'Comp' }))
         .sort((a, b) => b.rx - a.rx);
 
     // Cálculo de share, gap y categoría de adopción
-    let doctors = Object.values(docMap).map(doc => {
+    let doctors = docMap.map(doc => {
         const denominator = doc.rxTotalSum;
         const share = denominator > 0 ? (doc.rxPhq / denominator) * 100 : 0;
         let catLoyalty = 'C';
@@ -361,8 +394,9 @@ window.App.matrix.aggregateAndCalculate = function() {
             return hasAssigned;
         });
         // Agregar médicos del fichero sin Rx
+        const conRx = new Set(doctors.map(x => d.normalizeKey(x.id)));
         assignedDocsMap.forEach((rows, docId) => {
-            if (!doctors.find(x => d.normalizeKey(x.id) === docId)) {
+            if (!conRx.has(docId)) {
                 const baseRow = rows[0];
                 let nameKey = Object.keys(baseRow).find(k => /^(nombre|medico|médico|doctor|doc)$/i.test(k.trim().toLowerCase()));
                 if (!nameKey) nameKey = Object.keys(baseRow).find(k => /nombre|med|doc/i.test(k) && !/visit|rep|agente|promotor|asesor/i.test(k));
@@ -431,7 +465,6 @@ window.App.matrix.aggregateAndCalculate = function() {
     });
 
     st.PROCESSED_DATA = doctors;
-    Object.keys(docMap).forEach(k => delete docMap[k]);
 
     // Principal competidor
     let topCompName = "N/A", topCompRx = 0;
