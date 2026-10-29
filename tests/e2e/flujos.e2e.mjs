@@ -41,7 +41,7 @@ try {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.addInitScript(() => { window.__calls = []; });
+  await page.addInitScript(() => { window.__calls = []; window.__SIN_GUIA = true; });
   // Lo que el servidor le enviaría a NEIVIS PARRA (calculado aquí con los datos reales)
   const { leerCsvGz } = await import('../../scripts/migracion/transformar.mjs');
   const leer = (f) => leerCsvGz(path.join(RAIZ, f));
@@ -123,6 +123,16 @@ try {
   await page.evaluate(() => { closeEvalModal(); App.ux.filtroRapido('evaluados'); });
   ok('VM: filtro "Evaluados" muestra el recién evaluado', await page.evaluate(() => App.state.CURRENT_TABLE_DATA.length === 1));
   await page.evaluate(() => App.ux.filtroRapido('todos'));
+  // Fase 6C: cuadrante → lista filtrada, pantalla completa y paginación de 20
+  await page.evaluate(() => filterByMatrix('C', 'C'));
+  ok('matriz: tocar un cuadrante filtra la lista (sin lista repetida arriba)', await page.evaluate(() => !document.getElementById('panelCelda') && App.state.CURRENT_TABLE_DATA.length > 0 && App.state.CURRENT_TABLE_DATA.every(d => d.catPotency === 'C' && d.catLoyalty === 'C')));
+  await page.evaluate(() => clearMatrixFilter());
+  ok('lista: de 20 en 20', await page.evaluate(() => document.querySelectorAll('#dataTable tr').length === 20));
+  await page.evaluate(() => App.ux.abrirMatrizCompleta());
+  const completa = await page.evaluate(() => document.getElementById('seccionMatriz').classList.contains('matriz-completa'));
+  await page.keyboard.press('Escape');
+  ok('matriz: pantalla completa abre y se cierra con Escape', completa && await page.evaluate(() => !document.getElementById('seccionMatriz').classList.contains('matriz-completa')));
+  ok('imagen de la matriz: se dibuja sin capturar la pantalla', await page.evaluate(() => { const c = App.exports.dibujarMatriz(); return c.width === 3200 && c.height === 2480; }));
   ok('VM: consulta las evaluaciones', (await page.evaluate(() => window.__calls)).includes('select:evaluaciones'));
 
   await page.reload();
