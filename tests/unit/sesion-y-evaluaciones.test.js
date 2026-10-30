@@ -243,11 +243,11 @@ describe('Pantallas por rol (Fase 9A)', () => {
         document.getElementById('visitadorPwd').value = 'adminadmin';
         await App.auth.attemptLogin();
         expect(botones()).toEqual(['inicio', 'matriz', 'medicos', 'equipo', 'ajustes']);
-        document.getElementById('adminProgressTable').innerHTML = '';
+        document.getElementById('equipoContenido').innerHTML = '';
         App.admin.renderAdminDashboard();
-        expect(document.getElementById('adminProgressTable').innerHTML).toBe('');
+        expect(document.getElementById('equipoContenido').innerHTML).toBe('');
         App.ux.irA('equipo');
-        expect(document.getElementById('adminProgressTable').innerHTML).not.toBe('');
+        expect(document.getElementById('equipoContenido').innerHTML).not.toBe('');
     });
     it('Ajustes: mover un umbral no cambia la matriz hasta "Aplicar"', async () => {
         document.getElementById('loginEmail').value = 'admin@lasante.com';
