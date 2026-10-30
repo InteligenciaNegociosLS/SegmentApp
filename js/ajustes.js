@@ -17,7 +17,8 @@ window.App.ajustes = {};
 const escA = (v) => window.App.ui.escapeHtml(v);
 const fmtA = (n, d = 0) => window.App.ui.formatNumber(n || 0, d);
 const CONTROLES = { TH_LOY_LOW: 'sliderLow', TH_LOY_HIGH: 'sliderHigh', TH_POT_LOW: 'sliderPotLow', TH_POT_HIGH: 'sliderPotHigh' };
-const CELDAS = ['A_A', 'A_B', 'A_C', 'B_A', 'B_B', 'B_C', 'C_A', 'C_B', 'C_C'];
+// Mismo orden que la matriz: filas = potencial A, B, C; columnas = adopción baja (−), media, alta (+)
+const CELDAS = ['A_C', 'A_B', 'A_A', 'B_C', 'B_B', 'B_A', 'C_C', 'C_B', 'C_A'];
 const SIGNO_AJ = { A: '+', B: '', C: '-' };
 
 window.App.ajustes.irA = function(id) {
