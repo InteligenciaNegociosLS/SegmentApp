@@ -38,18 +38,85 @@ window.App.ux.ocultarSplash = function() {
 };
 
 /* ============================================================
-   NAVEGACIÓN
+   NAVEGACIÓN POR PANTALLAS (Fase 9A)
+   Una pantalla a la vez: Inicio, Matriz, Médicos y, según el rol,
+   Equipo y Ajustes. En el teléfono, barra inferior; en tablet y
+   computadora, riel a la izquierda. El botón "atrás" del teléfono
+   vuelve a la pantalla anterior.
 ============================================================ */
-window.App.ux.irA = function(id) {
-    const destino = id === 'inicio' ? null : document.getElementById(id);
-    const opciones = { behavior: sinMovimiento() ? 'auto' : 'smooth' };
-    if (destino && destino.scrollIntoView) destino.scrollIntoView({ ...opciones, block: 'start' });
-    else if (window.scrollTo) window.scrollTo({ top: 0, ...opciones });
-    window.App.ux.marcarNav(id);
+const BOTONES_NAV = {
+    inicio:     ['home', 'Inicio'],
+    matriz:     ['grid_view', 'Matriz'],
+    medicos:    ['stethoscope', 'Médicos'],
+    pendientes: ['checklist', 'Pendientes'],
+    equipo:     ['groups', 'Equipo'],
+    ajustes:    ['settings', 'Ajustes'],
+    mas:        ['menu', 'Más']
+};
+// Qué ve cada rol (la barra del teléfono tiene como máximo 5 botones)
+const NAV_POR_ROL = {
+    vm:           ['inicio', 'matriz', 'medicos', 'pendientes', 'mas'],
+    gd:           ['inicio', 'matriz', 'medicos', 'equipo', 'mas'],
+    gte_nacional: ['inicio', 'matriz', 'medicos', 'equipo', 'mas'],
+    admin:        ['inicio', 'matriz', 'medicos', 'equipo', 'ajustes']
+};
+const PANTALLAS = ['inicio', 'matriz', 'medicos', 'equipo', 'ajustes'];
+// Nombres antiguos (por si algún botón todavía los usa)
+const ALIAS_PANTALLA = { seccionMatriz: 'matriz', seccionMedicos: 'medicos', pantallaEquipo: 'equipo', pantallaAjustes: 'ajustes' };
+
+const pantallasDelRol = () => {
+    const rol = window.App.state.rolReal;
+    return PANTALLAS.filter(p => (NAV_POR_ROL[rol] || NAV_POR_ROL.vm).includes(p) || ['inicio', 'matriz', 'medicos'].includes(p));
 };
 
+window.App.ux.armarNavegacion = function() {
+    const rol = window.App.state.rolReal;
+    const botones = NAV_POR_ROL[rol] || NAV_POR_ROL.vm;
+    const boton = (id, clase) => {
+        const [icono, texto] = BOTONES_NAV[id];
+        const accion = id === 'pendientes' ? "App.ux.filtroRapido('pendientes', true)" : (id === 'mas' ? 'App.ux.abrirMas()' : `App.ux.irA('${id}')`);
+        const insignia = id === 'pendientes' ? '<span class="nav-insignia hidden" data-insignia="pendientes">0</span>' : '';
+        return `<button class="${clase}" data-seccion="${id}" onclick="${accion}" aria-current="false"><span class="nav-icono"><span class="material-symbols-outlined">${icono}</span></span>${texto}${insignia}</button>`;
+    };
+    const abajo = document.getElementById('navInferior');
+    if (abajo) abajo.innerHTML = botones.map(id => boton(id, 'nav-item')).join('');
+    // En el riel no hace falta "Más": está siempre en la barra superior (⋮)
+    const riel = document.getElementById('navRiel');
+    if (riel) riel.innerHTML = botones.filter(id => id !== 'mas').map(id => boton(id, 'nav-item riel-item')).join('');
+};
+
+window.App.ux.irA = function(id, { historial = true } = {}) {
+    const st = window.App.state;
+    const pantalla = ALIAS_PANTALLA[id] || id;
+    if (!PANTALLAS.includes(pantalla)) return;
+    const destino = pantallasDelRol().includes(pantalla) ? pantalla : 'inicio';
+    const anterior = st.PANTALLA;
+    st.PANTALLA = destino;
+    window.App.ux.cerrarMatrizCompleta();
+    document.querySelectorAll('[data-pantalla]').forEach(el => {
+        const activa = el.dataset.pantalla === destino;
+        el.classList.toggle('pantalla-activa', activa);
+        if (activa && anterior !== destino) { el.classList.remove('animate-fade-in'); void el.offsetWidth; el.classList.add('animate-fade-in'); }
+    });
+    document.body.dataset.pantalla = destino;
+    if (window.scrollTo && anterior !== destino) window.scrollTo({ top: 0, behavior: 'auto' });
+    window.App.ux.marcarNav(destino);
+    // Lo que solo se dibuja cuando se ve
+    if (destino === 'equipo' && window.App.admin && (window.App.admin._panelPendiente || anterior !== 'equipo')) window.App.admin.renderAdminDashboard();
+    if (destino === 'ajustes' && window.App.ajustes && anterior !== 'ajustes') window.App.ajustes.render();
+    if (historial && anterior && anterior !== destino && window.history && history.pushState) {
+        try { history.pushState({ pantalla: destino }, ''); } catch (e) { /* sin historial */ }
+    }
+};
+
+// Botón "atrás" del teléfono o del navegador: volver a la pantalla anterior
+window.addEventListener('popstate', (e) => {
+    const p = e.state && e.state.pantalla;
+    if (p && window.App.state && window.App.state.currentUserRole !== 'guest') window.App.ux.irA(p, { historial: false });
+});
+
 window.App.ux.marcarNav = function(id) {
-    document.querySelectorAll('#navInferior .nav-item').forEach(b => {
+    document.querySelectorAll('#navInferior .nav-item, #navRiel .nav-item').forEach(b => {
         b.setAttribute('aria-current', b.dataset.seccion === id ? 'true' : 'false');
     });
 };
@@ -57,9 +124,13 @@ window.App.ux.marcarNav = function(id) {
 window.App.ux.alEntrar = function() {
     const st = window.App.state;
     const nombres = { admin: 'Administrador', gte_nacional: 'Gerente Nacional', gd: 'Gerente de Distrito', vm: 'Visitador médico' };
-    const nav = document.getElementById('navInferior');
-    if (nav) nav.classList.remove('hidden');
-    window.App.ux.marcarNav('inicio');
+    window.App.ux.armarNavegacion();
+    document.getElementById('navInferior')?.classList.remove('hidden');
+    // El riel se muestra solo en tablet y computadora (css: body.con-riel #navRiel)
+    document.body.classList.add('con-riel');
+    st.PANTALLA = null;
+    window.App.ux.irA('inicio', { historial: false });
+    try { history.replaceState({ pantalla: 'inicio' }, ''); } catch (e) { /* sin historial */ }
     window.App.ui.safeSetText('masNombre', st.currentVisitadorName || 'SegmentApp');
     window.App.ui.safeSetText('masRol', nombres[st.rolReal] || '');
     document.querySelectorAll('#menuMas .solo-admin').forEach(e => e.classList.toggle('hidden', st.rolReal !== 'admin'));
@@ -78,6 +149,7 @@ window.App.ux.alEntrar = function() {
 window.App.ux.alSalir = function() {
     const nav = document.getElementById('navInferior');
     if (nav) nav.classList.add('hidden');
+    document.body.classList.remove('con-riel');
     document.querySelectorAll('#menuMas .solo-admin, #menuMas .con-sesion').forEach(e => e.classList.add('hidden'));
     window.App.ux.cerrarMas();
     window.App.ux.cerrarFiltros();
@@ -168,11 +240,12 @@ const FILTROS_RAPIDOS = [
 window.App.ux.estaEvaluado = function(doc) {
     const st = window.App.state;
     if (doc.isInst) return false;
+    const clave = doc._clave || window.App.data.normalizeKey(doc.id);
     if (st.currentUserRole === 'visitador') {
-        const m = st.EVALUACIONES_VISITADOR[window.App.data.normalizeKey(doc.id)];
+        const m = st.EVALUACIONES_VISITADOR[clave];
         return !!m && Object.keys(m).length > 0;
     }
-    return (window.getEvaluationsForDoc ? window.getEvaluationsForDoc(doc.id) : []).length > 0;
+    return window.App.evaluation.getEvaluationsForDoc(doc.id, clave).length > 0;
 };
 
 const CUMPLE = {
@@ -205,8 +278,8 @@ window.App.ux.filtroRapido = function(tipo, irALista = false) {
     st.FILTRO_RAPIDO = (st.FILTRO_RAPIDO === tipo && tipo !== 'todos' && !irALista) ? 'todos' : tipo;
     window.App.filters.resetPaginationAndRender();
     if (irALista) {
-        window.App.ux.irA('seccionMedicos');
-        window.App.ux.marcarNav(tipo === 'pendientes' ? 'pendientes' : 'seccionMedicos');
+        window.App.ux.irA('medicos');
+        if (tipo === 'pendientes') window.App.ux.marcarNav('pendientes');
     }
 };
 
@@ -216,18 +289,27 @@ window.App.ux.renderChipsRapidos = function() {
     if (!zona) return;
     const base = st.PROCESSED_DATA || [];
     const actual = st.FILTRO_RAPIDO || 'todos';
-    const cuentas = {};
-    FILTROS_RAPIDOS.forEach(f => { cuentas[f.id] = f.id === 'todos' ? base.length : base.filter(CUMPLE[f.id]).length; });
+    // Los conteos solo cambian si cambian los médicos o las evaluaciones: al pasar
+    // de página o elegir otro filtro rápido se reutilizan (con 28 mil médicos, se nota)
+    const firma = [base, base.length, st._versionEvaluaciones, st.ALL_EVALUATIONS, st.ALL_EVALUATIONS.length, st.currentMatrixMode];
+    const previa = window.App.ux._cuentas;
+    let cuentas;
+    if (previa && previa.firma.every((v, i) => v === firma[i])) {
+        cuentas = previa.cuentas;
+    } else {
+        cuentas = {};
+        FILTROS_RAPIDOS.forEach(f => { cuentas[f.id] = f.id === 'todos' ? base.length : base.filter(CUMPLE[f.id]).length; });
+        window.App.ux._cuentas = { firma, cuentas };
+    }
     zona.innerHTML = FILTROS_RAPIDOS.map(f => `
         <button type="button" class="chip" aria-pressed="${actual === f.id}" onclick="App.ux.filtroRapido('${f.id}')">
             ${actual === f.id ? '' : `<span class="material-symbols-outlined text-[18px]">${f.icono}</span>`}${f.texto}
             <span class="cuenta">${fmtN(cuentas[f.id])}</span>
         </button>`).join('');
-    const ins = document.getElementById('insigniaPendientes');
-    if (ins) {
+    document.querySelectorAll('[data-insignia="pendientes"]').forEach(ins => {
         ins.textContent = cuentas.pendientes > 999 ? '999+' : String(cuentas.pendientes);
         ins.classList.toggle('hidden', !cuentas.pendientes);
-    }
+    });
 };
 
 /* ---------- Filtros activos (pastillas con ✕) ---------- */
@@ -271,6 +353,7 @@ window.App.ux.trasRenderTabla = function() {
     const titulos = { pendientes: 'Médicos pendientes por evaluar', evaluados: 'Médicos evaluados', oportunidad: 'Mayor oportunidad', sinrx: 'Médicos sin recetas',
         mejoraron: 'Médicos que mejoraron de cuadrante', bajaron: 'Médicos que bajaron de cuadrante', discrepan: 'CloseUp y encuesta no coinciden' };
     window.App.ui.safeSetText('tableTitle', st.groupByInstitution ? 'Instituciones' : (titulos[st.FILTRO_RAPIDO] || 'Médicos'));
+    document.getElementById('btnVolverMatriz')?.classList.toggle('hidden', !st.MATRIX_FILTER);
 };
 
 /* ============================================================
@@ -366,13 +449,12 @@ window.App.ux.cerrarMatrizCompleta = function() {
     document.body.classList.remove('sin-desplazar');
 };
 
-// Al tocar un cuadrante: la lista de abajo queda filtrada y se baja hasta ella
+// Al tocar un cuadrante: se abre la pantalla "Médicos" con ese cuadrante filtrado
 window.App.ux.alElegirCuadrante = function(pot, loy) {
     window.App.ux.cerrarMatrizCompleta();
     const lista = document.getElementById('seccionMedicos');
     if (!lista) return;
-    window.App.ux.irA('seccionMedicos');
-    lista.classList.remove('resaltar'); void lista.offsetWidth; lista.classList.add('resaltar');
+    window.App.ux.irA('medicos');
     const n = (window.App.state.CURRENT_TABLE_DATA || []).length;
     window.App.ui.showToast(`Cuadrante ${pot}${LOY_SIGNO[loy]}: ${fmtN(n)} médicos`);
 };
@@ -677,17 +759,19 @@ window.App.ux.cerrarAyudaMatriz = function() {
    GUÍA RÁPIDA (la primera vez que cada persona entra)
 ============================================================ */
 const PASOS_GUIA = {
+    // [qué se resalta, título, texto, pantalla donde está]
     vm: [
-        ['#chipsRapidos', 'Tus filtros rápidos', 'Toca "Pendientes" para ver los médicos que te faltan por evaluar. El número te dice cuántos son.'],
-        ['#visitadorDashboard', 'Tu avance', 'Aquí ves cuántos médicos llevas evaluados. "Evaluar pendientes" te lleva directo al trabajo.'],
-        ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. El botón "?" explica qué significa cada uno.'],
-        ['#dataTable tr:first-child .eval-estado, #dataCards article:first-child .eval-estado, #seccionMedicos', 'Evaluar', 'Toca "Evaluar" en un médico. Las respuestas son de un toque y "Guardar y siguiente" te lleva al próximo.']
+        ['#navInferior, #navRiel', 'Tus secciones', 'Inicio, Matriz y Médicos son pantallas separadas. "Pendientes" te lleva directo a lo que falta evaluar.', 'inicio'],
+        ['#visitadorDashboard', 'Tu avance', 'Aquí ves cuántos médicos llevas evaluados. "Evaluar pendientes" te lleva directo al trabajo.', 'inicio'],
+        ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. El botón "?" explica qué significa cada uno.', 'matriz'],
+        ['#dataTable tr:first-child .eval-estado, #dataCards article:first-child .eval-estado, #seccionMedicos', 'Evaluar', 'Toca "Evaluar" en un médico. Las respuestas son de un toque y "Guardar y siguiente" te lleva al próximo.', 'medicos']
     ],
     equipo: [
-        ['#filterBar', 'Buscar y filtrar', 'Busca un médico o usa los filtros rápidos. En "Filtros" están todos los demás.'],
-        ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. Usa pantalla completa para presentarla.'],
-        ['#dataTable tr:first-child, #dataCards article:first-child, #seccionMedicos', 'La lista', 'Cada médico con su cuadrante, recetas, participación y estado de evaluación.'],
-        ['#btnMas', 'Más opciones', 'Versiones de datos, exportar, la guía y cerrar sesión están aquí.']
+        ['#navInferior, #navRiel', 'Las secciones', 'Inicio, Matriz, Médicos y Equipo son pantallas separadas. Cambia entre ellas desde aquí.', 'inicio'],
+        ['#filterBar', 'Buscar y filtrar', 'Busca un médico o usa los filtros rápidos. En "Filtros" están todos los demás.', 'inicio'],
+        ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. Usa pantalla completa para presentarla.', 'matriz'],
+        ['#dataTable tr:first-child, #dataCards article:first-child, #seccionMedicos', 'La lista', 'Cada médico con su cuadrante, recetas, participación y estado de evaluación.', 'medicos'],
+        ['#btnMas', 'Más opciones', 'Versiones de datos, exportar, la guía y cerrar sesión están aquí.', 'inicio']
     ]
 };
 let pasoActual = 0;
@@ -708,7 +792,8 @@ window.App.ux.pasoGuia = function(delta) {
     const pasos = pasosGuia();
     pasoActual += delta;
     if (pasoActual >= pasos.length) return window.App.ux.terminarGuia();
-    const [selector, titulo, texto] = pasos[pasoActual];
+    const [selector, titulo, texto, pantalla] = pasos[pasoActual];
+    if (pantalla && window.App.state.PANTALLA !== pantalla) window.App.ux.irA(pantalla, { historial: false });
     const el = primeroVisible(selector);
     if (!el && delta === 0 && pasoActual < pasos.length - 1) return window.App.ux.pasoGuia(1);
     const foco = document.getElementById('guiaFoco'), tarjeta = document.getElementById('guiaTarjeta');
@@ -734,6 +819,7 @@ window.App.ux.pasoGuia = function(delta) {
 window.App.ux.terminarGuia = function() {
     document.getElementById('guia')?.classList.add('hidden');
     try { localStorage.setItem(claveGuia(), '1'); } catch (e) { /* sin almacenamiento */ }
+    window.App.ux.irA('inicio', { historial: false });
     window.scrollTo({ top: 0 });
 };
 

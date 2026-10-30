@@ -356,6 +356,29 @@
     .item-menu { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 20px; min-height: 48px; font-size: 14px; font-weight: 500; text-align: left; color: inherit; }
     .item-menu .material-symbols-outlined { font-size: 22px; color: var(--md-on-surface-variant); }
 
+    /* Pantallas (Fase 9A): se ve una a la vez */
+    #dashboardContent [data-pantalla]:not(.pantalla-activa) { display: none; }
+    body[data-pantalla="equipo"] #filterBar, body[data-pantalla="ajustes"] #filterBar { display: none !important; }
+    /* El riel ocupa 88 px a la izquierda: el contenido se corre solo lo necesario */
+    @media (min-width: 768px) {
+        body.con-riel #navRiel { display: flex; }
+        body.con-riel main { padding-left: max(16px, calc(104px - max(0px, (100vw - 80rem) / 2))); }
+    }
+    #navRiel .nav-item { flex: none; width: 80px; padding: 6px 0 10px; border-radius: 16px; }
+    #navRiel .nav-item .nav-icono { width: 56px; }
+
+    /* Ajustes: barras de umbrales y lista de opciones */
+    .umbral-barra { display: flex; height: 14px; border-radius: 9999px; overflow: hidden; gap: 3px; }
+    .umbral-barra > span { display: block; height: 100%; border-radius: 4px; transition: width var(--md-motion-short) var(--md-ease-standard); }
+    #segLoyC { background: rgb(var(--c-error-300)); } #segLoyB { background: rgb(var(--c-warning-300)); } #segLoyA { background: rgb(var(--c-success-500)); }
+    #segPotA { background: rgb(var(--c-primary-700)); } #segPotB { background: rgb(var(--c-primary-400)); } #segPotC { background: rgb(var(--c-neutral-300)); }
+    .umbral-control { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--md-on-surface-variant); }
+    .umbral-control b { color: var(--md-on-surface); }
+    .ajuste-item { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 20px; text-align: left; min-height: 64px; }
+    .ajuste-item b { display: block; font-size: 14px; color: var(--md-on-surface); }
+    .ajuste-item small { display: block; font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
+    .ajuste-icono { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
     /* Ficha del médico: pestañas M3 y anillo de participación */
     .ficha-pestanas button {
         display: inline-flex; align-items: center; gap: 6px; height: 48px; padding: 0 14px; white-space: nowrap; flex-shrink: 0;
