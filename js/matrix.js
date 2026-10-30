@@ -509,6 +509,11 @@ window.App.matrix.aggregateAndCalculate = function() {
     }
     // Al final: los tableros del inicio usan el avance del VM ya actualizado
     if (window.App.tableros) window.App.tableros.alRecalcular();
+    // La campanita se pone al día justo después (sin frenar lo que se ve)
+    if (window.App.avisos && st.isAdmin) {
+        clearTimeout(window.App.matrix._esperaAvisos);
+        window.App.matrix._esperaAvisos = setTimeout(() => { if (typeof window !== 'undefined' && window.App && window.App.avisos) window.App.avisos.actualizar(); }, 300);
+    }
 };
 
 /* ============================================================

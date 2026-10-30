@@ -182,6 +182,8 @@ window.App.ux.alEntrar = function() {
     const sig = document.getElementById('btnGuardarSiguiente');
     if (sig) sig.classList.toggle('hidden', st.rolReal !== 'vm');
     window.App.ux.ocultarSplash();
+    // Campanita de avisos (GD, Gerente Nacional y admin)
+    if (window.App.avisos) window.App.avisos.alEntrar();
     // Movimientos y tendencias respecto a la versión anterior (si existe)
     setTimeout(() => { if (typeof window !== 'undefined' && window.App && window.App.comparar) window.App.comparar.cargar(true); }, 300);
     // La primera vez de cada persona: guía rápida (cuando ya se ve el tablero)
@@ -199,6 +201,7 @@ window.App.ux.alSalir = function() {
     if (window.App.equipo) { window.App.equipo.distrito = 'todos'; window.App.equipo.vista = null; }
     window.App.state.verComo = null;
     document.getElementById('bannerVerComo')?.classList.add('hidden');
+    if (window.App.avisos) { window.App.avisos.cerrar(); window.App.avisos.lista = []; window.App.avisos.actualizar(); }
     document.getElementById('visPromedioDistrito')?.classList.add('hidden');
     window.App.ux.cerrarMas();
     window.App.ux.cerrarFiltros();
