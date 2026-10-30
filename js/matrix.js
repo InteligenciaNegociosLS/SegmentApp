@@ -507,6 +507,8 @@ window.App.matrix.aggregateAndCalculate = function() {
     if (st.currentUserRole === 'visitador') {
         if (typeof updateVisitadorDashboard === 'function') updateVisitadorDashboard(r.visTotalFichero, r.visTotalCruzados);
     }
+    // Al final: los tableros del inicio usan el avance del VM ya actualizado
+    if (window.App.tableros) window.App.tableros.alRecalcular();
 };
 
 /* ============================================================
