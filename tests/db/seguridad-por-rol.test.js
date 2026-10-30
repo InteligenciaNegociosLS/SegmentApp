@@ -259,3 +259,18 @@ describe('Historial de evaluaciones (migración 9)', () => {
         expect(await falla(U.vm1, `update public.evaluaciones_historial set accion = 'x'`)).toBe(true);
     });
 });
+
+describe('Avisos vistos (migración 12)', () => {
+    it('cada persona guarda y lee SOLO su marca de "visto hasta"', async () => {
+        await como(db, U.gd1, `insert into public.avisos_vistos (perfil_id, visto_hasta) values ($1, '2026-10-30T10:00:00Z')`, [U.gd1]);
+        await como(db, U.gd1, `update public.avisos_vistos set visto_hasta = '2026-10-30T12:00:00Z' where perfil_id = $1`, [U.gd1]);
+        const propia = await filas(U.gd1, 'select visto_hasta from public.avisos_vistos');
+        expect(propia).toHaveLength(1);
+        expect(new Date(propia[0].visto_hasta).toISOString()).toBe('2026-10-30T12:00:00.000Z');
+        expect(await filas(U.admin, 'select 1 from public.avisos_vistos')).toHaveLength(0);
+        expect(await falla(U.vm1, `insert into public.avisos_vistos (perfil_id) values ($1)`, [U.gd1])).toBe(true);
+        expect(await falla(U.nuevo, `insert into public.avisos_vistos (perfil_id) values ($1)`, [U.nuevo])).toBe(true);
+        expect(await falla(null, 'select * from public.avisos_vistos')).toBe(true);
+        expect(await falla(U.gd1, 'delete from public.avisos_vistos')).toBe(true);
+    });
+});
