@@ -101,6 +101,10 @@ try {
         await page.evaluate(() => attemptLogin());
         await page.waitForFunction(() => App.state.currentUserRole === 'visitador');
         await foto('3-vm-tablero', { completa: true });
+        await page.evaluate(() => App.ux.irA('matriz'));
+        await foto('3m-vm-matriz', { completa: true });
+        await page.evaluate(() => App.ux.irA('medicos'));
+        await foto('3n-vm-medicos', { completa: true });
         await page.evaluate(() => filterByMatrix('C', 'C'));
         await foto('3a-vm-cuadrante');
         await page.evaluate(() => { clearMatrixFilter(); App.ux.abrirFiltros(); });
@@ -132,7 +136,7 @@ try {
         await foto('3f4-vm-guia-paso4');
         await page.evaluate(() => { App.ux.terminarGuia(); App.ux.abrirAyudaMatriz(); });
         await foto('3g-vm-ayuda');
-        await page.evaluate(() => { App.ux.cerrarAyudaMatriz(); App.ux.abrirMatrizCompleta(); });
+        await page.evaluate(() => { App.ux.cerrarAyudaMatriz(); App.ux.irA('matriz'); App.ux.abrirMatrizCompleta(); });
         await foto('3h-vm-matriz-completa');
         await page.evaluate(() => toggleSummaryCells());
         await foto('3i-vm-matriz-completa-subtotales');
@@ -158,6 +162,15 @@ try {
         await page.evaluate(() => attemptLogin());
         await page.waitForFunction(() => App.state.isAdmin, null, { timeout: 120000 });
         await foto('4-admin-tablero', { completa: true });
+        await page.evaluate(() => App.ux.irA('matriz'));
+        await foto('4b-admin-matriz');
+        await page.evaluate(() => App.ux.irA('equipo'));
+        await foto('4c-admin-equipo', { completa: true });
+        await page.evaluate(() => App.ux.irA('ajustes'));
+        await foto('4d-admin-ajustes', { completa: true });
+        await page.evaluate(() => { document.getElementById('sliderPotHigh').value = 80; App.ajustes.alMoverUmbral(); App.ajustes.vistaPrevia(); });
+        await foto('4e-admin-ajustes-vista-previa');
+        await page.evaluate(() => { App.ajustes.descartarUmbrales(); App.ux.irA('inicio'); });
         await page.evaluate(() => abrirCargaDatos());
         await foto('5-admin-carga');
         await page.evaluate(() => { App.carga.cerrarPanel(); App.reports.openModal(); });

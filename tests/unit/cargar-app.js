@@ -14,7 +14,7 @@ export const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 // Mismo orden que index.html
 const SCRIPTS = ['entorno', 'errores', 'config', 'state', 'ui', 'data', 'filters', 'matrix',
     'evaluation', 'admin', 'auth', 'modals', 'exports', 'offline', 'reports',
-    'supabase-api', 'carga-datos', 'versiones', 'comparar', 'ficha', 'ux', 'main'];
+    'supabase-api', 'carga-datos', 'versiones', 'comparar', 'ficha', 'ajustes', 'ux', 'main'];
 
 export function localforageEnMemoria() {
     const m = new Map();
@@ -46,6 +46,7 @@ export function cargarApp({ datos, env } = {}) {
     window.localforage = localforageEnMemoria();
     window.__calls = [];
     window.__SIN_GUIA = true;   // la guía rápida no se abre sola en las pruebas
+    window.scrollTo = () => {};   // jsdom no desplaza la página
     window.__SEGMENTAPP_ENV__ = env || { APP_ENV: 'development', SUPABASE_URL: 'https://prueba.supabase.co', SUPABASE_ANON_KEY: 'clave-publica-de-prueba' };
 
     for (const nombre of SCRIPTS) {
