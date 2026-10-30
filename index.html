@@ -90,6 +90,17 @@
 </header>
 <div id="toast" role="status" aria-live="polite">Notificación</div>
 
+<!-- Aviso de "Ver como…" (solo administrador) -->
+<div id="bannerVerComo" class="hidden fixed top-16 inset-x-0 z-[45] no-print">
+    <div class="max-w-3xl mx-auto mt-2 px-3">
+        <div class="bg-purple-700 text-white rounded-full shadow-lg pl-4 pr-1.5 py-1.5 flex items-center gap-3 text-sm">
+            <span class="material-symbols-outlined text-[20px]">visibility</span>
+            <span class="flex-1 min-w-0 truncate">Viendo la app como <b id="bannerVerComoNombre"></b> · solo consulta</span>
+            <button class="h-9 px-4 rounded-full bg-white text-purple-800 font-bold" onclick="App.ajustes.salirVerComo()">Salir</button>
+        </div>
+    </div>
+</div>
+
 <!-- Instalar en iPhone / iPad (Safari no tiene botón automático) -->
 <div id="instalarIos" class="hidden fixed inset-0 z-[95] hoja-fondo" onclick="if (event.target === this) this.classList.add('hidden')">
     <div class="hoja p-6" role="dialog" aria-modal="true" aria-labelledby="instalarIosTitulo">
@@ -327,6 +338,7 @@
                 <div class="text-sm font-bold text-slate-800 truncate"><span id="visTotalEvaluados">0</span> de <span id="visTotalFichero">0</span> médicos evaluados</div>
                 <div class="barra-fina mt-2"><div id="visBarEvaluados" style="width:0%"></div></div>
                 <div class="text-xs text-slate-500 mt-1.5 truncate"><span id="visTotalCruzados">0</span> con recetas en CloseUp<span class="hidden" id="visBarCruzados"></span></div>
+                <div class="text-xs text-slate-600 mt-1 hidden" id="visPromedioDistrito"></div>
             </div>
             <button onclick="App.ux.filtroRapido('pendientes', true)" class="hidden sm:flex shrink-0 items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 text-white text-sm font-bold"><span class="material-symbols-outlined text-[18px]">checklist</span> Evaluar pendientes</button>
         </section>
@@ -392,6 +404,9 @@
             <section id="tarjetaMovimientos" class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200" aria-live="polite"></section>
             <section id="tarjetaConcordancia" class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200" aria-live="polite"></section>
         </div>
+
+        <!-- Tableros del inicio según el rol (Fase 9B, js/tableros.js) -->
+        <div id="tablerosInicio" class="mb-6"></div>
 
         </div>
 
@@ -499,59 +514,27 @@
         </section>
 
         <!-- ===== Pantalla: Equipo (GD, Gerente Nacional y administrador) ===== -->
-        <section data-pantalla="equipo" id="pantallaEquipo" class="pantalla" aria-label="Equipo">
-        <!-- Dashboard del Administrador (Gestión de Equipo) -->
-        <div id="adminDashboard" class="hidden mb-8 space-y-6 animate-fade-in no-print">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
-                <h3 class="font-display font-bold text-slate-800 text-xl flex flex-wrap items-center gap-2">
-                    <span class="material-symbols-outlined text-indigo-600 bg-indigo-100 p-1.5 rounded-lg text-[22px]">admin_panel_settings</span>
-                    Panel de Control del Equipo
-                </h3>
-        <div class="flex items-center gap-2 flex-wrap">
-                    <button onclick="openReportsModal()" class="bg-indigo-600 text-white border border-indigo-700 px-4 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center justify-center gap-2">
-                        <span class="material-symbols-outlined text-[18px]">monitoring</span> Reportes Avanzados
-                    </button>
-                    <button onclick="exportAdminEvaluationsExcel()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-full text-sm font-bold shadow-sm transition flex items-center justify-center gap-2">
-                        <span class="material-symbols-outlined text-[18px]">download_for_offline</span> Descargar
-                    </button>
+        <section data-pantalla="equipo" id="pantallaEquipo" class="pantalla" aria-labelledby="tituloEquipo">
+            <div id="adminDashboard" class="hidden no-print">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+                    <div>
+                        <h2 id="tituloEquipo" class="font-display font-bold text-slate-800 text-2xl">Equipo</h2>
+                        <p class="text-sm text-slate-500" id="equipoSubtitulo">Avance y calidad de las evaluaciones</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="relative" id="equipoDistritoZona">
+                            <span class="sr-only">Distrito</span>
+                            <select id="equipoDistrito" class="filter-select !rounded-full !py-2 !text-xs !font-bold max-w-[220px]" onchange="App.equipo.elegirDistrito(this.value)"></select>
+                        </label>
+                        <button onclick="exportAdminEvaluationsExcel()" class="h-10 px-4 rounded-full border border-slate-300 text-sm font-bold text-blue-700 flex items-center gap-2" title="Descargar las evaluaciones en Excel">
+                            <span class="material-symbols-outlined text-[20px]">download</span><span class="hidden sm:inline">Evaluaciones</span>
+                        </button>
+                    </div>
                 </div>
+                <div id="equipoResumen" class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4"></div>
+                <div class="chips-fila mb-4" id="equipoPestanas" role="tablist" aria-label="Vistas del equipo"></div>
+                <div id="equipoContenido" role="tabpanel" aria-live="polite"></div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm flex flex-col">
-                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4 border-b border-slate-100 pb-3">
-                        <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2 uppercase tracking-widest">
-                            <span class="material-symbols-outlined text-blue-500">checklist</span> Progreso de Evaluación
-                        </h4>
-                        <select id="adminManagerFilter" class="text-xs border border-slate-300 rounded-lg px-2 py-1 outline-none bg-slate-50 text-slate-700 font-bold" onchange="renderAdminDashboard()">
-                            <option value="all">Todos los Gerentes</option>
-                        </select>
-                    </div>
-                    <div id="managerStatsCards" class="grid grid-cols-2 gap-4 mb-4">
-                       <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 flex flex-col justify-center">
-                           <span class="text-[9px] font-bold text-indigo-500 uppercase">Médicos Evaluados vs Fichados</span>
-                           <span class="text-2xl font-black text-indigo-700" id="mgrDocsStat">0 / 0</span>
-                       </div>
-                       <div class="bg-purple-50 p-4 rounded-2xl border border-purple-100 flex flex-col justify-center">
-                           <span class="text-[9px] font-bold text-purple-500 uppercase">Total Encuestas Realizadas</span>
-                           <span class="text-2xl font-black text-purple-700" id="mgrSurveysStat">0</span>
-                       </div>
-                    </div>
-                    <div class="flex-1 overflow-y-auto max-h-[350px] pr-2 space-y-2" id="adminProgressTable">
-                        <div class="p-4 text-center text-xs text-slate-500">Cargando métricas de equipo...</div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-3xl p-6 md:p-8 border border-rose-200 shadow-sm relative flex flex-col">
-                    <div class="flex items-center justify-between mb-4 border-b border-rose-100 pb-3">
-                        <h4 class="text-sm font-bold text-rose-800 flex items-center gap-2 uppercase tracking-widest">
-                            <span class="material-symbols-outlined text-rose-500">warning</span> Alertas de Discrepancia
-                        </h4>
-                        <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200" id="discCountBadge">0</span>
-                    </div>
-                    <p class="text-[10px] text-slate-500 mb-3 bg-rose-50 p-2 rounded-lg border border-rose-100">Muestra médicos con un choque crítico entre la categórica de potencialidad Recetas (Rx) vs la Evaluación del Asesor (Ej: Rx Bajo = C vs Subj Alto = A).</p>
-                    <div class="flex-1 overflow-y-auto max-h-[350px] pr-2" id="adminDiscrepancyTable"></div>
-                </div>
-            </div>
-        </div>
         </section>
 
         <!-- ===== Pantalla: Ajustes (solo administrador) ===== -->
@@ -564,6 +547,9 @@
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajUmbrales')"><span class="material-symbols-outlined text-[18px]">tune</span> Umbrales</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajEncuesta')"><span class="material-symbols-outlined text-[18px]">balance</span> Encuesta</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajDatos')"><span class="material-symbols-outlined text-[18px]">database</span> Datos y equipo</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajSalud')"><span class="material-symbols-outlined text-[18px]">health_and_safety</span> Salud de los datos</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajVerComo')"><span class="material-symbols-outlined text-[18px]">visibility</span> Ver como…</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajBitacora')"><span class="material-symbols-outlined text-[18px]">history_edu</span> Bitácora</button>
             </div>
 
             <!-- Umbrales de la matriz -->
@@ -633,6 +619,45 @@
                     <button type="button" class="ajuste-item" onclick="descargarRegistroFallas()"><span class="ajuste-icono bg-rose-50 text-rose-700"><span class="material-symbols-outlined">bug_report</span></span><span><b>Registro de fallas</b><small>Descargar los errores que ha tenido la app</small></span></button>
                     <button type="button" class="ajuste-item" onclick="App.reports.openModal()"><span class="ajuste-icono bg-purple-50 text-purple-700"><span class="material-symbols-outlined">monitoring</span></span><span><b>Reportes avanzados</b><small>Reportes por mercado, visitador y producto</small></span></button>
                 </div>
+            </article>
+
+            <!-- Salud de los datos (Fase 9B) -->
+            <article id="ajSalud" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-4">
+                    <span class="w-11 h-11 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">health_and_safety</span></span>
+                    <div><h3 class="text-lg font-display font-bold text-slate-800">Salud de los datos</h3>
+                        <p class="text-sm text-slate-500">Lo que conviene revisar en la versión de datos que se usa hoy.</p></div>
+                </header>
+                <ul id="ajSaludLista" class="divide-y divide-slate-100"></ul>
+            </article>
+
+            <!-- Ver como… (Fase 9B) -->
+            <article id="ajVerComo" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-4">
+                    <span class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">visibility</span></span>
+                    <div><h3 class="text-lg font-display font-bold text-slate-800">Ver la app como…</h3>
+                        <p class="text-sm text-slate-500">Mira exactamente lo que ve un visitador o un gerente de distrito, para ayudarlos. Es solo consulta: no se puede guardar nada.</p></div>
+                </header>
+                <div class="grid sm:grid-cols-2 gap-3">
+                    <label class="flex flex-col gap-1 text-sm font-semibold text-slate-700">Visitador
+                        <select id="ajVerComoVm" class="filter-select !rounded-2xl"></select></label>
+                    <label class="flex flex-col gap-1 text-sm font-semibold text-slate-700">Gerente de distrito
+                        <select id="ajVerComoGd" class="filter-select !rounded-2xl"></select></label>
+                </div>
+                <div class="flex flex-wrap justify-end gap-2 mt-4">
+                    <button type="button" class="h-10 px-5 rounded-full text-sm font-bold bg-purple-700 text-white flex items-center gap-2" onclick="App.ajustes.verComo('vm', document.getElementById('ajVerComoVm').value)"><span class="material-symbols-outlined text-[18px]">person</span> Ver como visitador</button>
+                    <button type="button" class="h-10 px-5 rounded-full text-sm font-bold bg-purple-50 text-purple-800 flex items-center gap-2" onclick="App.ajustes.verComo('gd', document.getElementById('ajVerComoGd').value)"><span class="material-symbols-outlined text-[18px]">groups</span> Ver como gerente</button>
+                </div>
+            </article>
+
+            <!-- Bitácora de cambios (Fase 9B, migración 11) -->
+            <article id="ajBitacora" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-4">
+                    <span class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">history_edu</span></span>
+                    <div><h3 class="text-lg font-display font-bold text-slate-800">Bitácora de cambios</h3>
+                        <p class="text-sm text-slate-500">Quién cambió umbrales, ponderación o productos, y quién publicó cada versión de datos.</p></div>
+                </header>
+                <ul id="ajBitacoraLista" class="divide-y divide-slate-100"></ul>
             </article>
         </section>
     </div>
@@ -1424,6 +1449,8 @@
 <script src="js/comparar.js"></script>
 <script src="js/ficha.js"></script>
 <script src="js/ajustes.js"></script>
+<script src="js/equipo.js"></script>
+<script src="js/tableros.js"></script>
 <script src="js/ux.js"></script>
 
 <!-- 6. Entry point — orquestador (debe ir al final) -->
