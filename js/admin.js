@@ -39,11 +39,9 @@ window.App.admin.processAdminAuth = function() {
 window.App.admin.updateAdminUI = function() {
     const st = window.App.state;
     const esAdmin = st.rolReal === 'admin';
-    const tools    = document.getElementById('analysisTools');
     const uploadBtn = document.getElementById('btnUploadData');
     const prodBtn  = document.getElementById('btnProductsNav');
-    // Ajustes, productos y carga de datos: solo el administrador
-    tools.classList.toggle('hidden', !esAdmin);
+    // Ajustes (su propia pantalla), productos y carga de datos: solo el administrador
     if (uploadBtn) { uploadBtn.classList.toggle('hidden', !esAdmin); uploadBtn.classList.toggle('flex', esAdmin); }
     if (prodBtn) prodBtn.classList.toggle('hidden', !esAdmin);
     // Versión de datos: cualquiera con sesión
@@ -58,8 +56,10 @@ window.App.admin.renderAdminDashboard = function() {
     const st = window.App.state;
     const d  = window.App.data;
     if (!st.isAdmin) return;
-
-console.time('[Admin] renderAdminDashboard');
+    // Solo se dibuja cuando se está viendo la pantalla "Equipo" (con 28 mil médicos
+    // dibujarlo en cada filtro era uno de los tirones). Al abrirla se pone al día.
+    if (st.PANTALLA !== 'equipo') { window.App.admin._panelPendiente = true; return; }
+    window.App.admin._panelPendiente = false;
 
     // Pedido 2 Entrega 2: Filtro de Cruce Errado
     window.App.admin._ensureCruceErradoFilter();
@@ -186,6 +186,7 @@ filteredEvals.forEach(ev => {
     const discContainer = document.getElementById('adminDiscrepancyTable');
     const discParts = [];
     let discCount = 0;
+    const mostrarHasta = window.App.admin._alertasVisibles || 20;   // de 20 en 20
     validEvalsForDiscrepancy.forEach(ev => {
         const doc = docByKey.get(normId(ev.medico_id));   // ⚡ era .find() O(n)
 
@@ -194,6 +195,7 @@ filteredEvals.forEach(ev => {
         const subPot = ev.cuadrante ? ev.cuadrante.charAt(0) : '';
         if (subPot && objPot !== subPot) {
             discCount++;
+            if (discCount > mostrarHasta) return;
             discParts.push(`
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 mb-2 bg-white rounded-xl border border-rose-100 transition shadow-sm gap-2 group cursor-pointer" onclick="openDoctorModal('${doc.id}')">
                     <div class="flex flex-col"><span class="text-xs font-bold text-slate-800">${doc.name}</span><span class="text-[10px] text-slate-500">Evaluado por: <b class="text-indigo-600">${ev.visitador}</b> en <b class="text-indigo-600">${ev.mercado || 'General'}</b></span></div>
@@ -209,7 +211,9 @@ filteredEvals.forEach(ev => {
     const discHtml = discParts.length > 0
         ? discParts.join('')
         : '<div class="p-8 text-center text-xs text-emerald-600 flex flex-col items-center gap-2 font-medium bg-emerald-50 rounded-2xl border border-emerald-100"><span class="material-symbols-outlined text-emerald-400 text-4xl">verified</span>No hay discrepancias críticas de potencial detectadas.</div>';
-    if (discContainer) discContainer.innerHTML = discHtml;
+    const verMas = discCount > mostrarHasta
+        ? `<button class="w-full mt-2 h-10 rounded-full text-sm font-bold text-blue-700 border border-slate-300" onclick="App.admin.verMasAlertas()">Ver 20 más (quedan ${window.App.ui.formatNumber(discCount - mostrarHasta)})</button>` : '';
+    if (discContainer) discContainer.innerHTML = discHtml + verMas;
 
     const discBadge = document.getElementById('discCountBadge');
     if (discBadge) {
@@ -223,7 +227,11 @@ filteredEvals.forEach(ev => {
         }
     }
 
-    console.timeEnd('[Admin] renderAdminDashboard');
+};
+
+window.App.admin.verMasAlertas = function() {
+    window.App.admin._alertasVisibles = (window.App.admin._alertasVisibles || 20) + 20;
+    window.App.admin.renderAdminDashboard();
 };
 
 /* ============================================================
@@ -339,6 +347,7 @@ window.App.admin.adminDeleteEval = async function(firebaseId) {
         const eliminada = st.ALL_EVALUATIONS.find(e => e.firebaseId === firebaseId);
         await window.App.sb.eliminarEvaluacion(firebaseId);
         st.ALL_EVALUATIONS = st.ALL_EVALUATIONS.filter(e => e.firebaseId !== firebaseId);
+        window.App.evaluation.marcarCambio();
         await refrescar();
         // No se borra (queda en el historial) y se puede deshacer enseguida
         window.App.ui.showToast("Evaluación eliminada.", {
@@ -347,6 +356,7 @@ window.App.admin.adminDeleteEval = async function(firebaseId) {
                 try {
                     const restaurada = await window.App.sb.restaurarEvaluacion(firebaseId);
                     st.ALL_EVALUATIONS.push(restaurada || eliminada);
+                    window.App.evaluation.marcarCambio();
                     await refrescar();
                     window.App.ui.showToast("Evaluación restaurada.");
                 } catch (e) {
@@ -376,93 +386,10 @@ window.App.admin.executeClearRepEvals = window.App.admin.confirmClearAllEvals;
 /* ============================================================
    CONFIGURACIÓN DE PONDERACIÓN DE LA ENCUESTA
 ============================================================ */
+// La ponderación ahora está en la pantalla "Ajustes"
 window.App.admin.openSurveyConfigModal = function() {
-    window.App.admin.renderSurveyConfigForm();
-    document.getElementById('surveyConfigModal').classList.remove('hidden');
-};
-
-window.App.admin.renderSurveyConfigForm = function() {
-    const st = window.App.state;
-    const cfg = window.App.config;
-    const container = document.getElementById('surveyConfigBody');
-    let html = `
-        <div class="bg-blue-50 border border-blue-100 p-5 rounded-2xl mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
-            <div>
-                <h4 class="font-bold text-blue-800 text-sm flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">rule</span> Umbrales de Potencial</h4>
-                <p class="text-xs text-blue-600 mt-1">Define el puntaje mínimo requerido en la encuesta para alcanzar A o B.</p>
-            </div>
-            <div class="flex gap-4 shrink-0">
-                <div class="flex flex-col">
-                    <label class="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Puntaje para A</label>
-                    <input type="number" inputmode="numeric" pattern="[0-9]*" id="th_A" value="${st.SURVEY_THRESHOLDS.A}" class="w-24 px-3 py-2 border border-blue-200 rounded-xl text-sm font-bold text-center focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Puntaje para B</label>
-                    <input type="number" inputmode="numeric" pattern="[0-9]*" id="th_B" value="${st.SURVEY_THRESHOLDS.B}" class="w-24 px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-center focus:ring-2 focus:ring-slate-500 outline-none">
-                </div>
-            </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    `;
-    for (const [qKey, qLabel] of Object.entries(cfg.SURVEY_QUESTION_LABELS)) {
-        html += `<div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-sm transition"><h4 class="font-bold text-slate-700 text-xs mb-3 truncate" title="${qLabel}">${qLabel}</h4><div class="space-y-2">`;
-        for (const [option, score] of Object.entries(st.SURVEY_WEIGHTS[qKey])) {
-            const safeId = `w_${qKey}_${option.replace(/[^a-zA-Z0-9]/g, "_")}`;
-            html += `
-                <div class="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm transition">
-                    <span class="text-xs font-medium text-slate-600 truncate mr-2" title="${option}">${option}</span>
-                    <input type="number" inputmode="numeric" pattern="[0-9]*" id="${safeId}" data-q="${qKey}" data-opt="${option}" value="${score}" class="w-16 px-2 py-1 border border-slate-200 rounded-lg text-xs font-mono text-center focus:ring-1 focus:ring-emerald-500 outline-none transition">
-                </div>
-            `;
-        }
-        html += `</div></div>`;
-    }
-    html += `</div>`;
-    container.innerHTML = html;
-};
-
-window.App.admin.saveSurveyConfig = function() {
-    const st = window.App.state;
-    const thA = parseInt(document.getElementById('th_A').value) || 70;
-    const thB = parseInt(document.getElementById('th_B').value) || 35;
-
-    if (thB >= thA) {
-        window.App.ui.showToast("Error: El puntaje para A debe ser mayor al de B.");
-        return;
-    }
-    st.SURVEY_THRESHOLDS.A = thA;
-    st.SURVEY_THRESHOLDS.B = thB;
-
-    const inputs = document.querySelectorAll('#surveyConfigBody input[data-q]');
-    inputs.forEach(input => {
-        const q = input.getAttribute('data-q');
-        const opt = input.getAttribute('data-opt');
-        const val = parseInt(input.value) || 0;
-        if (st.SURVEY_WEIGHTS[q] && st.SURVEY_WEIGHTS[q][opt] !== undefined) {
-            st.SURVEY_WEIGHTS[q][opt] = val;
-        }
-    });
-
-    window.App.admin.guardarConfig({
-        ponderacion_encuesta: st.SURVEY_WEIGHTS,
-        umbrales_encuesta: st.SURVEY_THRESHOLDS
-    }, "Ponderación guardada para todo el equipo.").then(ok => {
-        if (!ok) return;
-        document.getElementById('surveyConfigModal').classList.add('hidden');
-        st._lastUniverseSignature = null;
-        window.App.matrix.aggregateAndCalculate();
-    });
-};
-
-window.App.admin.restoreDefaultWeights = function() {
-    if (confirm("¿Estás seguro de restaurar los valores por defecto? Se perderán los cambios actuales.")) {
-        const cfg = window.App.config;
-        const st = window.App.state;
-        st.SURVEY_WEIGHTS = JSON.parse(JSON.stringify(cfg.DEFAULT_SURVEY_WEIGHTS));
-        st.SURVEY_THRESHOLDS = JSON.parse(JSON.stringify(cfg.DEFAULT_SURVEY_THRESHOLDS));
-        window.App.admin.renderSurveyConfigForm();
-        window.App.ui.showToast("Valores restaurados. No olvides guardar.");
-    }
+    if (window.App.ux) window.App.ux.irA('ajustes');
+    if (window.App.ajustes) setTimeout(() => window.App.ajustes.irA('ajEncuesta'), 50);
 };
 
 /* ============================================================
@@ -533,20 +460,7 @@ window.App.admin.guardarConfig = async function(cambios, mensajeOk) {
     }
 };
 
-// Umbrales de la matriz: se guardan para todos al soltar el control (solo admin)
-window.addEventListener('DOMContentLoaded', () => {
-    ['sliderLow', 'sliderHigh', 'sliderPotLow', 'sliderPotHigh'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener('change', () => {
-            const st = window.App.state;
-            if (st.rolReal !== 'admin') return;
-            window.App.admin.guardarConfig({ umbrales_matriz: {
-                TH_LOY_LOW: st.TH_LOY_LOW, TH_LOY_HIGH: st.TH_LOY_HIGH, TH_POT_LOW: st.TH_POT_LOW, TH_POT_HIGH: st.TH_POT_HIGH
-            } }, "Umbrales guardados para todo el equipo.");
-        });
-    });
-});
+// Umbrales de la matriz: se aplican y guardan para todos con "Aplicar" en Ajustes (js/ajustes.js)
 
 /* ============================================================
    GESTIÓN DE ACCESOS DE VISITADORES
@@ -622,9 +536,6 @@ window.executeClearAllEvals    = window.App.admin.executeClearAllEvals;
 window.clearRepEvaluations     = window.App.admin.clearRepEvaluations;
 window.executeClearRepEvals    = window.App.admin.executeClearRepEvals;
 window.openSurveyConfigModal   = window.App.admin.openSurveyConfigModal;
-window.renderSurveyConfigForm  = window.App.admin.renderSurveyConfigForm;
-window.saveSurveyConfig        = window.App.admin.saveSurveyConfig;
-window.restoreDefaultWeights   = window.App.admin.restoreDefaultWeights;
 window.openProductModal        = window.App.admin.openProductModal;
 window.renderProductCheckboxes = window.App.admin.renderProductCheckboxes;
 window.saveProductsConfig      = window.App.admin.saveProductsConfig;
