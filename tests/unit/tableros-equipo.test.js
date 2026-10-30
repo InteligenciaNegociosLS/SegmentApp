@@ -97,7 +97,7 @@ describe('Herramientas del administrador', () => {
         App.ajustes.verComo('vm', 'NEIVIS PARRA');
         expect(App.state.soloLectura).toBe(true);
         expect(App.state.currentUserRole).toBe('visitador');
-        expect([...document.querySelectorAll('#navInferior [data-seccion]')].map(b => b.dataset.seccion)).toEqual(['inicio', 'matriz', 'medicos', 'pendientes', 'mas']);
+        expect([...document.querySelectorAll('#navInferior [data-seccion]')].map(b => b.dataset.seccion)).toEqual(['inicio', 'matriz', 'medicos', 'mas']);
         expect(App.state.PROCESSED_DATA.every(d => (d.ficheroData || []).some(f => f['Nombre del sector'] === 'NEIVIS PARRA'))).toBe(true);
         expect(document.getElementById('bannerVerComo').classList.contains('hidden')).toBe(false);
         App.ajustes.salirVerComo();

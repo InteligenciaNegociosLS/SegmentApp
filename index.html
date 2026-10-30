@@ -405,8 +405,8 @@
             <section id="tarjetaConcordancia" class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200" aria-live="polite"></section>
         </div>
 
-        <!-- Tableros del inicio según el rol (Fase 9B, js/tableros.js) -->
-        <div id="tablerosInicio" class="mb-6"></div>
+        <!-- Tableros del inicio según el rol (Fase 9B, js/tableros.js). Para el VM se mueven al final de la página -->
+        <div id="zonaTablerosArriba"><div id="tablerosInicio" class="mb-6"></div></div>
 
         </div>
 
@@ -512,6 +512,9 @@
                 </div>
             </div>
         </section>
+
+        <!-- Final de la página única del VM: sus médicos con más oportunidad -->
+        <div data-pantalla="medicos" id="zonaTablerosAbajo" class="pantalla mt-6"></div>
 
         <!-- ===== Pantalla: Equipo (GD, Gerente Nacional y administrador) ===== -->
         <section data-pantalla="equipo" id="pantallaEquipo" class="pantalla" aria-labelledby="tituloEquipo">
