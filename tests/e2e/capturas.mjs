@@ -166,8 +166,15 @@ try {
         await foto('4b-admin-matriz');
         await page.evaluate(() => App.ux.irA('equipo'));
         await foto('4c-admin-equipo', { completa: true });
+        await page.evaluate(() => { App.equipo.verVista('visitadores'); App.equipo.abrirVm(0, App.equipo.estadisticas().vms.slice().sort((a, b) => b.pct - a.pct)[0].nombre); });
+        await foto('4c2-admin-equipo-visitadores');
+        await page.evaluate(() => App.equipo.verVista('prioridades'));
+        await foto('4c3-admin-equipo-prioridades');
         await page.evaluate(() => App.ux.irA('ajustes'));
         await foto('4d-admin-ajustes', { completa: true });
+        await page.evaluate(() => App.ajustes.verComo('vm', 'NEIVIS PARRA'));
+        await foto('4f-admin-ver-como');
+        await page.evaluate(() => App.ajustes.salirVerComo());
         await page.evaluate(() => { document.getElementById('sliderPotHigh').value = 80; App.ajustes.alMoverUmbral(); App.ajustes.vistaPrevia(); });
         await foto('4e-admin-ajustes-vista-previa');
         await page.evaluate(() => { App.ajustes.descartarUmbrales(); App.ux.irA('inicio'); });

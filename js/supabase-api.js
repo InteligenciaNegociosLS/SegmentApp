@@ -141,6 +141,26 @@ window.App.sb.historialMedico = async function(matricula) {
     return data || [];
 };
 
+// Fase 9B (migración 11): evolución por mercado, avance del distrito y bitácora
+window.App.sb.evolucionMercados = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('evolucion_mercados');
+    if (error) throw fallo(error, 'Evolución por mercado');
+    return data || [];
+};
+window.App.sb.avanceDistrito = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('avance_distrito');
+    if (error) throw fallo(error, 'Avance del distrito');
+    return data;
+};
+window.App.sb.bitacora = async function(limite = 50) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('bitacora_reciente', { p_limite: limite });
+    if (error) throw fallo(error, 'Bitácora');
+    return data || [];
+};
+
 window.App.sb.urlArchivo = async function(ruta) {
     const sb = await window.App.sb.cliente();
     const { data, error } = await sb.storage.from(BUCKET_DATOS).createSignedUrl(ruta, 3600);

@@ -168,6 +168,48 @@ describe('Historial de un médico (migración 10)', () => {
     });
 });
 
+describe('Tableros por rol (migración 11)', () => {
+    it('evolución por mercado: el admin ve todo el país; el VM, solo sus médicos', async () => {
+        const nacional = (await como(db, U.admin, 'select public.evolucion_mercados() as e')).rows[0].e;
+        expect(nacional).toHaveLength(1);
+        const totalNacional = (await db.query('select sum(rx)::int as t from public.recetas where snapshot_id = $1', [ids.recetas])).rows[0].t;
+        expect(nacional[0].mercados.reduce((s, m) => s + Number(m[1]), 0)).toBe(totalNacional);
+        expect(nacional[0].mercados).toHaveLength(MERCADOS.length);
+        const delVm = (await como(db, U.vm, 'select public.evolucion_mercados() as e')).rows[0].e;
+        const paquete = await datosComo(U.vm);
+        expect(delVm[0].mercados.reduce((s, m) => s + Number(m[1]), 0)).toBe(paquete.recetas.reduce((s, r) => s + r[3], 0));
+        expect(delVm[0].mercados.every(m => Number(m[2]) <= Number(m[1]))).toBe(true);
+    });
+    it('avance del VM frente al promedio de su distrito (sin nombres de otros)', async () => {
+        const antes = (await como(db, U.vm, 'select public.avance_distrito() as a')).rows[0].a;
+        expect(antes.total).toBe(142);
+        const vis = (await db.query('select id from public.visitadores where nombre_sector = $1', [VM])).rows[0].id;
+        const mat = (await db.query(`select f.matricula from public.fichero f where f.snapshot_id = $1 and f.visitador_id = $2 limit 1`, [ids.fichero, vis])).rows[0].matricula;
+        await db.query(`insert into public.evaluaciones (visitador_id, matricula, mercado, cuadrante) values ($1, $2, 'M1', 'A')`, [vis, mat]);
+        const despues = (await como(db, U.vm, 'select public.avance_distrito() as a')).rows[0].a;
+        expect(despues.evaluados).toBe(antes.evaluados + 1);
+        expect(despues.visitadores).toBeGreaterThan(1);
+        expect(Number(despues.promedio_pct)).toBeGreaterThan(0);
+        expect(Object.keys(despues).sort()).toEqual(['evaluados', 'promedio_pct', 'total', 'visitadores']);
+        // Para quien no es VM no devuelve nada
+        expect((await como(db, U.gd, 'select public.avance_distrito() as a')).rows[0].a).toBeNull();
+    });
+    it('bitácora: registra cambios de configuración y publicaciones; solo la lee el admin', async () => {
+        await como(db, U.admin, `update public.configuracion set valor = '{"TH_LOY_LOW": 30, "TH_LOY_HIGH": 66, "TH_POT_LOW": 33, "TH_POT_HIGH": 66}' where clave = 'umbrales_matriz'`);
+        const b = (await como(db, U.admin, 'select public.bitacora_reciente(10) as b')).rows[0].b;
+        expect(b[0]).toMatchObject({ accion: 'configuracion', clave: 'umbrales_matriz' });
+        expect(b[0].antes.TH_LOY_LOW).toBe(33);
+        expect(b[0].despues.TH_LOY_LOW).toBe(30);
+        await expect(como(db, U.vm, 'select public.bitacora_reciente(10)')).rejects.toThrow(/Solo el administrador/);
+        expect((await como(db, U.vm, 'select count(*)::int as n from public.bitacora')).rows[0].n).toBe(0);
+        await expect(como(db, U.admin, `insert into public.bitacora (accion) values ('falsa')`)).rejects.toThrow();
+        // Sin cambios reales no se registra nada
+        const n = (await db.query('select count(*)::int as n from public.bitacora')).rows[0].n;
+        await como(db, U.admin, `update public.configuracion set descripcion = descripcion where clave = 'umbrales_matriz'`);
+        expect((await db.query('select count(*)::int as n from public.bitacora')).rows[0].n).toBe(n);
+    });
+});
+
 describe('Permisos', () => {
     it('solo el admin prepara versiones', async () => {
         await expect(como(db, U.vm, 'select public.preparar_orden_mercado($1)', [ids.recetas])).rejects.toThrow(/Solo el administrador/);

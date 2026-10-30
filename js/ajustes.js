@@ -17,7 +17,8 @@ window.App.ajustes = {};
 const escA = (v) => window.App.ui.escapeHtml(v);
 const fmtA = (n, d = 0) => window.App.ui.formatNumber(n || 0, d);
 const CONTROLES = { TH_LOY_LOW: 'sliderLow', TH_LOY_HIGH: 'sliderHigh', TH_POT_LOW: 'sliderPotLow', TH_POT_HIGH: 'sliderPotHigh' };
-const CELDAS = ['A_A', 'A_B', 'A_C', 'B_A', 'B_B', 'B_C', 'C_A', 'C_B', 'C_C'];
+// Mismo orden que la matriz: filas = potencial A, B, C; columnas = adopción baja (−), media, alta (+)
+const CELDAS = ['A_C', 'A_B', 'A_A', 'B_C', 'B_B', 'B_A', 'C_C', 'C_B', 'C_A'];
 const SIGNO_AJ = { A: '+', B: '', C: '-' };
 
 window.App.ajustes.irA = function(id) {
@@ -29,6 +30,9 @@ window.App.ajustes.irA = function(id) {
 window.App.ajustes.render = function() {
     window.App.ajustes.descartarUmbrales();
     window.App.ajustes.renderEncuesta();
+    window.App.ajustes.renderSalud();
+    window.App.ajustes.renderVerComo();
+    window.App.ajustes.cargarBitacora();
 };
 
 /* ============================================================
@@ -243,6 +247,152 @@ window.App.ajustes.guardarEncuesta = async function() {
     document.getElementById('btnGuardarEncuesta').disabled = true;
     st._lastUniverseSignature = null;
     window.App.matrix.aggregateAndCalculate();
+};
+
+/* ============================================================
+   SALUD DE LOS DATOS (Fase 9B)
+============================================================ */
+window.App.ajustes.renderSalud = async function() {
+    const st = window.App.state;
+    const zona = document.getElementById('ajSaludLista');
+    if (!zona) return;
+    const v = st.VERSIONES_EN_USO || {};
+    const fecha = (x) => x ? new Date(x + (String(x).length === 10 ? 'T12:00:00' : '')).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+    const c = window.App.tableros ? window.App.tableros.calcular() : { embudo: {} };
+    const e = c.embudo;
+    const evals = st.ALL_EVALUATIONS || [];
+    const cruces = evals.filter(x => x.cruceErrado).length;
+    const fila = (estado, titulo, detalle) => {
+        const icono = { ok: ['check_circle', 'text-green-700'], aviso: ['warning', 'text-amber-600'], info: ['info', 'text-blue-700'] }[estado];
+        return `<li class="flex gap-3 py-3"><span class="material-symbols-outlined ${icono[1]}">${icono[0]}</span>
+            <div class="min-w-0"><div class="text-sm font-semibold text-slate-800">${titulo}</div><div class="text-xs text-slate-500">${detalle}</div></div></li>`;
+    };
+    const filas = [
+        v.recetas ? fila('ok', `Recetas: ${escA(v.recetas.nombre)}`, `Datos al ${fecha(v.recetas.fecha)} · ${fmtA(v.recetas.filas)} filas · publicada ${fecha(String(v.recetas.publicado_en || '').slice(0, 10))}`)
+                  : fila('aviso', 'No hay versión de recetas en uso', 'Carga y publica una versión desde "Cargar datos".'),
+        v.fichero ? fila('ok', `Fichero: ${escA(v.fichero.nombre)}`, `Datos al ${fecha(v.fichero.fecha)} · ${fmtA(v.fichero.filas)} filas`)
+                  : fila('aviso', 'No hay fichero en uso', 'Sin fichero no se sabe qué médicos atiende cada visitador.'),
+        fila(e.sinFichero ? 'info' : 'ok', `${fmtA(e.sinFichero)} médicos con recetas no están en el fichero`, 'Están en CloseUp pero ningún visitador los tiene asignados.'),
+        fila('info', `${fmtA(Math.max(0, (e.fichados || 0) - (e.conRx || 0)))} médicos del fichero sin recetas en CloseUp`, 'Con los filtros elegidos ahora (mercados, productos).'),
+        fila(cruces ? 'aviso' : 'ok', `${fmtA(cruces)} evaluaciones marcadas como "cruce errado"`, `De ${fmtA(evals.length)} evaluaciones activas. El médico de CloseUp no coincide con el del fichero.`),
+        '<li id="ajSaludUsuarios" class="py-3 text-xs text-slate-500">Revisando qué visitadores tienen usuario…</li>'
+    ];
+    zona.innerHTML = filas.join('');
+    try {
+        const lista = await window.App.sb.visitadoresConUsuario();
+        const activos = lista.filter(x => x.activo);
+        const sin = activos.filter(x => !x.perfiles || !x.perfiles.activo);
+        const li = document.getElementById('ajSaludUsuarios');
+        if (li) li.outerHTML = fila(sin.length ? 'aviso' : 'ok', `${fmtA(sin.length)} de ${fmtA(activos.length)} visitadores todavía no tienen usuario`,
+            sin.length ? escA(sin.slice(0, 6).map(x => x.nombre_sector).join(', ') + (sin.length > 6 ? '…' : '')) : 'Todos pueden entrar.');
+    } catch (err) {
+        const li = document.getElementById('ajSaludUsuarios');
+        if (li) li.textContent = 'No se pudo revisar los usuarios (¿sin conexión?).';
+    }
+};
+
+/* ============================================================
+   VER LA APP COMO OTRA PERSONA (solo consulta, Fase 9B)
+============================================================ */
+window.App.ajustes.renderVerComo = function() {
+    const st = window.App.state;
+    const vm = document.getElementById('ajVerComoVm'), gd = document.getElementById('ajVerComoGd');
+    if (!vm || !gd) return;
+    const reps = [...(st.FILTER_OPTIONS.Rep || [])].sort();
+    const gerentes = [...new Set(Object.values(st.REP_MANAGER_MAP || {}))].filter(Boolean).sort();
+    vm.innerHTML = reps.map(r => `<option value="${escA(r)}">${escA(window.App.ui.nombreVisible(r))}</option>`).join('');
+    gd.innerHTML = gerentes.map(g => `<option value="${escA(g)}">${escA(g)}</option>`).join('');
+};
+
+window.App.ajustes.verComo = function(tipo, nombre) {
+    const st = window.App.state;
+    if (!nombre || st.rolReal !== 'admin') return;
+    if (!st.verComo) {
+        st._antesDeVerComo = { REPS: st.REPS_PERMITIDOS, rol: st.currentUserRole, nombre: st.currentVisitadorName, isAdmin: st.isAdmin, solo: st.soloLectura, visitadorId: st.visitadorId };
+    }
+    const reps = tipo === 'vm' ? [nombre] : Object.keys(st.REP_MANAGER_MAP).filter(r => st.REP_MANAGER_MAP[r] === nombre);
+    st.verComo = { tipo, nombre, rol: tipo === 'vm' ? 'vm' : 'gd' };
+    st.REPS_PERMITIDOS = new Set(reps);
+    st.soloLectura = true;
+    st.visitadorId = null;
+    if (tipo === 'vm') {
+        st.currentUserRole = 'visitador';
+        st.currentVisitadorName = nombre;
+        st.isAdmin = false;
+        window.App.evaluation.armarMapaVisitador((st.ALL_EVALUATIONS || []).filter(e => String(e.visitador || '').trim().toUpperCase() === nombre));
+    } else {
+        st.currentUserRole = 'admin';
+        st.currentVisitadorName = nombre;
+        st.isAdmin = true;
+    }
+    aplicarVista();
+    document.getElementById('bannerVerComoNombre').textContent = tipo === 'vm' ? window.App.ui.nombreVisible(nombre) : `GD ${nombre}`;
+    document.getElementById('bannerVerComo').classList.remove('hidden');
+    window.App.ui.showToast(`Viendo la app como ${tipo === 'vm' ? 'el visitador' : 'el gerente'} ${window.App.ui.nombreVisible(nombre)}.`);
+};
+
+window.App.ajustes.salirVerComo = function() {
+    const st = window.App.state;
+    const a = st._antesDeVerComo;
+    if (!st.verComo || !a) return;
+    st.verComo = null;
+    st.REPS_PERMITIDOS = a.REPS; st.currentUserRole = a.rol; st.currentVisitadorName = a.nombre;
+    st.isAdmin = a.isAdmin; st.soloLectura = a.solo; st.visitadorId = a.visitadorId;
+    st.EVALUACIONES_VISITADOR = {};
+    document.getElementById('bannerVerComo').classList.add('hidden');
+    aplicarVista();
+    window.App.ux.irA('ajustes');
+};
+
+// Vuelve a armar filtros, matriz, navegación y paneles con la vista elegida
+function aplicarVista() {
+    const st = window.App.state;
+    st._lastUniverseSignature = null;
+    st.MATRIX_FILTER = null;
+    st.FILTRO_RAPIDO = 'todos';
+    window.App.filters.populateFilters();
+    window.App.matrix.aggregateAndCalculate();
+    document.getElementById('adminDashboard')?.classList.toggle('hidden', !st.isAdmin);
+    document.getElementById('visitadorDashboard')?.classList.toggle('hidden', st.currentUserRole !== 'visitador');
+    window.App.ux.armarNavegacion();
+    st.PANTALLA = null;
+    window.App.ux.irA('inicio', { historial: false });
+}
+
+/* ============================================================
+   BITÁCORA DE CAMBIOS (migración 11)
+============================================================ */
+const NOMBRES_CONFIG = { umbrales_matriz: 'los umbrales de la matriz', umbrales_encuesta: 'los puntajes de la encuesta', ponderacion_encuesta: 'la ponderación de la encuesta', productos_phq: 'los productos del laboratorio', equipos_otc: 'los equipos OTC' };
+const ETIQUETAS_UMBRAL = { TH_LOY_LOW: 'Adopción baja hasta', TH_LOY_HIGH: 'Adopción alta desde', TH_POT_LOW: 'Potencial A hasta', TH_POT_HIGH: 'Potencial B hasta' };
+
+function detalleCambio(b) {
+    if (b.accion === 'publicar_version') return `Publicó la versión de ${b.clave === 'fichero' ? 'fichero' : 'recetas'} <b>${escA(b.despues && b.despues.nombre)}</b>`;
+    const antes = b.antes || {}, despues = b.despues || {};
+    let detalle = '';
+    if (b.clave === 'umbrales_matriz' || b.clave === 'umbrales_encuesta') {
+        detalle = Object.keys(despues).filter(k => antes[k] !== despues[k])
+            .map(k => `${ETIQUETAS_UMBRAL[k] || 'Puntaje ' + k}: ${escA(antes[k])} → <b>${escA(despues[k])}</b>`).join(' · ');
+    } else if (Array.isArray(despues) && Array.isArray(antes)) {
+        const mas = despues.filter(x => !antes.includes(x)), menos = antes.filter(x => !despues.includes(x));
+        detalle = [mas.length ? `agregó ${escA(mas.slice(0, 3).join(', '))}${mas.length > 3 ? '…' : ''}` : '', menos.length ? `quitó ${escA(menos.slice(0, 3).join(', '))}${menos.length > 3 ? '…' : ''}` : ''].filter(Boolean).join(' · ');
+    }
+    return `Cambió ${NOMBRES_CONFIG[b.clave] || escA(b.clave)}${detalle ? `<div class="text-xs text-slate-600 mt-0.5">${detalle}</div>` : ''}`;
+}
+
+window.App.ajustes.cargarBitacora = async function() {
+    const zona = document.getElementById('ajBitacoraLista');
+    if (!zona) return;
+    zona.innerHTML = '<li class="py-3 text-sm text-slate-500">Cargando…</li>';
+    try {
+        const lista = await window.App.sb.bitacora(30);
+        zona.innerHTML = lista.length ? lista.map(b => `<li class="flex gap-3 py-3">
+            <span class="material-symbols-outlined ${b.accion === 'publicar_version' ? 'text-blue-700' : 'text-amber-700'}">${b.accion === 'publicar_version' ? 'publish' : 'tune'}</span>
+            <div class="min-w-0 flex-1"><div class="text-sm text-slate-800">${detalleCambio(b)}</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">${escA(b.quien)} · ${new Date(b.hecho_en).toLocaleString('es-VE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div></div></li>`).join('')
+            : '<li class="py-3 text-sm text-slate-500">Todavía no hay cambios registrados. Desde hoy se anota cada cambio.</li>';
+    } catch (e) {
+        zona.innerHTML = `<li class="py-3 text-sm text-slate-500">${/does not exist|bitacora_reciente|desconocida/i.test(String(e && e.message)) ? 'Falta aplicar la migración 11 en Supabase.' : 'No se pudo leer la bitácora (¿sin conexión?).'}</li>`;
+    }
 };
 
 console.log('[SegmentApp] ajustes.js cargado.');

@@ -305,3 +305,27 @@ por rol** (todas las ideas propuestas). Nuevo orden:
   tarjetas), se recuerdan los últimos 4 grupos de mercados, el panel del
   equipo se dibuja solo al abrir su pantalla y las alertas van de 20 en 20.
   La regla de cálculo de la matriz no cambió.
+
+### Fase 9B (hecha)
+- Fase 9A aprobada. Arreglo: la vista previa de umbrales usa el mismo orden
+  que la matriz (adopción alta "+" a la derecha).
+- **Equipo** (GD, Gerente Nacional y admin), con cuatro vistas:
+  - *Distritos* (Gerente Nacional y admin): avance, participación,
+    oportunidad, calidad, ritmo y visitadores sin actividad de cada distrito.
+  - *Visitadores*: ranking ordenable (avance, ritmo, calidad, La Santé,
+    oportunidad). Al abrir uno: su mini matriz, sus últimas evaluaciones
+    (el admin puede editarlas o eliminarlas) y "Ver sus médicos".
+  - *Prioridades*: médicos con más recetas que nadie ha evaluado.
+  - *Alertas*: evaluaciones cuyo potencial (A, B o C) no coincide con
+    CloseUp; "Muy distintas" = A contra C. De 20 en 20.
+  - "Calidad" = en cuántas evaluaciones del VM el potencial coincide con
+    CloseUp. Un médico que atienden dos VM cuenta una vez en los totales.
+- **Inicio** de GD, Gerente Nacional y admin: cobertura (fichero → con
+  recetas → evaluados → potencial A), mercados con más oportunidad, mapa
+  esquemático por estado, participación mes a mes, distritos y "Resumen en
+  PDF". **Inicio del VM**: sus 10 médicos con más oportunidad y su avance
+  frente al promedio de su distrito.
+- **Ajustes** del admin: salud de los datos, "Ver la app como…" un VM o un GD
+  (solo consulta, con aviso para salir) y bitácora de cambios.
+- Migración 11 (aditiva). La evolución mensual se probó con los datos
+  reales: 0,18 s para todo el país en la base de pruebas.

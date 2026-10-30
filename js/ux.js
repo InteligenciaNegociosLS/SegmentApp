@@ -64,13 +64,16 @@ const PANTALLAS = ['inicio', 'matriz', 'medicos', 'equipo', 'ajustes'];
 // Nombres antiguos (por si algún botón todavía los usa)
 const ALIAS_PANTALLA = { seccionMatriz: 'matriz', seccionMedicos: 'medicos', pantallaEquipo: 'equipo', pantallaAjustes: 'ajustes' };
 
+// El rol que se está mostrando (el admin puede "ver como" un VM o un GD)
+window.App.ux.rolVisible = () => { const st = window.App.state; return (st.verComo && st.verComo.rol) || st.rolReal; };
+
 const pantallasDelRol = () => {
-    const rol = window.App.state.rolReal;
+    const rol = window.App.ux.rolVisible();
     return PANTALLAS.filter(p => (NAV_POR_ROL[rol] || NAV_POR_ROL.vm).includes(p) || ['inicio', 'matriz', 'medicos'].includes(p));
 };
 
 window.App.ux.armarNavegacion = function() {
-    const rol = window.App.state.rolReal;
+    const rol = window.App.ux.rolVisible();
     const botones = NAV_POR_ROL[rol] || NAV_POR_ROL.vm;
     const boton = (id, clase) => {
         const [icono, texto] = BOTONES_NAV[id];
@@ -104,6 +107,7 @@ window.App.ux.irA = function(id, { historial = true } = {}) {
     // Lo que solo se dibuja cuando se ve
     if (destino === 'equipo' && window.App.admin && (window.App.admin._panelPendiente || anterior !== 'equipo')) window.App.admin.renderAdminDashboard();
     if (destino === 'ajustes' && window.App.ajustes && anterior !== 'ajustes') window.App.ajustes.render();
+    if (destino === 'inicio' && window.App.tableros && window.App.tableros._pendiente) window.App.tableros.render();
     if (historial && anterior && anterior !== destino && window.history && history.pushState) {
         try { history.pushState({ pantalla: destino }, ''); } catch (e) { /* sin historial */ }
     }
@@ -151,6 +155,12 @@ window.App.ux.alSalir = function() {
     if (nav) nav.classList.add('hidden');
     document.body.classList.remove('con-riel');
     document.querySelectorAll('#menuMas .solo-admin, #menuMas .con-sesion').forEach(e => e.classList.add('hidden'));
+    // Lo que se guardó de la persona anterior no se muestra a la siguiente
+    if (window.App.tableros) { window.App.tableros.evolucion = null; window.App.tableros.avance = null; window.App.tableros._pendiente = true; }
+    if (window.App.equipo) { window.App.equipo.distrito = 'todos'; window.App.equipo.vista = null; }
+    window.App.state.verComo = null;
+    document.getElementById('bannerVerComo')?.classList.add('hidden');
+    document.getElementById('visPromedioDistrito')?.classList.add('hidden');
     window.App.ux.cerrarMas();
     window.App.ux.cerrarFiltros();
     document.getElementById('guia')?.classList.add('hidden');
