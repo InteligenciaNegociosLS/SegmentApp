@@ -343,3 +343,17 @@ por rol** (todas las ideas propuestas). Nuevo orden:
   oportunidad, distritos). La función de la migración 11 queda en la base
   sin uso (no molesta).
 - Los "10 médicos con más oportunidad" del VM van al final de su página.
+
+### Fase 9C (hecha): avisos con campanita
+- Para **GD, Gerente Nacional y administrador** (el VM no). Avisa cuando un
+  visitador evalúa (un aviso por visitador y día), cuando evaluó a **todos**
+  sus médicos 🎉, cuando hay visitadores con **7 días o más sin evaluar**, y
+  cuando una evaluación **no coincide con CloseUp**. Últimos 14 días.
+- Número rojo con los no leídos; tocar un aviso lleva a Equipo (al
+  visitador o a Alertas); "Marcar todo como leído".
+- Cada **2 minutos** (con la app abierta e internet) se traen **solo** las
+  evaluaciones nuevas o cambiadas y se avisa "Hay N evaluaciones nuevas".
+- "Visto hasta" se guarda en el servidor (migración 12): la campanita marca
+  lo mismo en el teléfono y en la computadora.
+- Avisos al teléfono con la app cerrada: quedan para después (requieren un
+  servicio de avisos aparte).

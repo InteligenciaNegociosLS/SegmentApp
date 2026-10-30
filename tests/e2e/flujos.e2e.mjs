@@ -173,6 +173,15 @@ try {
   console.log(`INFO  Admin: de "Entrar" al tablero en ${Date.now() - tAdmin} ms (archivo completo, como antes lo hacían todos)`);
   await page.waitForTimeout(1000);
   ok('admin: entra al panel', await vis('adminDashboard') && await page.evaluate(() => App.state.isAdmin));
+  ok('avisos (9C): campanita visible para el admin; una evaluación nueva aparece como aviso sin leer', await vis('btnAvisos') && await page.evaluate(() => {
+    const d = App.state.PROCESSED_DATA.find(x => !x.isZeroRx && x.ficheroData && x.ficheroData.length);
+    const k = App.data.getFicheroRepKey(d.ficheroData[0]);
+    App.state.ALL_EVALUATIONS.push({ firebaseId: 'e2e', id: 'e2e', visitador: String(d.ficheroData[0][k]).trim().toUpperCase(), medico_id: d._clave, medico_name: d.name, mercado: 'X', cuadrante: d.closeupLabel, survey: {}, timestamp: new Date().toISOString() });
+    App.evaluation.marcarCambio(); App.avisos.actualizar();
+    const ok = App.avisos.lista.some(x => x.tipo === 'evaluacion') && App.avisos.sinLeer() > 0 && !document.getElementById('avisosNumero').classList.contains('hidden');
+    App.state.ALL_EVALUATIONS.pop(); App.evaluation.marcarCambio();
+    return ok;
+  }));
   ok('admin: secciones Inicio, Matriz, Médicos, Equipo y Ajustes', await page.evaluate(() => [...document.querySelectorAll('#navRiel [data-seccion]')].map(b => b.dataset.seccion).join() === 'inicio,matriz,medicos,equipo,ajustes'));
   await page.evaluate(() => App.ux.irA('ajustes'));
   const tUmbral = await page.evaluate(() => { const t = performance.now(); document.getElementById('sliderLow').value = 40; App.ajustes.alMoverUmbral(); return performance.now() - t; });
