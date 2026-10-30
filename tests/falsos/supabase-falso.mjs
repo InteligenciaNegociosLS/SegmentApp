@@ -215,6 +215,34 @@ export function createClient(url, clave, opciones = {}) {
             }).filter(v => v.total > 0);
             return { data, error: null };
         },
+        evolucion_mercados() {
+            const s = leerSesion();
+            if (!s) return { data: null, error: { message: 'Tu usuario no tiene permisos' } };
+            registrar('rpc:evolucion_mercados');
+            const cfg = bd.configuracion.find(c => c.clave === 'productos_phq');
+            const phq = (cfg ? cfg.valor : []).map(x => String(x).toUpperCase());
+            const data = bd.data_snapshots.filter(v => v.tipo === 'recetas' && v.estado === 'publicado' && bd.fuentes[v.id])
+                .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))).map(v => {
+                    const { encabezados: e, filas } = bd.fuentes[v.id];
+                    const [cK, cP, cR] = ['Mercado', 'Producto', 'Px_Product'].map(n => e.indexOf(n));
+                    const m = {};
+                    filas.forEach(f => { const x = m[f[cK]] || (m[f[cK]] = [f[cK], 0, 0]); const rx = Number(f[cR]) || 0; x[1] += rx; if (phq.some(p => String(f[cP]).toUpperCase().includes(p))) x[2] += rx; });
+                    return { id: v.id, nombre: v.nombre, fecha: v.fecha, mercados: Object.values(m).sort((a, b) => b[1] - a[1]) };
+                });
+            return { data, error: null };
+        },
+        avance_distrito() {
+            const s = leerSesion();
+            const p = s && bd.perfiles.find(x => x.id === s.id);
+            registrar('rpc:avance_distrito');
+            if (!p || p.rol !== 'vm') return { data: null, error: null };
+            return { data: bd.avanceDistrito || { total: 142, evaluados: 0, promedio_pct: 12.5, visitadores: 8 }, error: null };
+        },
+        bitacora_reciente() {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador' } };
+            registrar('rpc:bitacora_reciente');
+            return { data: bd.bitacora || [], error: null };
+        },
         preparar_orden_mercado() {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador' } };
             return { data: 0, error: null };
