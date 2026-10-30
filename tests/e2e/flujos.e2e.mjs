@@ -138,6 +138,8 @@ try {
   await page.evaluate(() => App.ux.filtroRapido('todos'));
   // Fase 6C: cuadrante → lista filtrada, pantalla completa y paginación de 20
   await page.evaluate(() => filterByMatrix('C', 'C'));
+  ok('pantallas: tocar un cuadrante abre "Médicos" (una pantalla a la vez)', await page.evaluate(() => App.state.PANTALLA === 'medicos'
+    && getComputedStyle(document.getElementById('seccionMatriz')).display === 'none' && getComputedStyle(document.getElementById('seccionMedicos')).display !== 'none'));
   ok('matriz: tocar un cuadrante filtra la lista (sin lista repetida arriba)', await page.evaluate(() => !document.getElementById('panelCelda') && App.state.CURRENT_TABLE_DATA.length > 0 && App.state.CURRENT_TABLE_DATA.every(d => d.catPotency === 'C' && d.catLoyalty === 'C')));
   await page.evaluate(() => clearMatrixFilter());
   ok('lista: de 20 en 20', await page.evaluate(() => document.querySelectorAll('#dataTable tr').length === 20));
@@ -170,6 +172,19 @@ try {
   console.log(`INFO  Admin: de "Entrar" al tablero en ${Date.now() - tAdmin} ms (archivo completo, como antes lo hacían todos)`);
   await page.waitForTimeout(1000);
   ok('admin: entra al panel', await vis('adminDashboard') && await page.evaluate(() => App.state.isAdmin));
+  ok('admin: secciones Inicio, Matriz, Médicos, Equipo y Ajustes', await page.evaluate(() => [...document.querySelectorAll('#navRiel [data-seccion]')].map(b => b.dataset.seccion).join() === 'inicio,matriz,medicos,equipo,ajustes'));
+  await page.evaluate(() => App.ux.irA('ajustes'));
+  const tUmbral = await page.evaluate(() => { const t = performance.now(); document.getElementById('sliderLow').value = 40; App.ajustes.alMoverUmbral(); return performance.now() - t; });
+  ok(`ajustes: mover un umbral es instantáneo (${Math.round(tUmbral)} ms) y no cambia la matriz`, tUmbral < 50 && await page.evaluate(() => App.state.TH_LOY_LOW !== 40));
+  await page.evaluate(() => App.ajustes.vistaPrevia());
+  ok('ajustes: vista previa de cuántos médicos cambiarían', await page.evaluate(() => /cambiarían de cuadrante/.test(document.getElementById('ajVistaPrevia').innerText)));
+  await page.evaluate(() => App.ajustes.descartarUmbrales());
+  ok('ajustes: "Descartar" vuelve a los valores de todos', await page.evaluate(() => document.getElementById('sliderLow').value == App.state.TH_LOY_LOW && document.getElementById('btnAplicarUmbrales').disabled));
+  await page.evaluate(() => App.ux.irA('equipo'));
+  ok('equipo: el panel se dibuja al abrir la pantalla', await page.evaluate(() => document.querySelectorAll('#adminProgressTable > div').length > 5));
+  await page.evaluate(() => history.back()); await page.waitForTimeout(300);
+  ok('botón atrás: vuelve a la pantalla anterior', await page.evaluate(() => App.state.PANTALLA === 'ajustes'));
+  await page.evaluate(() => App.ux.irA('inicio'));
   ok('admin: sin botón "Limpiar Datos"', !(await page.evaluate(() => document.body.innerHTML.includes('Limpiar Datos'))));
   await page.evaluate(() => confirmClearAllEvals());
   ok('admin: borrado masivo desactivado', (await toast()).includes('desactivada'));

@@ -108,7 +108,11 @@ describe('Pantalla de ingreso', () => {
         expect(App.state.rolReal).toBe('gd');
         expect(App.state.soloLectura).toBe(true);
         expect(visible('btnUploadData')).toBe(false);
-        expect(visible('analysisTools')).toBe(false);
+        // Sin pantalla de Ajustes; sí ve la pantalla del equipo
+        expect(document.querySelector('#navInferior [data-seccion="ajustes"]')).toBeNull();
+        expect(document.querySelector('#navInferior [data-seccion="equipo"]')).not.toBeNull();
+        App.ux.irA('ajustes');
+        expect(App.state.PANTALLA).toBe('inicio');
         expect(App.state.REPS_PERMITIDOS).toBeInstanceOf(Set);
     });
     it('editar sessionStorage ya no da permisos de admin', async () => {
@@ -208,5 +212,75 @@ describe('Versiones de datos', () => {
         await ingresar('admin@lasante.com', 'adminadmin');
         await App.versiones.abrir();
         expect(document.getElementById('versionSel_recetas').options).toHaveLength(1);
+    });
+});
+
+describe('Pantallas por rol (Fase 9A)', () => {
+    const botones = () => [...document.querySelectorAll('#navInferior [data-seccion]')].map(b => b.dataset.seccion);
+    it('VM: Inicio, Matriz, Médicos, Pendientes y Más; una pantalla a la vez', async () => {
+        document.getElementById('loginEmail').value = 'vm@lasante.com';
+        document.getElementById('visitadorPwd').value = '123456';
+        await App.auth.attemptLogin();
+        expect(botones()).toEqual(['inicio', 'matriz', 'medicos', 'pendientes', 'mas']);
+        expect(App.state.PANTALLA).toBe('inicio');
+        App.ux.irA('matriz');
+        const activas = [...document.querySelectorAll('[data-pantalla].pantalla-activa')].map(e => e.dataset.pantalla);
+        expect(activas).toEqual(['matriz']);
+        App.ux.irA('equipo');   // no es de su rol
+        expect(App.state.PANTALLA).toBe('inicio');
+    });
+    it('tocar un cuadrante abre Médicos con ese cuadrante', async () => {
+        document.getElementById('loginEmail').value = 'admin@lasante.com';
+        document.getElementById('visitadorPwd').value = 'adminadmin';
+        await App.auth.attemptLogin();
+        App.ux.irA('matriz');
+        App.matrix.filterByMatrix('C', 'C');
+        expect(App.state.PANTALLA).toBe('medicos');
+        expect(document.getElementById('btnVolverMatriz').classList.contains('hidden')).toBe(false);
+    });
+    it('admin: Equipo y Ajustes; el panel del equipo solo se dibuja al abrirlo', async () => {
+        document.getElementById('loginEmail').value = 'admin@lasante.com';
+        document.getElementById('visitadorPwd').value = 'adminadmin';
+        await App.auth.attemptLogin();
+        expect(botones()).toEqual(['inicio', 'matriz', 'medicos', 'equipo', 'ajustes']);
+        document.getElementById('adminProgressTable').innerHTML = '';
+        App.admin.renderAdminDashboard();
+        expect(document.getElementById('adminProgressTable').innerHTML).toBe('');
+        App.ux.irA('equipo');
+        expect(document.getElementById('adminProgressTable').innerHTML).not.toBe('');
+    });
+    it('Ajustes: mover un umbral no cambia la matriz hasta "Aplicar"', async () => {
+        document.getElementById('loginEmail').value = 'admin@lasante.com';
+        document.getElementById('visitadorPwd').value = 'adminadmin';
+        await App.auth.attemptLogin();
+        baseSimulada(App).configuracion.push({ clave: 'umbrales_matriz', valor: {} });
+        App.ux.irA('ajustes');
+        const antes = App.state.PROCESSED_DATA;
+        document.getElementById('sliderPotHigh').value = 90;
+        App.ajustes.alMoverUmbral();
+        App.ajustes.vistaPrevia();
+        expect(App.state.PROCESSED_DATA).toBe(antes);
+        expect(App.state.TH_POT_HIGH).toBe(66);
+        expect(document.getElementById('lblPotHigh').innerText).toBe('90%');
+        expect(document.getElementById('btnAplicarUmbrales').disabled).toBe(false);
+        expect(document.getElementById('ajVistaPrevia').textContent).toMatch(/cambiarían de cuadrante/);
+        await App.ajustes.aplicarUmbrales();
+        expect(App.state.TH_POT_HIGH).toBe(90);
+        expect(App.state.PROCESSED_DATA).not.toBe(antes);
+        const cfg = baseSimulada(App).configuracion.find(c => c.clave === 'umbrales_matriz');
+        expect(cfg.valor.TH_POT_HIGH).toBe(90);
+    });
+    it('Ajustes: la ponderación se guarda para todos y muestra un ejemplo', async () => {
+        document.getElementById('loginEmail').value = 'admin@lasante.com';
+        document.getElementById('visitadorPwd').value = 'adminadmin';
+        await App.auth.attemptLogin();
+        baseSimulada(App).configuracion.push({ clave: 'ponderacion_encuesta', valor: {} }, { clave: 'umbrales_encuesta', valor: {} });
+        App.ux.irA('ajustes');
+        expect(document.getElementById('ajEjemplo').textContent).toMatch(/puntos/);
+        document.getElementById('ajThA').value = 80;
+        App.ajustes.alCambiarEncuesta();
+        await App.ajustes.guardarEncuesta();
+        expect(App.state.SURVEY_THRESHOLDS.A).toBe(80);
+        expect(baseSimulada(App).configuracion.find(c => c.clave === 'umbrales_encuesta').valor.A).toBe(80);
     });
 });

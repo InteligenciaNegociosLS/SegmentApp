@@ -281,10 +281,20 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
         Generic: fGeneric
     });
 
-    // Si los filtros pesados no cambiaron, usar el universo cacheado
+    // Si los filtros pesados no cambiaron, usar el universo cacheado.
+    // Se recuerdan los últimos 4 universos (con su agrupación por médico): ir y
+    // volver entre un mercado y "Todos" ya no repite el trabajo con 28 mil médicos.
+    if (!st._cacheUniversos || st._cacheUniversosDatos !== filasFuente) { st._cacheUniversos = new Map(); st._cacheUniversosDatos = filasFuente; }
+    const recordado = usarCache && st._lastUniverseSignature !== null ? st._cacheUniversos.get(filterSignature) : null;
     let universeRows;
     if (usarCache && st._lastUniverseSignature === filterSignature && st._lastUniverseRows) {
         universeRows = st._lastUniverseRows;
+    } else if (recordado) {
+        universeRows = recordado.filas;
+        st._lastUniverseSignature = filterSignature;
+        st._lastUniverseRows = universeRows;
+        st._lastGroupsRows = universeRows;
+        st._lastGroups = recordado.grupos;
     } else {
         // Recalcular universo desde cero
         // Conjuntos (búsqueda instantánea) en vez de recorrer cada lista por fila
@@ -322,9 +332,10 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
             if (id === undefined) {
                 const cleanLicense = row.license ? String(row.license).trim().replace(/^0+/, '') : "";
                 id = row._id = cleanLicense + "_" + row.doc.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                row._clave = d.normalizeKey(id);
             }
             let g = docMap[id];
-            if (!g) g = docMap[id] = { id, name: row.doc, address: row.address, spec: row.spec, rows: [], uniqueProds: {} };
+            if (!g) g = docMap[id] = { id, clave: row._clave, name: row.doc, address: row.address, spec: row.spec, rows: [], uniqueProds: {} };
             g.rows.push(row);
             g.uniqueProds[row.prod] = Math.max(g.uniqueProds[row.prod] || 0, row.rx);
         });
@@ -333,6 +344,11 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
         if (usarCache) {
             st._lastGroupsRows = universeRows;
             st._lastGroups = grupos;
+            if (st._lastUniverseSignature === filterSignature) {
+                st._cacheUniversos.delete(filterSignature);
+                st._cacheUniversos.set(filterSignature, { filas: universeRows, grupos });
+                if (st._cacheUniversos.size > 4) st._cacheUniversos.delete(st._cacheUniversos.keys().next().value);
+            }
         }
     }
 
@@ -341,7 +357,7 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
     const todosLosProductos = st.FILTER_STATE.Product.length === st.FILTER_OPTIONS.Product.length;
     const productosElegidos = new Set(st.FILTER_STATE.Product);
     const docMap = grupos.map(g => {
-        const doc = { id: g.id, name: g.name, address: g.address, spec: g.spec, rxPhq: 0, rxTotalSum: 0, rows: g.rows, uniqueProds: g.uniqueProds };
+        const doc = { id: g.id, _clave: g.clave, name: g.name, address: g.address, spec: g.spec, rxPhq: 0, rxTotalSum: 0, rows: g.rows, uniqueProds: g.uniqueProds };
         g.prodsLista.forEach(([prod, rx]) => {
             doc.rxTotalSum += rx;
             if (d.isPhq(prod) && (todosLosProductos || productosElegidos.has(prod))) {
@@ -375,7 +391,7 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
 
         return {
             ...doc, totalRx: denominator, share, catLoyalty, gap, targetLabel,
-            ficheroData: st.FICHERO_MAP.get(d.normalizeKey(doc.id)) || [],
+            ficheroData: st.FICHERO_MAP.get(doc._clave) || [],
             isZeroRx: false
         };
     });
@@ -394,12 +410,12 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
             if (isAssigned) { visTotalFichero++; assignedDocsMap.set(docId, rows); }
         });
         doctors = doctors.filter(doc => {
-            const hasAssigned = assignedDocsMap.has(d.normalizeKey(doc.id));
+            const hasAssigned = assignedDocsMap.has(doc._clave);
             if (hasAssigned) visTotalCruzados++;
             return hasAssigned;
         });
         // Agregar médicos del fichero sin Rx
-        const conRx = new Set(doctors.map(x => d.normalizeKey(x.id)));
+        const conRx = new Set(doctors.map(x => x._clave));
         assignedDocsMap.forEach((rows, docId) => {
             if (!conRx.has(docId)) {
                 const baseRow = rows[0];
@@ -408,7 +424,7 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
                 const specKey = Object.keys(baseRow).find(k => /esp|spec/i.test(k));
                 const addrKey = Object.keys(baseRow).find(k => /dir|address|inst/i.test(k));
                 doctors.push({
-                    id: docId,
+                    id: docId, _clave: docId,
                     name: (nameKey && baseRow[nameKey]) ? String(baseRow[nameKey]).trim() : `Médico no mapeado (${docId})`,
                     spec: (specKey && baseRow[specKey]) ? String(baseRow[specKey]).trim() : "S/E",
                     address: (addrKey && baseRow[addrKey]) ? String(baseRow[addrKey]).trim() : "",
@@ -450,7 +466,7 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
 
         // Matriz Encuesta
         doc.surveyPotency = null; doc.surveyLoyalty = null; doc.surveyLabel = "N/A";
-        const evals = (typeof getEvaluationsForDoc === 'function') ? getEvaluationsForDoc(doc.id) : [];
+        const evals = window.App.evaluation ? window.App.evaluation.getEvaluationsForDoc(doc.id, doc._clave) : [];
         if (evals && evals.length > 0) {
             const obj = window.App.matrix.calculateObjectiveScore(evals[0].survey);
             if (obj.pot) {
@@ -778,14 +794,25 @@ window.App.matrix.renderTable = function() {
             </tr>
         `);
     });
-    tbody.innerHTML = htmlBuffer.join('');
+    // Solo se dibuja la forma que se ve: tabla (computadora) o tarjetas (teléfono y tablet).
+    // Dibujar las dos en cada página era la mitad del tiempo de la lista.
+    const forma = window.App.matrix.formaLista();
+    tbody.innerHTML = forma !== 'tarjetas' ? htmlBuffer.join('') : '';
 
-    // Teléfono: los mismos médicos como tarjetas
     if (window.App.ux) {
-        window.App.ux.renderTarjetas(pageData, startIdx);
+        if (forma !== 'tabla') window.App.ux.renderTarjetas(pageData, startIdx);
+        else { const z = document.getElementById('dataCards'); if (z) z.innerHTML = ''; }
         window.App.ux.trasRenderTabla();
     }
 };
+
+// 'tabla' (pantalla ancha), 'tarjetas' (angosta) o 'ambas' (sin medidas, p. ej. pruebas)
+const CONSULTA_ANCHA = typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 1024px)') : null;
+window.App.matrix.formaLista = () => !CONSULTA_ANCHA ? 'ambas' : (CONSULTA_ANCHA.matches ? 'tabla' : 'tarjetas');
+// Al girar la tablet o cambiar el tamaño de la ventana, se dibuja la otra forma
+if (CONSULTA_ANCHA && CONSULTA_ANCHA.addEventListener) {
+    CONSULTA_ANCHA.addEventListener('change', () => { if ((window.App.state.PROCESSED_DATA || []).length) window.App.matrix.renderTable(); });
+}
 
 /* ============================================================
    ALIAS GLOBALES

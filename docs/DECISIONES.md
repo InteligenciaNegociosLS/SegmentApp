@@ -262,3 +262,46 @@ Fase 6E aprobada. Fase 8:
 - Auditoría: C6 ya estaba corregido ("Volver a descargar" conserva la cola).
   A2–A4 dejaron de existir con Supabase (se lee la lista completa, sin comparar
   horas de distintos equipos); ahora la cola es la única vía sin conexión.
+
+## 29/10/2026 (Fase 8 aprobada · rediseño por roles)
+
+Fase 8 aprobada. Antes de los accesos, el dueño aprueba un **rediseño profundo
+por rol** (todas las ideas propuestas). Nuevo orden:
+- **9A** Velocidad del administrador, navegación por secciones (una pantalla a
+  la vez, distinta para cada rol) y pantalla de **Ajustes** nueva (umbrales con
+  vista previa y "Aplicar", ponderación de la encuesta, productos, usuarios,
+  versiones, carga de datos y registro de fallas).
+- **9B** Vistas nuevas del GD ("Mi equipo": ranking, ritmo, calidad de la
+  evaluación, mini matriz por VM, prioridades, participación por VM) y del
+  Gerente Nacional ("País" y "Distritos": comparativo de distritos, mapa por
+  estado, evolución mensual, embudo de cobertura, mercados con más
+  oportunidad, resumen ejecutivo en PDF); Progreso y Alertas en su propia
+  sección, rediseñadas; administrador: salud de los datos, "Ver como…",
+  bitácora de cambios; VM: sus 10 médicos con más oportunidad y su avance
+  frente al promedio del distrito.
+- **9C** Notificaciones dentro de la app (campanita): evaluación nueva, VM que
+  terminó a todos sus médicos, VM sin evaluar en 7 días, alerta de
+  discrepancia nueva. Las notificaciones al teléfono quedan para después.
+- **10** Accesos y cierre (la antigua Fase 9).
+
+### Fase 9A (hecha)
+- **Pantallas**: la app ya no es una sola página larga. Cada sección es su
+  propia pantalla: Inicio, Matriz, Médicos y, según el rol, Pendientes (VM),
+  Equipo (GD, Gerente Nacional y administrador) y Ajustes (solo
+  administrador). Barra inferior en el teléfono y riel a la izquierda en
+  tablet y computadora. El botón "atrás" vuelve a la pantalla anterior.
+  Tocar un cuadrante abre "Médicos" con ese cuadrante y un botón "← Matriz".
+- **Ajustes** (administrador): umbrales con vista previa (cuántos médicos
+  suben o bajan y cómo quedan los 9 cuadrantes) que solo se aplican al tocar
+  "Aplicar para todo el equipo"; ponderación de la encuesta en la misma
+  pantalla con un ejemplo de puntaje; accesos a cargar datos, versiones,
+  productos, usuarios, registro de fallas y reportes. Se quitaron los
+  ajustes plegables de encima de la matriz y la ventana de ponderación.
+- **Velocidad del administrador** (mediana de 5 mediciones, 28.712 médicos):
+  mover un umbral 160 ms por paso → 10 ms; recalcular 150 → 76 ms; volver a
+  "Todos los mercados" 310 → 114 ms; filtros rápidos 60–87 → 12 ms; quitar
+  cuadrante 50 → 10 ms. Cómo: los conteos de filtros rápidos se reutilizan,
+  la lista se dibuja una vez (no dos) y solo en la forma que se ve (tabla o
+  tarjetas), se recuerdan los últimos 4 grupos de mercados, el panel del
+  equipo se dibuja solo al abrir su pantalla y las alertas van de 20 en 20.
+  La regla de cálculo de la matriz no cambió.
