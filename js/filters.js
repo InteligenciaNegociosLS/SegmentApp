@@ -165,8 +165,10 @@ window.App.filters.resetAllFilters = function() {
    las movemos al módulo matrix.js en el paso 8.
 ------------------------------------------------------------ */
 window.App.filters.applyFilters = function() {
-    if (typeof resetPaginationAndRender === 'function') resetPaginationAndRender();
-    if (typeof aggregateAndCalculate === 'function')    aggregateAndCalculate();
+    // Recalcular ya vuelve a dibujar la lista desde la página 1 (antes se dibujaba dos veces)
+    window.App.state.currentPage = 1;
+    if (typeof aggregateAndCalculate === 'function') aggregateAndCalculate();
+    else if (typeof resetPaginationAndRender === 'function') resetPaginationAndRender();
 };
 
 window.App.filters.resetPaginationAndRender = function() {

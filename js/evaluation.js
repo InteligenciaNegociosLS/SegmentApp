@@ -22,6 +22,7 @@ window.App.evaluation = {};
 window.App.evaluation.armarMapaVisitador = function(lista) {
     const st = window.App.state;
     st.EVALUACIONES_VISITADOR = {};
+    window.App.evaluation.marcarCambio();
     lista.forEach(data => {
         const key = window.App.data.normalizeKey(data.medico_id);
         if (!st.EVALUACIONES_VISITADOR[key]) st.EVALUACIONES_VISITADOR[key] = {};
@@ -64,25 +65,34 @@ window.App.evaluation.fetchEvaluacionesYCalcular = async function() {
 /* ============================================================
    OBTENER EVALUACIONES DE UN MÉDICO (según rol)
 ============================================================ */
-window.App.evaluation.getEvaluationsForDoc = function(docId) {
+// Cada vez que cambia una evaluación en memoria se sube este número: así los
+// índices y conteos guardados (para ir rápido) saben que deben rehacerse.
+window.App.evaluation.marcarCambio = function() {
+    const st = window.App.state;
+    st._versionEvaluaciones = (st._versionEvaluaciones || 0) + 1;
+};
+
+// clave (opcional): la matrícula ya normalizada, para no volver a calcularla
+window.App.evaluation.getEvaluationsForDoc = function(docId, clave) {
     const st = window.App.state;
     const d  = window.App.data;
+    const k = clave || d.normalizeKey(docId);
     if (st.currentUserRole === 'visitador') {
-        const evMap = st.EVALUACIONES_VISITADOR[d.normalizeKey(docId)];
+        const evMap = st.EVALUACIONES_VISITADOR[k];
         return evMap ? Object.values(evMap) : [];
     } else {
         // Índice por médico; se reconstruye solo si cambia la lista de evaluaciones
         const idx = window.App.evaluation._adminIndex;
-        if (!idx || idx.source !== st.ALL_EVALUATIONS || idx.length !== st.ALL_EVALUATIONS.length) {
+        if (!idx || idx.source !== st.ALL_EVALUATIONS || idx.length !== st.ALL_EVALUATIONS.length || idx.version !== st._versionEvaluaciones) {
             const byDoc = new Map();
             st.ALL_EVALUATIONS.forEach(e => {
                 const k = d.normalizeKey(e.medico_id);
                 if (!byDoc.has(k)) byDoc.set(k, []);
                 byDoc.get(k).push(e);
             });
-            window.App.evaluation._adminIndex = { source: st.ALL_EVALUATIONS, length: st.ALL_EVALUATIONS.length, byDoc };
+            window.App.evaluation._adminIndex = { source: st.ALL_EVALUATIONS, length: st.ALL_EVALUATIONS.length, version: st._versionEvaluaciones, byDoc };
         }
-        return window.App.evaluation._adminIndex.byDoc.get(d.normalizeKey(docId)) || [];
+        return window.App.evaluation._adminIndex.byDoc.get(k) || [];
     }
 };
 /* ============================================================
@@ -105,6 +115,7 @@ window.App.evaluation.fetchAllEvaluacionesAdmin = async function() {
         if (enCache.length) { st.ALL_EVALUATIONS = enCache; refrescar(); }
 
         st.ALL_EVALUATIONS = await window.App.sb.evaluaciones();
+        window.App.evaluation.marcarCambio();
         st._lastUniverseSignature = null;
         if (window.localforage) await localforage.setItem(CACHE_KEY, st.ALL_EVALUATIONS);
         console.log(`[SegmentApp] ${st.ALL_EVALUATIONS.length} evaluaciones del equipo.`);
@@ -333,6 +344,7 @@ window.App.evaluation.saveEvaluation = async function() {
         if (!st.isAdmin) {
             if (!st.EVALUACIONES_VISITADOR[docId]) st.EVALUACIONES_VISITADOR[docId] = {};
             st.EVALUACIONES_VISITADOR[docId][selectedMarket] = payload;
+            window.App.evaluation.marcarCambio();
 
             // Propagar Q1 y Q5 a otros mercados ya evaluados del mismo médico
             for (const mkt in st.EVALUACIONES_VISITADOR[docId]) {
@@ -358,6 +370,7 @@ window.App.evaluation.saveEvaluation = async function() {
             const existingIdx = st.ALL_EVALUATIONS.findIndex(e => e.firebaseId === adminEvalId);
             if (existingIdx >= 0) st.ALL_EVALUATIONS[existingIdx] = payload;
             else st.ALL_EVALUATIONS.push(payload);
+            window.App.evaluation.marcarCambio();
             if (window.localforage) localforage.setItem('EQUIPO_EVALS_CACHE', st.ALL_EVALUATIONS);
             // Re-renderizar sin tocar Firestore
             if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
