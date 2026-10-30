@@ -138,8 +138,9 @@ try {
   await page.evaluate(() => App.ux.filtroRapido('todos'));
   // Fase 6C: cuadrante → lista filtrada, pantalla completa y paginación de 20
   await page.evaluate(() => filterByMatrix('C', 'C'));
-  ok('pantallas: tocar un cuadrante abre "Médicos" (una pantalla a la vez)', await page.evaluate(() => App.state.PANTALLA === 'medicos'
-    && getComputedStyle(document.getElementById('seccionMatriz')).display === 'none' && getComputedStyle(document.getElementById('seccionMedicos')).display !== 'none'));
+  ok('VM: página única (la matriz y la lista se ven juntas) y sin botón "Pendientes"', await page.evaluate(() => App.state.PANTALLA === 'medicos'
+    && getComputedStyle(document.getElementById('seccionMatriz')).display !== 'none' && getComputedStyle(document.getElementById('seccionMedicos')).display !== 'none'
+    && !document.querySelector('#navInferior [data-seccion="pendientes"]')));
   ok('matriz: tocar un cuadrante filtra la lista (sin lista repetida arriba)', await page.evaluate(() => !document.getElementById('panelCelda') && App.state.CURRENT_TABLE_DATA.length > 0 && App.state.CURRENT_TABLE_DATA.every(d => d.catPotency === 'C' && d.catLoyalty === 'C')));
   await page.evaluate(() => clearMatrixFilter());
   ok('lista: de 20 en 20', await page.evaluate(() => document.querySelectorAll('#dataTable tr').length === 20));
@@ -172,6 +173,15 @@ try {
   console.log(`INFO  Admin: de "Entrar" al tablero en ${Date.now() - tAdmin} ms (archivo completo, como antes lo hacían todos)`);
   await page.waitForTimeout(1000);
   ok('admin: entra al panel', await vis('adminDashboard') && await page.evaluate(() => App.state.isAdmin));
+  ok('avisos (9C): campanita visible para el admin; una evaluación nueva aparece como aviso sin leer', await vis('btnAvisos') && await page.evaluate(() => {
+    const d = App.state.PROCESSED_DATA.find(x => !x.isZeroRx && x.ficheroData && x.ficheroData.length);
+    const k = App.data.getFicheroRepKey(d.ficheroData[0]);
+    App.state.ALL_EVALUATIONS.push({ firebaseId: 'e2e', id: 'e2e', visitador: String(d.ficheroData[0][k]).trim().toUpperCase(), medico_id: d._clave, medico_name: d.name, mercado: 'X', cuadrante: d.closeupLabel, survey: {}, timestamp: new Date().toISOString() });
+    App.evaluation.marcarCambio(); App.avisos.actualizar();
+    const ok = App.avisos.lista.some(x => x.tipo === 'evaluacion') && App.avisos.sinLeer() > 0 && !document.getElementById('avisosNumero').classList.contains('hidden');
+    App.state.ALL_EVALUATIONS.pop(); App.evaluation.marcarCambio();
+    return ok;
+  }));
   ok('admin: secciones Inicio, Matriz, Médicos, Equipo y Ajustes', await page.evaluate(() => [...document.querySelectorAll('#navRiel [data-seccion]')].map(b => b.dataset.seccion).join() === 'inicio,matriz,medicos,equipo,ajustes'));
   await page.evaluate(() => App.ux.irA('ajustes'));
   const tUmbral = await page.evaluate(() => { const t = performance.now(); document.getElementById('sliderLow').value = 40; App.ajustes.alMoverUmbral(); return performance.now() - t; });
@@ -186,7 +196,9 @@ try {
   await page.evaluate(() => { App.equipo.verVista('visitadores'); App.equipo.abrirVm(0, App.equipo.estadisticas().vms.slice().sort((a, b) => b.pct - a.pct)[0].nombre); });
   ok('equipo: detalle de un visitador con su mini matriz', await page.evaluate(() => /Sus médicos por cuadrante/.test(document.getElementById('equipoContenido').innerText)));
   await page.evaluate(() => App.ux.irA('inicio'));
-  ok('inicio (9B): cobertura, mercados con oportunidad, mapa y distritos', await page.evaluate(() => ['Cobertura', 'Mercados con más oportunidad', 'Mapa por estado', 'Distritos'].every(t => document.getElementById('tablerosInicio').innerText.includes(t))));
+  ok('inicio: cobertura, mercados con oportunidad y distritos (sin mapa ni gráfica mes a mes)', await page.evaluate(() => ['Cobertura', 'Mercados con más oportunidad', 'Distritos'].every(t => document.getElementById('tablerosInicio').innerText.includes(t))
+    && !/Mapa por estado|mes a mes/.test(document.getElementById('tablerosInicio').innerText)));
+  ok('admin: sigue con pantallas separadas', await page.evaluate(() => { App.ux.irA('matriz'); const r = getComputedStyle(document.getElementById('seccionMedicos')).display === 'none'; App.ux.irA('inicio'); return r; }));
   await page.evaluate(() => App.ux.irA('ajustes'));
   await page.evaluate(() => App.ajustes.verComo('vm', 'NEIVIS PARRA')); await page.waitForTimeout(300);
   ok('ver como: el admin ve la app de NEIVIS PARRA (solo sus médicos, solo consulta)', await page.evaluate(() => App.state.soloLectura && App.state.PROCESSED_DATA.length === 142 && !document.getElementById('bannerVerComo').classList.contains('hidden')));

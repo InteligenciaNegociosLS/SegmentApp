@@ -82,6 +82,10 @@
                     <span class="material-symbols-outlined text-[18px]">login</span> <span class="hidden sm:inline">Ingresar</span>
                 </button>
             </div>
+            <button id="btnAvisos" class="hidden relative w-10 h-10 rounded-full items-center justify-center text-slate-700" onclick="App.avisos.abrir()" title="Avisos" aria-label="Avisos" aria-haspopup="dialog">
+                <span class="material-symbols-outlined">notifications</span>
+                <span id="avisosNumero" class="hidden absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold items-center justify-center">0</span>
+            </button>
             <button id="btnMas" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700" onclick="App.ux.abrirMas()" title="Más opciones" aria-haspopup="menu" aria-expanded="false">
                 <span class="material-symbols-outlined">more_vert</span>
             </button>
@@ -114,6 +118,19 @@
         </ol>
         <button class="mt-6 w-full h-11 rounded-full bg-blue-700 text-white text-sm font-bold" onclick="document.getElementById('instalarIos').classList.add('hidden')">Entendido</button>
     </div>
+</div>
+
+<!-- Avisos (campanita) para GD, Gerente Nacional y administrador · Fase 9C -->
+<div id="panelAvisos" class="hidden fixed inset-0 z-[90] hoja-fondo" onclick="if (event.target === this) App.avisos.cerrar()">
+    <section class="hoja hoja-menu !max-h-[85vh] md:!w-[400px] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="avisosTitulo">
+        <div class="hoja-asa"></div>
+        <header class="px-5 pt-2 pb-3 border-b border-slate-200 flex items-center justify-between gap-2">
+            <div><h2 id="avisosTitulo" class="text-base font-bold text-slate-800">Avisos</h2>
+                <p class="text-xs text-slate-500" id="avisosSubtitulo">Lo que pasó con tu equipo</p></div>
+            <button class="h-9 px-3 rounded-full text-xs font-bold text-blue-700" onclick="App.avisos.marcarLeidos()" id="btnAvisosLeidos">Marcar todo como leído</button>
+        </header>
+        <ul id="avisosLista" class="overflow-y-auto flex-1 py-1"></ul>
+    </section>
 </div>
 
 <!-- Menú "Más" (en el teléfono sube desde abajo) -->
@@ -405,8 +422,8 @@
             <section id="tarjetaConcordancia" class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200" aria-live="polite"></section>
         </div>
 
-        <!-- Tableros del inicio según el rol (Fase 9B, js/tableros.js) -->
-        <div id="tablerosInicio" class="mb-6"></div>
+        <!-- Tableros del inicio según el rol (Fase 9B, js/tableros.js). Para el VM se mueven al final de la página -->
+        <div id="zonaTablerosArriba"><div id="tablerosInicio" class="mb-6"></div></div>
 
         </div>
 
@@ -512,6 +529,9 @@
                 </div>
             </div>
         </section>
+
+        <!-- Final de la página única del VM: sus médicos con más oportunidad -->
+        <div data-pantalla="medicos" id="zonaTablerosAbajo" class="pantalla mt-6"></div>
 
         <!-- ===== Pantalla: Equipo (GD, Gerente Nacional y administrador) ===== -->
         <section data-pantalla="equipo" id="pantallaEquipo" class="pantalla" aria-labelledby="tituloEquipo">
@@ -1451,6 +1471,7 @@
 <script src="js/ajustes.js"></script>
 <script src="js/equipo.js"></script>
 <script src="js/tableros.js"></script>
+<script src="js/avisos.js"></script>
 <script src="js/ux.js"></script>
 
 <!-- 6. Entry point — orquestador (debe ir al final) -->

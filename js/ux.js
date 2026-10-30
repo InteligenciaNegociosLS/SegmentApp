@@ -38,34 +38,46 @@ window.App.ux.ocultarSplash = function() {
 };
 
 /* ============================================================
-   NAVEGACIÓN POR PANTALLAS (Fase 9A)
-   Una pantalla a la vez: Inicio, Matriz, Médicos y, según el rol,
-   Equipo y Ajustes. En el teléfono, barra inferior; en tablet y
-   computadora, riel a la izquierda. El botón "atrás" del teléfono
-   vuelve a la pantalla anterior.
+   NAVEGACIÓN (Fase 9A, ajustada en 9C)
+   - Administrador: una pantalla a la vez (Inicio, Matriz, Médicos,
+     Equipo, Ajustes).
+   - VM, GD y Gerente Nacional: Inicio, Matriz y Médicos en UNA sola
+     página (la matriz siempre a la vista); los botones llevan a cada
+     parte. GD y Gerente Nacional tienen además la pantalla Equipo.
+   En el teléfono, barra inferior; en tablet y computadora, riel a la
+   izquierda. El botón "atrás" del teléfono vuelve a lo anterior.
 ============================================================ */
 const BOTONES_NAV = {
     inicio:     ['home', 'Inicio'],
     matriz:     ['grid_view', 'Matriz'],
     medicos:    ['stethoscope', 'Médicos'],
-    pendientes: ['checklist', 'Pendientes'],
     equipo:     ['groups', 'Equipo'],
     ajustes:    ['settings', 'Ajustes'],
     mas:        ['menu', 'Más']
 };
 // Qué ve cada rol (la barra del teléfono tiene como máximo 5 botones)
 const NAV_POR_ROL = {
-    vm:           ['inicio', 'matriz', 'medicos', 'pendientes', 'mas'],
+    vm:           ['inicio', 'matriz', 'medicos', 'mas'],
     gd:           ['inicio', 'matriz', 'medicos', 'equipo', 'mas'],
     gte_nacional: ['inicio', 'matriz', 'medicos', 'equipo', 'mas'],
     admin:        ['inicio', 'matriz', 'medicos', 'equipo', 'ajustes']
 };
 const PANTALLAS = ['inicio', 'matriz', 'medicos', 'equipo', 'ajustes'];
+const TRIO = ['inicio', 'matriz', 'medicos'];
 // Nombres antiguos (por si algún botón todavía los usa)
 const ALIAS_PANTALLA = { seccionMatriz: 'matriz', seccionMedicos: 'medicos', pantallaEquipo: 'equipo', pantallaAjustes: 'ajustes' };
 
 // El rol que se está mostrando (el admin puede "ver como" un VM o un GD)
 window.App.ux.rolVisible = () => { const st = window.App.state; return (st.verComo && st.verComo.rol) || st.rolReal; };
+
+// Solo el administrador ve Inicio, Matriz y Médicos como pantallas separadas
+window.App.ux.paginaUnica = () => window.App.ux.rolVisible() !== 'admin';
+// ¿Se está viendo esa parte? (en la página única, las tres se ven juntas)
+window.App.ux.seVe = (p) => {
+    const st = window.App.state;
+    if (window.App.ux.paginaUnica() && TRIO.includes(p)) return TRIO.includes(st.PANTALLA);
+    return st.PANTALLA === p;
+};
 
 const pantallasDelRol = () => {
     const rol = window.App.ux.rolVisible();
@@ -77,15 +89,18 @@ window.App.ux.armarNavegacion = function() {
     const botones = NAV_POR_ROL[rol] || NAV_POR_ROL.vm;
     const boton = (id, clase) => {
         const [icono, texto] = BOTONES_NAV[id];
-        const accion = id === 'pendientes' ? "App.ux.filtroRapido('pendientes', true)" : (id === 'mas' ? 'App.ux.abrirMas()' : `App.ux.irA('${id}')`);
-        const insignia = id === 'pendientes' ? '<span class="nav-insignia hidden" data-insignia="pendientes">0</span>' : '';
-        return `<button class="${clase}" data-seccion="${id}" onclick="${accion}" aria-current="false"><span class="nav-icono"><span class="material-symbols-outlined">${icono}</span></span>${texto}${insignia}</button>`;
+        const accion = id === 'mas' ? 'App.ux.abrirMas()' : `App.ux.irA('${id}')`;
+        return `<button class="${clase}" data-seccion="${id}" onclick="${accion}" aria-current="false"><span class="nav-icono"><span class="material-symbols-outlined">${icono}</span></span>${texto}</button>`;
     };
     const abajo = document.getElementById('navInferior');
     if (abajo) abajo.innerHTML = botones.map(id => boton(id, 'nav-item')).join('');
     // En el riel no hace falta "Más": está siempre en la barra superior (⋮)
     const riel = document.getElementById('navRiel');
     if (riel) riel.innerHTML = botones.filter(id => id !== 'mas').map(id => boton(id, 'nav-item riel-item')).join('');
+    // El VM ve primero su matriz: sus "10 con más oportunidad" van al final de la página
+    const tableros = document.getElementById('tablerosInicio');
+    const destino = document.getElementById(rol === 'vm' ? 'zonaTablerosAbajo' : 'zonaTablerosArriba');
+    if (tableros && destino && tableros.parentElement !== destino) destino.appendChild(tableros);
 };
 
 window.App.ux.irA = function(id, { historial = true } = {}) {
@@ -96,18 +111,27 @@ window.App.ux.irA = function(id, { historial = true } = {}) {
     const anterior = st.PANTALLA;
     st.PANTALLA = destino;
     window.App.ux.cerrarMatrizCompleta();
+    // Página única: Inicio, Matriz y Médicos se muestran juntas y se baja hasta la parte elegida
+    const unica = window.App.ux.paginaUnica() && TRIO.includes(destino);
+    const grupo = (p) => window.App.ux.paginaUnica() && TRIO.includes(p) ? 'pagina' : p;
+    const cambiaGrupo = grupo(anterior) !== grupo(destino);
     document.querySelectorAll('[data-pantalla]').forEach(el => {
-        const activa = el.dataset.pantalla === destino;
+        const activa = unica ? TRIO.includes(el.dataset.pantalla) : el.dataset.pantalla === destino;
         el.classList.toggle('pantalla-activa', activa);
-        if (activa && anterior !== destino) { el.classList.remove('animate-fade-in'); void el.offsetWidth; el.classList.add('animate-fade-in'); }
+        if (activa && cambiaGrupo) { el.classList.remove('animate-fade-in'); void el.offsetWidth; el.classList.add('animate-fade-in'); }
     });
     document.body.dataset.pantalla = destino;
-    if (window.scrollTo && anterior !== destino) window.scrollTo({ top: 0, behavior: 'auto' });
+    if (unica && destino !== 'inicio') {
+        const seccion = document.getElementById(destino === 'matriz' ? 'seccionMatriz' : 'seccionMedicos');
+        if (seccion && seccion.scrollIntoView) seccion.scrollIntoView({ behavior: cambiaGrupo || sinMovimiento() ? 'auto' : 'smooth', block: 'start' });
+    } else if (window.scrollTo && (anterior !== destino)) {
+        window.scrollTo({ top: 0, behavior: unica && !cambiaGrupo && !sinMovimiento() ? 'smooth' : 'auto' });
+    }
     window.App.ux.marcarNav(destino);
     // Lo que solo se dibuja cuando se ve
     if (destino === 'equipo' && window.App.admin && (window.App.admin._panelPendiente || anterior !== 'equipo')) window.App.admin.renderAdminDashboard();
     if (destino === 'ajustes' && window.App.ajustes && anterior !== 'ajustes') window.App.ajustes.render();
-    if (destino === 'inicio' && window.App.tableros && window.App.tableros._pendiente) window.App.tableros.render();
+    if (window.App.ux.seVe('inicio') && window.App.tableros && window.App.tableros._pendiente) window.App.tableros.render();
     if (historial && anterior && anterior !== destino && window.history && history.pushState) {
         try { history.pushState({ pantalla: destino }, ''); } catch (e) { /* sin historial */ }
     }
@@ -118,6 +142,21 @@ window.addEventListener('popstate', (e) => {
     const p = e.state && e.state.pantalla;
     if (p && window.App.state && window.App.state.currentUserRole !== 'guest') window.App.ux.irA(p, { historial: false });
 });
+
+// En la página única, el botón marcado sigue a la parte que se está viendo
+let esperaScroll = false;
+window.addEventListener('scroll', () => {
+    if (esperaScroll || !window.App.state || !window.App.ux.paginaUnica || !window.App.ux.paginaUnica()) return;
+    if (!TRIO.includes(window.App.state.PANTALLA)) return;
+    esperaScroll = true;
+    requestAnimationFrame(() => {
+        esperaScroll = false;
+        const corte = window.innerHeight * 0.35;
+        const arriba = (id) => { const el = document.getElementById(id); return el ? el.getBoundingClientRect().top : 9e9; };
+        const parte = arriba('seccionMedicos') < corte ? 'medicos' : (arriba('seccionMatriz') < corte ? 'matriz' : 'inicio');
+        if (parte !== window.App.state.PANTALLA) { window.App.state.PANTALLA = parte; window.App.ux.marcarNav(parte); }
+    });
+}, { passive: true });
 
 window.App.ux.marcarNav = function(id) {
     document.querySelectorAll('#navInferior .nav-item, #navRiel .nav-item').forEach(b => {
@@ -143,6 +182,8 @@ window.App.ux.alEntrar = function() {
     const sig = document.getElementById('btnGuardarSiguiente');
     if (sig) sig.classList.toggle('hidden', st.rolReal !== 'vm');
     window.App.ux.ocultarSplash();
+    // Campanita de avisos (GD, Gerente Nacional y admin)
+    if (window.App.avisos) window.App.avisos.alEntrar();
     // Movimientos y tendencias respecto a la versión anterior (si existe)
     setTimeout(() => { if (typeof window !== 'undefined' && window.App && window.App.comparar) window.App.comparar.cargar(true); }, 300);
     // La primera vez de cada persona: guía rápida (cuando ya se ve el tablero)
@@ -156,10 +197,11 @@ window.App.ux.alSalir = function() {
     document.body.classList.remove('con-riel');
     document.querySelectorAll('#menuMas .solo-admin, #menuMas .con-sesion').forEach(e => e.classList.add('hidden'));
     // Lo que se guardó de la persona anterior no se muestra a la siguiente
-    if (window.App.tableros) { window.App.tableros.evolucion = null; window.App.tableros.avance = null; window.App.tableros._pendiente = true; }
+    if (window.App.tableros) { window.App.tableros.avance = null; window.App.tableros._pendiente = true; }
     if (window.App.equipo) { window.App.equipo.distrito = 'todos'; window.App.equipo.vista = null; }
     window.App.state.verComo = null;
     document.getElementById('bannerVerComo')?.classList.add('hidden');
+    if (window.App.avisos) { window.App.avisos.cerrar(); window.App.avisos.lista = []; window.App.avisos.actualizar(); }
     document.getElementById('visPromedioDistrito')?.classList.add('hidden');
     window.App.ux.cerrarMas();
     window.App.ux.cerrarFiltros();
@@ -287,10 +329,7 @@ window.App.ux.filtroRapido = function(tipo, irALista = false) {
     }
     st.FILTRO_RAPIDO = (st.FILTRO_RAPIDO === tipo && tipo !== 'todos' && !irALista) ? 'todos' : tipo;
     window.App.filters.resetPaginationAndRender();
-    if (irALista) {
-        window.App.ux.irA('medicos');
-        if (tipo === 'pendientes') window.App.ux.marcarNav('pendientes');
-    }
+    if (irALista) window.App.ux.irA('medicos');
 };
 
 window.App.ux.renderChipsRapidos = function() {
@@ -771,13 +810,14 @@ window.App.ux.cerrarAyudaMatriz = function() {
 const PASOS_GUIA = {
     // [qué se resalta, título, texto, pantalla donde está]
     vm: [
-        ['#navInferior, #navRiel', 'Tus secciones', 'Inicio, Matriz y Médicos son pantallas separadas. "Pendientes" te lleva directo a lo que falta evaluar.', 'inicio'],
+        ['#navInferior, #navRiel', 'Tus secciones', 'Inicio, Matriz y Médicos están en la misma página: estos botones te llevan directo a cada parte.', 'inicio'],
+        ['#chipsRapidos', 'Tus filtros rápidos', 'Toca "Pendientes" para ver los médicos que te faltan por evaluar. El número te dice cuántos son.', 'inicio'],
         ['#visitadorDashboard', 'Tu avance', 'Aquí ves cuántos médicos llevas evaluados. "Evaluar pendientes" te lleva directo al trabajo.', 'inicio'],
         ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. El botón "?" explica qué significa cada uno.', 'matriz'],
         ['#dataTable tr:first-child .eval-estado, #dataCards article:first-child .eval-estado, #seccionMedicos', 'Evaluar', 'Toca "Evaluar" en un médico. Las respuestas son de un toque y "Guardar y siguiente" te lleva al próximo.', 'medicos']
     ],
     equipo: [
-        ['#navInferior, #navRiel', 'Las secciones', 'Inicio, Matriz, Médicos y Equipo son pantallas separadas. Cambia entre ellas desde aquí.', 'inicio'],
+        ['#navInferior, #navRiel', 'Las secciones', 'Inicio, Matriz y Médicos están en la misma página; Equipo tiene el avance de tus visitadores. Cambia desde aquí.', 'inicio'],
         ['#filterBar', 'Buscar y filtrar', 'Busca un médico o usa los filtros rápidos. En "Filtros" están todos los demás.', 'inicio'],
         ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. Usa pantalla completa para presentarla.', 'matriz'],
         ['#dataTable tr:first-child, #dataCards article:first-child, #seccionMedicos', 'La lista', 'Cada médico con su cuadrante, recetas, participación y estado de evaluación.', 'medicos'],

@@ -4,9 +4,8 @@
    GD, Gerente Nacional y administrador:
    - Embudo de cobertura: fichero → con recetas → evaluados → potencial A
    - Mercados con más oportunidad (recetas que faltan para subir)
-   - Mapa de Venezuela por estado (participación, médicos, avance u
-     oportunidad)
-   - Evolución mes a mes de la participación por mercado (migración 11)
+   (El mapa por estado y la evolución mes a mes se quitaron en la 9C:
+    el dueño prefiere gráficos más fáciles de leer.)
    - Comparativo de distritos (Gerente Nacional y admin)
    - Resumen ejecutivo en PDF (una página para reuniones)
    VM:
@@ -18,13 +17,12 @@
 // Todo queda dentro de esta función: sus nombres internos no chocan con los de otros archivos
 (function() {
     window.App = window.App || {};
-    window.App.tableros = { metricaMapa: 'share', _pendiente: true, evolucion: null, avance: null };
+    window.App.tableros = { _pendiente: true, avance: null };
 
     const escT = (v) => window.App.ui.escapeHtml(v);
     const fmtT = (n, d = 0) => window.App.ui.formatNumber(n || 0, d);
     const nomT = (n) => window.App.ui.nombreVisible(n);
     const argT = (v) => escT(JSON.stringify(String(v == null ? '' : v)));
-    const sinAcentos = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase();
     const esEquipoT = () => window.App.state.isAdmin;
     const esNacionalT = () => ['admin', 'gte_nacional'].includes(window.App.ux ? window.App.ux.rolVisible() : window.App.state.rolReal);
     const tarjeta = (icono, titulo, cuerpo, extra = '', clase = '') => `<section class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-5 ${clase}">
@@ -34,7 +32,7 @@
        CUÁNDO DIBUJAR
     ============================================================ */
     window.App.tableros.alRecalcular = function() {
-        if (window.App.state.PANTALLA === 'inicio') window.App.tableros.render();
+        if (window.App.ux && window.App.ux.seVe('inicio')) window.App.tableros.render();
         else window.App.tableros._pendiente = true;
     };
 
@@ -54,11 +52,8 @@
             <div class="grid lg:grid-cols-2 gap-3">
                 ${tarjeta('filter_alt', 'Cobertura', renderEmbudo(c))}
                 ${tarjeta('trending_up', 'Mercados con más oportunidad', renderMercados(c))}
-                ${tarjeta('map', 'Mapa por estado', renderMapa(c), renderSelectorMapa())}
-                ${tarjeta('show_chart', 'Participación mes a mes', '<div id="tabEvolucion" class="text-sm text-slate-500">Cargando…</div>')}
                 ${esNacionalT() ? tarjeta('leaderboard', 'Distritos', renderDistritosMini(), '<button class="text-xs font-bold text-blue-700 px-3 py-1.5 rounded-full" onclick="App.ux.irA(\'equipo\'); App.equipo.verVista(\'distritos\')">Ver todo</button>', 'lg:col-span-2') : ''}
             </div>`;
-        window.App.tableros.cargarEvolucion();
     };
 
     /* ============================================================
@@ -113,21 +108,7 @@
         });
         const listaMercados = [...mercados.values()].sort((a, b) => b.gap - a.gap);
 
-        // Por estado (fichero)
-        const estados = new Map();
-        docs.forEach(doc => {
-            if (!doc.ficheroData || !doc.ficheroData.length) return;
-            const f = doc.ficheroData[0];
-            const clave = Object.keys(f).find(k => k.trim().toLowerCase() === 'estadodescripcion');
-            const estado = sinAcentos(clave ? f[clave] : '');
-            if (!estado) return;
-            const e = estados.get(estado) || { estado, medicos: 0, conRx: 0, evaluados: 0, rx: 0, phq: 0, gap: 0 };
-            e.medicos++;
-            if (!doc.isZeroRx) { e.conRx++; e.rx += doc.totalRx; e.phq += doc.rxPhq; e.gap += doc.gap; if (window.App.ux.estaEvaluado(doc)) e.evaluados++; }
-            estados.set(estado, e);
-        });
-
-        const datos = { embudo, mercados: listaMercados, estados };
+        const datos = { embudo, mercados: listaMercados };
         memoTab = { firma, datos };
         return datos;
     };
@@ -166,96 +147,6 @@
                 <div class="h-2.5 rounded-full bg-slate-100 mt-1 overflow-hidden"><div class="h-full rounded-full bg-green-600" style="width:${(m.gap / max * 100).toFixed(1)}%"></div></div>
                 <div class="text-[11px] text-slate-500 mt-0.5">${fmtT(m.medicos)} médicos · La Santé ${fmtT(m.total ? m.phq / m.total * 100 : 0, 1)}% de ${fmtT(m.total)} recetas</div>
             </button></li>`).join('')}</ul>`;
-    }
-
-    /* ============================================================
-       MAPA POR ESTADO (esquemático: cada estado es un cuadro en su zona)
-    ============================================================ */
-    const MAPA = [
-        // [estado, columna, fila, abreviatura]
-        ['FALCON', 2, 0, 'FAL'], ['VARGAS', 6, 0, 'VAR'], ['NUEVA ESPARTA', 9, 0, 'NE'],
-        ['ZULIA', 0, 1, 'ZUL'], ['LARA', 2, 1, 'LAR'], ['YARACUY', 3, 1, 'YAR'], ['CARABOBO', 4, 1, 'CAR'], ['ARAGUA', 5, 1, 'ARA'],
-        ['DISTRITO CAPITAL', 6, 1, 'DC'], ['MIRANDA', 7, 1, 'MIR'], ['SUCRE', 9, 1, 'SUC'],
-        ['TRUJILLO', 1, 2, 'TRU'], ['PORTUGUESA', 2, 2, 'POR'], ['COJEDES', 3, 2, 'COJ'], ['GUARICO', 5, 2, 'GUA'], ['ANZOATEGUI', 7, 2, 'ANZ'],
-        ['MONAGAS', 9, 2, 'MON'], ['DELTA AMACURO', 10, 2, 'DA'],
-        ['MERIDA', 0, 3, 'MER'], ['BARINAS', 2, 3, 'BAR'], ['APURE', 3, 4, 'APU'], ['BOLIVAR', 7, 3, 'BOL'],
-        ['TACHIRA', 0, 4, 'TAC'], ['AMAZONAS', 6, 4, 'AMA']
-    ];
-    const METRICAS = {
-        share: ['La Santé %', e => e.rx ? e.phq / e.rx * 100 : null, v => fmtT(v, 1) + '%'],
-        medicos: ['Médicos', e => e.medicos, v => fmtT(v)],
-        evaluado: ['Avance %', e => e.conRx ? e.evaluados / e.conRx * 100 : null, v => fmtT(v, 0) + '%'],
-        oportunidad: ['Oportunidad', e => e.gap, v => '+' + fmtT(v)]
-    };
-    function renderSelectorMapa() {
-        return `<select class="filter-select !rounded-full !py-1.5 !text-xs max-w-[150px]" onchange="App.tableros.metricaMapa = this.value; App.tableros.render()" aria-label="Qué mostrar en el mapa">
-            ${Object.entries(METRICAS).map(([k, [t]]) => `<option value="${k}" ${window.App.tableros.metricaMapa === k ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
-    }
-    function renderMapa(c) {
-        const [, valor, formato] = METRICAS[window.App.tableros.metricaMapa] || METRICAS.share;
-        const valores = MAPA.map(([n]) => c.estados.get(n)).filter(Boolean).map(valor).filter(v => v != null);
-        if (!valores.length) return '<p class="text-sm text-slate-500">Sin estados en el fichero.</p>';
-        const min = Math.min(...valores), max = Math.max(...valores);
-        const nivel = (v) => v == null ? -1 : (max === min ? 3 : Math.min(4, Math.floor((v - min) / (max - min) * 5)));
-        const COLORES = ['bg-blue-100 text-blue-900', 'bg-blue-200 text-blue-900', 'bg-blue-400 text-white', 'bg-blue-600 text-white', 'bg-blue-800 text-white'];
-        const celdas = MAPA.map(([n, col, fila, abr]) => {
-            const e = c.estados.get(n);
-            const v = e ? valor(e) : null;
-            const clase = v == null ? 'bg-slate-100 text-slate-400' : COLORES[nivel(v)];
-            const titulo = e ? `${n}: ${formato(v ?? 0)} · ${fmtT(e.medicos)} médicos` : `${n}: sin médicos`;
-            return `<div class="${clase} rounded-md sm:rounded-lg flex flex-col items-center justify-center aspect-square text-[8px] sm:text-[10px] font-bold leading-tight overflow-hidden" style="grid-column:${col + 1};grid-row:${fila + 1}" title="${escT(titulo)}">
-                <span>${abr}</span><span class="hidden sm:inline text-[9px] font-semibold opacity-90">${v == null ? '' : formato(v)}</span></div>`;
-        }).join('');
-        const mejores = [...c.estados.values()].map(e => [e, valor(e)]).filter(([, v]) => v != null).sort((a, b) => b[1] - a[1]).slice(0, 3);
-        return `<div class="grid gap-1" style="grid-template-columns:repeat(11,minmax(0,1fr))" role="img" aria-label="Mapa de Venezuela por estado">${celdas}</div>
-            <div class="flex items-center gap-1 mt-3 text-[10px] text-slate-500"><span>${formato(min)}</span>${COLORES.map(cl => `<span class="${cl} w-6 h-2.5 rounded"></span>`).join('')}<span>${formato(max)}</span></div>
-            <p class="text-[11px] text-slate-600 mt-2">Más alto: ${mejores.map(([e, v]) => `<b>${escT(e.estado)}</b> ${formato(v)}`).join(' · ')}</p>`;
-    }
-
-    /* ============================================================
-       EVOLUCIÓN MES A MES (migración 11)
-    ============================================================ */
-    window.App.tableros.cargarEvolucion = async function() {
-        const zona = () => document.getElementById('tabEvolucion');
-        try {
-            if (!window.App.tableros.evolucion) window.App.tableros.evolucion = await window.App.sb.evolucionMercados();
-            if (zona()) zona().innerHTML = renderEvolucion(window.App.tableros.evolucion);
-        } catch (e) {
-            console.error('[SegmentApp] Evolución por mercado:', e);
-            if (zona()) zona().innerHTML = '<p class="text-sm text-slate-500">No se pudo leer la evolución (¿sin conexión?).</p>';
-        }
-    };
-
-    function renderEvolucion(versiones) {
-        const st = window.App.state;
-        if (!versiones || !versiones.length) return '<p class="text-sm text-slate-500">Sin versiones publicadas.</p>';
-        const elegidos = new Set(st.FILTER_STATE.Market);
-        const ultima = versiones[versiones.length - 1];
-        const candidatos = ultima.mercados.filter(m => elegidos.has(m[0])).slice(0, 4).map(m => m[0]);
-        const series = [{ nombre: 'Mercados elegidos', total: true }, ...candidatos.map(n => ({ nombre: n }))];
-        const COLORES = ['#0b57d0', '#1e9e5a', '#b3261e', '#7d5700', '#6750a4'];
-        series.forEach(s => {
-            s.puntos = versiones.map(v => {
-                const filas = s.total ? v.mercados.filter(m => elegidos.has(m[0])) : v.mercados.filter(m => m[0] === s.nombre);
-                const total = filas.reduce((a, m) => a + Number(m[1]), 0), phq = filas.reduce((a, m) => a + Number(m[2]), 0);
-                return total ? phq / total * 100 : null;
-            });
-        });
-        const todos = series.flatMap(s => s.puntos).filter(v => v != null);
-        const maxY = Math.max(5, Math.ceil(Math.max(...todos) / 5) * 5);
-        const W = 320, H = 150, iz = 34, ab = 22, ar = 8, de = 10;
-        const x = (i) => versiones.length === 1 ? (iz + W - de) / 2 : iz + i * (W - iz - de) / (versiones.length - 1);
-        const y = (v) => ar + (H - ar - ab) * (1 - v / maxY);
-        const lineas = series.map((s, k) => {
-            const pts = s.puntos.map((v, i) => v == null ? null : [x(i), y(v)]).filter(Boolean);
-            return `${pts.length > 1 ? `<polyline fill="none" stroke="${COLORES[k]}" stroke-width="${s.total ? 3 : 2}" points="${pts.map(p => p.join(',')).join(' ')}"/>` : ''}
-                ${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="${s.total ? 4 : 3}" fill="${COLORES[k]}"/>`).join('')}`;
-        }).join('');
-        const ejeY = [0, maxY / 2, maxY].map(v => `<text x="${iz - 6}" y="${y(v) + 3}" text-anchor="end" font-size="9" fill="currentColor" opacity=".6">${fmtT(v, 0)}%</text><line x1="${iz}" x2="${W - de}" y1="${y(v)}" y2="${y(v)}" stroke="currentColor" opacity=".12"/>`).join('');
-        const ejeX = versiones.map((v, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" font-size="9" fill="currentColor" opacity=".7">${escT(String(v.nombre).slice(0, 14))}</text>`).join('');
-        return `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto text-slate-700" role="img" aria-label="Participación de La Santé por versión">${ejeY}${ejeX}${lineas}</svg>
-            <ul class="flex flex-wrap gap-x-3 gap-y-1 mt-2">${series.map((s, k) => `<li class="flex items-center gap-1.5 text-[11px] text-slate-700"><span class="w-3 h-3 rounded-full" style="background:${COLORES[k]}"></span>${escT(s.nombre)} <b>${s.puntos.at(-1) == null ? '—' : fmtT(s.puntos.at(-1), 1) + '%'}</b></li>`).join('')}</ul>
-            ${versiones.length === 1 ? '<p class="text-[11px] text-slate-500 mt-2">Hay una sola versión publicada. Cuando se publique el próximo mes verás aquí la tendencia.</p>' : ''}`;
     }
 
     /* ============================================================

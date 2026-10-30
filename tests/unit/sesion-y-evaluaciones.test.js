@@ -217,15 +217,16 @@ describe('Versiones de datos', () => {
 
 describe('Pantallas por rol (Fase 9A)', () => {
     const botones = () => [...document.querySelectorAll('#navInferior [data-seccion]')].map(b => b.dataset.seccion);
-    it('VM: Inicio, Matriz, Médicos, Pendientes y Más; una pantalla a la vez', async () => {
+    it('VM: Inicio, Matriz y Médicos en una sola página (la matriz siempre a la vista), sin botón Pendientes', async () => {
         document.getElementById('loginEmail').value = 'vm@lasante.com';
         document.getElementById('visitadorPwd').value = '123456';
         await App.auth.attemptLogin();
-        expect(botones()).toEqual(['inicio', 'matriz', 'medicos', 'pendientes', 'mas']);
+        expect(botones()).toEqual(['inicio', 'matriz', 'medicos', 'mas']);
         expect(App.state.PANTALLA).toBe('inicio');
         App.ux.irA('matriz');
         const activas = [...document.querySelectorAll('[data-pantalla].pantalla-activa')].map(e => e.dataset.pantalla);
-        expect(activas).toEqual(['matriz']);
+        expect([...new Set(activas)].sort()).toEqual(['inicio', 'matriz', 'medicos']);
+        expect(App.ux.seVe('inicio')).toBe(true);
         App.ux.irA('equipo');   // no es de su rol
         expect(App.state.PANTALLA).toBe('inicio');
     });

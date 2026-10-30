@@ -329,3 +329,31 @@ por rol** (todas las ideas propuestas). Nuevo orden:
   (solo consulta, con aviso para salir) y bitácora de cambios.
 - Migración 11 (aditiva). La evolución mensual se probó con los datos
   reales: 0,18 s para todo el país en la base de pruebas.
+
+## 30/10/2026 (Fase 9B aprobada · ajustes antes de la 9C)
+
+- **VM, GD y Gerente Nacional**: Inicio, Matriz y Médicos vuelven a estar en
+  **una sola página** (la matriz siempre a la vista); los botones de abajo
+  solo llevan a cada parte. Solo el **administrador** mantiene pantallas
+  separadas. GD y Gerente Nacional conservan la pantalla Equipo.
+- Se quitó el botón **"Pendientes"** de la barra (era el mismo filtro rápido
+  "Pendientes", que se mantiene).
+- Se quitaron el **mapa por estado** y la **participación mes a mes**: el
+  dueño prefiere gráficos fáciles de leer (cobertura, mercados con
+  oportunidad, distritos). La función de la migración 11 queda en la base
+  sin uso (no molesta).
+- Los "10 médicos con más oportunidad" del VM van al final de su página.
+
+### Fase 9C (hecha): avisos con campanita
+- Para **GD, Gerente Nacional y administrador** (el VM no). Avisa cuando un
+  visitador evalúa (un aviso por visitador y día), cuando evaluó a **todos**
+  sus médicos 🎉, cuando hay visitadores con **7 días o más sin evaluar**, y
+  cuando una evaluación **no coincide con CloseUp**. Últimos 14 días.
+- Número rojo con los no leídos; tocar un aviso lleva a Equipo (al
+  visitador o a Alertas); "Marcar todo como leído".
+- Cada **2 minutos** (con la app abierta e internet) se traen **solo** las
+  evaluaciones nuevas o cambiadas y se avisa "Hay N evaluaciones nuevas".
+- "Visto hasta" se guarda en el servidor (migración 12): la campanita marca
+  lo mismo en el teléfono y en la computadora.
+- Avisos al teléfono con la app cerrada: quedan para después (requieren un
+  servicio de avisos aparte).

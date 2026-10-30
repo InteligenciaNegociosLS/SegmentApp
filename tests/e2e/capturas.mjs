@@ -162,6 +162,15 @@ try {
         await page.evaluate(() => attemptLogin());
         await page.waitForFunction(() => App.state.isAdmin, null, { timeout: 120000 });
         await foto('4-admin-tablero', { completa: true });
+        // Campanita con algunos avisos de ejemplo
+        await page.evaluate(() => {
+            const docs = App.state.PROCESSED_DATA.filter(d => !d.isZeroRx && d.ficheroData && d.ficheroData.length).slice(0, 4);
+            docs.forEach((d, i) => App.state.ALL_EVALUATIONS.push({ firebaseId: 'demo' + i, id: 'demo' + i, visitador: App.data.getFicheroRepKey(d.ficheroData[0]) ? String(d.ficheroData[0][App.data.getFicheroRepKey(d.ficheroData[0])]).trim().toUpperCase() : '',
+                medico_id: d._clave, medico_name: d.name, mercado: 'DESLER MERCADO', cuadrante: i === 0 ? (d.closeupPotency === 'A' ? 'C-' : 'A+') : d.closeupLabel, survey: {}, timestamp: new Date(Date.now() - i * 3600000).toISOString() }));
+            App.evaluation.marcarCambio(); App.avisos.actualizar(); App.avisos.abrir();
+        });
+        await foto('4a-admin-avisos');
+        await page.evaluate(() => App.avisos.cerrar());
         await page.evaluate(() => App.ux.irA('matriz'));
         await foto('4b-admin-matriz');
         await page.evaluate(() => App.ux.irA('equipo'));

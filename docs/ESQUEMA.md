@@ -248,6 +248,7 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261031120000_historial_equipo.sql` | Fase 6C: cada VM ve el historial de sus evaluaciones y cada GD el de su distrito |
 | `supabase/migrations/20261031130000_historial_medico.sql` | Fase 6E: `historial_medico` (recetas y clasificación de un médico en cada versión publicada; solo si está en tu fichero) |
 | `supabase/migrations/20261101120000_tableros_por_rol.sql` | Fase 9B: `evolucion_mercados` (participación por mercado en cada versión), `avance_distrito` (avance del VM y promedio de su distrito, sin nombres) y `bitacora` (quién cambió la configuración o publicó una versión; solo la lee el admin) |
+| `supabase/migrations/20261102120000_avisos.sql` | Fase 9C: `avisos_vistos` (hasta cuándo cada persona vio sus avisos; cada una solo ve y cambia su fila) |
 | `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 

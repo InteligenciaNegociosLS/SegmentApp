@@ -161,6 +161,31 @@ window.App.sb.bitacora = async function(limite = 50) {
     return data || [];
 };
 
+// Fase 9C: evaluaciones que cambiaron desde una fecha (para la campanita, sin volver a leer todo)
+window.App.sb.evaluacionesDesde = async function(desde) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.from('evaluaciones').select(COLUMNAS_EVAL + ', eliminado_en')
+        .gt('actualizado_en', desde).order('actualizado_en', { ascending: true }).limit(1000);
+    if (error) throw fallo(error, 'Evaluaciones nuevas');
+    return (data || []).map(r => ({ ...window.App.sb.aFormatoApp(r), eliminado: !!r.eliminado_en }));
+};
+// Hasta cuándo la persona ya vio sus avisos (migración 12)
+window.App.sb.avisosVistos = async function(perfilId) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.from('avisos_vistos').select('visto_hasta').eq('perfil_id', perfilId).maybeSingle();
+    if (error) throw fallo(error, 'Avisos vistos');
+    return data ? data.visto_hasta : null;
+};
+window.App.sb.marcarAvisosVistos = async function(perfilId, fecha) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.from('avisos_vistos').update({ visto_hasta: fecha }).eq('perfil_id', perfilId).select('perfil_id');
+    if (error) throw fallo(error, 'Marcar avisos');
+    if (!data || !data.length) {
+        const r = await sb.from('avisos_vistos').insert({ perfil_id: perfilId, visto_hasta: fecha });
+        if (r.error) throw fallo(r.error, 'Marcar avisos');
+    }
+};
+
 window.App.sb.urlArchivo = async function(ruta) {
     const sb = await window.App.sb.cliente();
     const { data, error } = await sb.storage.from(BUCKET_DATOS).createSignedUrl(ruta, 3600);
