@@ -96,6 +96,7 @@ window.App.comparar.alRecalcular = function() {
         const totalAntes = r.grandTotalRx;
         const phqAntes = r.doctors.reduce((s, d) => s + (d.isZeroRx ? 0 : d.rxPhq), 0);
         est.resumen = resumen;
+        est.previos = previos;   // por médico: lo usa la pantalla Equipo para la tendencia de cada VM
         est.kpis = { totalRx: totalAntes, rxPhq: phqAntes, share: totalAntes ? phqAntes / totalAntes * 100 : 0, medicos: previos.size };
     }
     window.App.comparar.render();
