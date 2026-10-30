@@ -74,6 +74,8 @@ class Consulta {
     update(v) { this.op = 'update'; this.valores = v; return this; }
     eq(c, v) { this.filtros.push(f => f[c] === v); return this; }
     is(c, v) { this.filtros.push(f => (f[c] ?? null) === v); return this; }
+    gt(c, v) { this.filtros.push(f => f[c] != null && String(f[c]) > String(v)); return this; }
+    limit(n) { this.limite = n; return this; }
     order(c, o = {}) { this.orden.push([c, o.ascending !== false]); return this; }
     range(a, b) { this.desde = a; this.hasta = b; return this; }
     maybeSingle() { this.unico = 'quizas'; return this; }
@@ -121,6 +123,7 @@ class Consulta {
         if (this.op !== 'select' && !this.devolver && !this.unico) return { data: null, error: null };
         res = res.map(f => this.conRelaciones(f));
         if (this.desde != null) res = res.slice(this.desde, this.hasta + 1);
+        if (this.limite != null) res = res.slice(0, this.limite);
         if (this.unico) {
             if (res.length > 1) return { data: null, error: { message: 'varias filas', code: 'PGRST116' } };
             if (!res.length) return this.unico === 'uno' ? { data: null, error: { message: 'sin filas', code: 'PGRST116' } } : { data: null, error: null };
