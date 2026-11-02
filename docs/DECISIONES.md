@@ -429,3 +429,17 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   una **clave temporal** (se ve una sola vez, con el mensaje listo para
   WhatsApp o correo) y activar o desactivar el acceso. No se borra nada.
   Crear personas nuevas sigue siendo con `3-usuarios.mjs`.
+
+### Fase 10D (02/11/2026, noche)
+- Los correos reales ya quedaron en producción, pero el `accesos.csv` de ese
+  paso no traía claves y las anteriores se perdieron. Pedido del dueño:
+  **clave temporal para todos** y poder **descargar o compartir** los
+  usuarios de forma masiva.
+- En **Ajustes → Usuarios**: botón **Claves temporales (N)** (para la lista
+  que se ve: todos, o los filtrados por búsqueda o rol; nunca el propio
+  admin ni los desactivados). Al terminar muestra cada clave una sola vez,
+  con **Descargar accesos** (CSV), **Compartir archivo** (en el teléfono),
+  **Copiar todos** y, por persona, copiar o **WhatsApp**. Botón **Descargar
+  lista** (sin claves). Migración 15 `admin_claves_temporales`, todo o nada.
+- GD y Gerente Nacional todavía no tenían usuario: se crean con
+  `3-usuarios.mjs` (filas gd y gte_nacional de `usuarios.csv`).

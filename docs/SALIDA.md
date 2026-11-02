@@ -88,7 +88,7 @@ Cada script pide escribir **`MIGRAR PRODUCCION`**.
 node 0-preparar-base.mjs
 ```
 
-Debe decir: ✅ Base lista: se aplicaron 14 archivo(s).
+Debe decir: ✅ Base lista: se aplicaron 15 archivo(s).
 
 ```bash
 node 1-exportar-firebase.mjs
@@ -202,6 +202,12 @@ estaba. Cópiame el error y lo resolvemos.
   `node 3-usuarios.mjs --nueva-clave su@correo`.)
 - **Cambiar el nombre o el correo de alguien, o quitarle el acceso:** en la
   app, **Ajustes → Usuarios** (no se borra nada).
+- **Claves temporales para todos (o para un grupo):** en la app, **Ajustes →
+  Usuarios** → (opcional: busca o elige un rol) → **Claves temporales (N)** →
+  **Descargar accesos** y envía a cada uno su mensaje (botón WhatsApp por
+  persona). Las claves se ven una sola vez.
+- **Lista de usuarios para Excel:** **Ajustes → Usuarios → Descargar lista**
+  (no lleva claves).
 - **Persona nueva:** agrégala a `usuarios.csv` y vuelve a ejecutar
   `node 3-usuarios.mjs` (los demás no cambian).
 - **Cargar datos nuevos** (CloseUp o fichero): desde la app, **Ajustes →

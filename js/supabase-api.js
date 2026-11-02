@@ -415,6 +415,14 @@ window.App.sb.claveTemporal = async function(id, clave) {
     if (error) throw fallo(error, 'Clave temporal');
 };
 
+// Varias a la vez (migración 15): [{ id, clave }]. Todo o nada.
+window.App.sb.clavesTemporales = async function(lista) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_claves_temporales', { p_claves: lista });
+    if (error) throw fallo(error, 'Claves temporales');
+    return data;
+};
+
 window.App.sb.activarUsuario = async function(id, activo) {
     const sb = await window.App.sb.cliente();
     const { error } = await sb.rpc('admin_activar_usuario', { p_id: id, p_activo: activo });

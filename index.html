@@ -660,6 +660,11 @@
                             <option value="gte_nacional">Gerente nacional</option><option value="admin">Administradores</option></select></label>
                 </div>
                 <p id="ajUsuariosResumen" class="text-xs text-slate-500 mb-1" aria-live="polite"></p>
+                <div class="flex flex-wrap gap-2 my-3">
+                    <button type="button" id="btnClavesMasivas" class="boton-tonal" onclick="App.usuarios.clavesMasivas()"><span class="material-symbols-outlined text-[18px]">key</span> <span>Claves temporales (<span data-cuenta>0</span>)</span></button>
+                    <button type="button" id="btnDescargarUsuarios" class="boton-tonal" onclick="App.usuarios.descargarLista()"><span class="material-symbols-outlined text-[18px]">download</span> Descargar lista</button>
+                </div>
+                <p class="text-[11px] text-slate-500 -mt-1 mb-2">Los dos botones usan la lista que ves: busca o elige un rol para hacerlo solo con algunos.</p>
                 <ul id="ajUsuariosLista" class="divide-y divide-slate-100"></ul>
             </article>
 
