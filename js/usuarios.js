@@ -53,7 +53,8 @@
 
     const textoError = (e) => {
         const m = String((e && e.original && e.original.message) || (e && e.message) || '');
-        if (/admin_usuarios|admin_editar|admin_clave|admin_activar|could not find the function|does not exist/i.test(m)) return 'Falta aplicar la migración 14 en Supabase.';
+        if (/admin_claves_temporales/i.test(m)) return 'Falta aplicar la migración 15 en Supabase (en Cloud Shell: node 0-preparar-base.mjs).';
+        if (/admin_usuarios|admin_editar|admin_clave|admin_activar|could not find the function|does not exist/i.test(m)) return 'Falta aplicar la migración 14 en Supabase (en Cloud Shell: node 0-preparar-base.mjs).';
         if (/failed to fetch|network|sin conexi/i.test(m)) return 'Sin conexión. Intenta de nuevo.';
         return m.replace(/^[^:]+:\s*/, '') || 'No se pudo completar. Intenta de nuevo.';
     };
@@ -77,14 +78,27 @@
     const fechaCorta = (x) => new Date(x).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
     const iniciales = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0] || '').join('').toUpperCase() || '?';
 
+    // Los que se ven con la búsqueda y el rol elegidos (los botones de abajo usan esta misma lista)
+    U.filtrados = function() {
+        const buscar = String((document.getElementById('ajUsuariosBuscar') || {}).value || '').trim().toLowerCase();
+        const rol = String((document.getElementById('ajUsuariosRol') || {}).value || '');
+        return lista.filter(u => (!rol || u.rol === rol)
+            && (!buscar || `${u.nombre} ${u.correo} ${u.visitador || ''} ${u.distritos || ''}`.toLowerCase().includes(buscar)));
+    };
+
     U.pintar = function() {
         const zona = document.getElementById('ajUsuariosLista');
         if (!zona) return;
-        const buscar = String((document.getElementById('ajUsuariosBuscar') || {}).value || '').trim().toLowerCase();
-        const rol = String((document.getElementById('ajUsuariosRol') || {}).value || '');
         const yo = window.App.state.usuarioId;
-        const vistos = lista.filter(u => (!rol || u.rol === rol)
-            && (!buscar || `${u.nombre} ${u.correo} ${u.visitador || ''} ${u.distritos || ''}`.toLowerCase().includes(buscar)));
+        const vistos = U.filtrados();
+        const masivo = vistos.filter(u => u.id !== yo && u.activo).length;
+        const bMasivo = document.getElementById('btnClavesMasivas');
+        if (bMasivo) {
+            bMasivo.disabled = !masivo;
+            bMasivo.querySelector('[data-cuenta]').textContent = fmt(masivo);
+        }
+        const bLista = document.getElementById('btnDescargarUsuarios');
+        if (bLista) bLista.disabled = !vistos.length;
         const temporales = lista.filter(u => u.clave_temporal).length;
         const nunca = lista.filter(u => !u.ultimo_ingreso).length;
         const internos = lista.filter(u => /@segmentapp\.internal$/i.test(u.correo)).length;
@@ -271,6 +285,136 @@
             ocupado(false);
             window.App.ui.safeSetText('usuarioError', textoError(e));
         }
+    };
+
+    /* ---------- Archivos (CSV que abre Excel, con tildes y Ñ) ---------- */
+    const celda = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const csv = (encabezados, filas) => '\ufeff' + [encabezados.join(','), ...filas.map(f => f.map(celda).join(','))].join('\n') + '\n';
+    const hoy = () => new Date().toISOString().slice(0, 10);
+    const descargar = (nombre, texto) => {
+        const url = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8' }));
+        const a = document.createElement('a');
+        a.href = url; a.download = nombre;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+    };
+
+    // Lista de usuarios (sin claves): la que se ve en pantalla
+    U.listaCsv = function(usuarios = U.filtrados()) {
+        return csv(['nombre', 'correo', 'rol', 'visitador', 'distritos', 'acceso', 'clave_temporal_pendiente', 'ultimo_ingreso'],
+            usuarios.map(u => [u.nombre, u.correo, ROL[u.rol] || u.rol, u.visitador || '', u.distritos || '', u.activo ? 'activo' : 'desactivado',
+                u.clave_temporal ? 'sí' : 'no', u.ultimo_ingreso ? fechaCorta(u.ultimo_ingreso) : 'nunca']));
+    };
+    U.descargarLista = function() {
+        const usuarios = U.filtrados();
+        if (!usuarios.length) return;
+        descargar(`usuarios-segmentapp-${hoy()}.csv`, U.listaCsv(usuarios));
+        toast(`Lista descargada (${fmt(usuarios.length)} usuarios).`);
+    };
+
+    /* ---------- Claves temporales para todos (o los filtrados) ---------- */
+    let accesos = [];          // resultado: se muestra una sola vez
+    let guardados = false;     // ¿ya descargó o compartió el archivo?
+    const candidatos = () => U.filtrados().filter(u => u.id !== window.App.state.usuarioId && u.activo);
+
+    U.clavesMasivas = function() {
+        const lista2 = candidatos();
+        if (!lista2.length) return;
+        actual = null;
+        const filtro = U.filtrados().length !== lista.length;
+        abrir('Claves temporales', `
+            <p class="text-sm text-slate-700">Se creará una clave temporal nueva para <b>${fmt(lista2.length)} ${lista2.length === 1 ? 'persona' : 'personas'}</b>${filtro ? ' (las que se ven con la búsqueda o el rol elegidos)' : ''}.</p>
+            <ul class="text-sm text-slate-600 mt-3 space-y-1 list-disc pl-5">
+                <li>Sus claves actuales <b>dejarán de funcionar</b>.</li>
+                <li>Al entrar con la temporal, la app le pide a cada una crear la suya.</li>
+                <li>Tú no estás incluido, ni quien tiene el acceso desactivado.</li>
+                <li>Las claves se ven <b>solo una vez</b>: descarga el archivo antes de cerrar.</li>
+            </ul>
+            <p id="usuarioError" class="text-sm text-rose-700 mt-3 min-h-[20px]" role="alert"></p>
+            ${botones('App.usuarios.crearClavesMasivas()', `Crear ${fmt(lista2.length)} claves`, 'key')}`);
+    };
+
+    U.crearClavesMasivas = async function() {
+        const lista2 = candidatos();
+        if (!lista2.length) return;
+        const nuevas = lista2.map(u => ({ u, clave: U.generarClave() }));
+        ocupado(true);
+        try {
+            await window.App.sb.clavesTemporales(nuevas.map(x => ({ id: x.u.id, clave: x.clave })));
+        } catch (e) {
+            ocupado(false);
+            window.App.ui.safeSetText('usuarioError', textoError(e));
+            return;
+        }
+        const dir = direccionApp();
+        accesos = nuevas.map(({ u, clave }) => {
+            u.clave_temporal = true;
+            const a = { nombre: u.nombre, correo: u.correo, rol: u.rol, clave, tipo: 'temporal' };
+            return { ...a, mensaje: U.mensaje(a, dir) };
+        });
+        guardados = false;
+        U.pintar();
+        mostrarAccesos();
+    };
+
+    U.accesosCsv = () => csv(['correo', 'nombre', 'rol', 'clave', 'mensaje'], accesos.map(a => [a.correo, a.nombre, ROL[a.rol] || a.rol, a.clave, a.mensaje]));
+    const archivoAccesos = () => `accesos-segmentapp-${hoy()}.csv`;
+
+    function mostrarAccesos() {
+        const puedeCompartir = !!(navigator.canShare && typeof File !== 'undefined'
+            && navigator.canShare({ files: [new File(['x'], 'a.csv', { type: 'text/csv' })] }));
+        abrir(`${fmt(accesos.length)} claves temporales creadas`, `
+            <p class="text-sm text-slate-700">Envía a cada persona su mensaje. <b>Descarga el archivo antes de cerrar</b>: las claves no se vuelven a mostrar.</p>
+            <div class="flex flex-wrap gap-2 mt-4">
+                <button type="button" class="boton-lleno" data-accion="descargar-accesos" onclick="App.usuarios.descargarAccesos()"><span class="material-symbols-outlined text-[18px]">download</span> Descargar accesos</button>
+                ${puedeCompartir ? '<button type="button" class="boton-tonal" data-accion="compartir-accesos" onclick="App.usuarios.compartirAccesos()"><span class="material-symbols-outlined text-[18px]">share</span> Compartir archivo</button>' : ''}
+                <button type="button" class="boton-tonal" data-accion="copiar-todos" onclick="App.usuarios.copiarTodos()"><span class="material-symbols-outlined text-[18px]">content_copy</span> Copiar todos</button>
+            </div>
+            <ul id="usuarioAccesos" class="divide-y divide-slate-100 mt-4 max-h-[45vh] overflow-y-auto">${accesos.map((a, i) => `
+                <li class="flex items-center gap-2 py-2.5">
+                    <div class="min-w-0 flex-1"><div class="text-sm font-semibold text-slate-800 truncate">${esc(a.nombre)}</div>
+                        <div class="text-xs text-slate-600 truncate">${esc(a.correo)} · <b class="text-slate-900">${esc(a.clave)}</b></div></div>
+                    <button type="button" class="boton-icono" title="Copiar mensaje" aria-label="Copiar el mensaje de ${esc(a.nombre)}" onclick="App.usuarios.copiarUno(${i})"><span class="material-symbols-outlined">content_copy</span></button>
+                    <button type="button" class="boton-icono" title="Enviar por WhatsApp" aria-label="Enviar por WhatsApp a ${esc(a.nombre)}" onclick="App.usuarios.whatsappUno(${i})"><span class="material-symbols-outlined">send</span></button>
+                </li>`).join('')}</ul>
+            <div class="flex justify-end mt-4"><button type="button" class="boton-texto" onclick="App.usuarios.cerrarAccesos()">Listo</button></div>`);
+    }
+
+    const copiarTexto = async (texto) => {
+        try { await navigator.clipboard.writeText(texto); return true; } catch (e) { return false; }
+    };
+    U.descargarAccesos = function() {
+        if (!accesos.length) return;
+        descargar(archivoAccesos(), U.accesosCsv());
+        guardados = true;
+        toast('Archivo descargado. Tiene claves: no lo reenvíes a nadie más y bórralo cuando termines.');
+    };
+    U.compartirAccesos = async function() {
+        if (!accesos.length) return;
+        try {
+            await navigator.share({ title: 'Accesos SegmentApp', files: [new File([U.accesosCsv()], archivoAccesos(), { type: 'text/csv' })] });
+            guardados = true;
+        } catch (e) { /* la persona canceló */ }
+    };
+    U.copiarTodos = async function() {
+        const ok = await copiarTexto(accesos.map(a => a.mensaje).join('\n\n'));
+        toast(ok ? `${fmt(accesos.length)} mensajes copiados.` : 'No se pudo copiar. Usa "Descargar accesos".');
+    };
+    U.copiarUno = async function(i) {
+        const a = accesos[i];
+        if (!a) return;
+        const ok = await copiarTexto(a.mensaje);
+        toast(ok ? `Mensaje de ${a.nombre} copiado.` : 'No se pudo copiar. Usa "Descargar accesos".');
+    };
+    U.whatsappUno = function(i) {
+        const a = accesos[i];
+        if (a) window.open(`https://wa.me/?text=${encodeURIComponent(a.mensaje)}`, '_blank', 'noopener');
+    };
+    U.cerrarAccesos = function() {
+        if (accesos.length && !guardados
+            && !window.confirm('Todavía no descargaste el archivo con las claves. Si cierras, no se vuelven a mostrar. ¿Cerrar de todos modos?')) return;
+        accesos = [];
+        U.cerrar();
     };
 
     console.log('[SegmentApp] usuarios.js cargado.');

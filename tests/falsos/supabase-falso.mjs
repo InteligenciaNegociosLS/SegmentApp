@@ -270,6 +270,17 @@ export function createClient(url, clave, opciones = {}) {
             registrar('rpc:admin_clave_temporal');
             return { data: { ok: true }, error: null };
         },
+        admin_claves_temporales({ p_claves }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const s = leerSesion();
+            if (p_claves.some(x => x.id === s.id || String(x.clave).length < 8)) return { data: null, error: { message: 'Cada clave temporal debe tener al menos 8 caracteres.' } };
+            p_claves.forEach(({ id, clave }) => {
+                const u = bd.usuarios.find(x => x.id === id);
+                u.clave = clave; u.metadata = { ...(u.metadata || {}), clave_temporal: true };
+            });
+            registrar(`rpc:admin_claves_temporales:${p_claves.length}`);
+            return { data: p_claves.length, error: null };
+        },
         admin_activar_usuario({ p_id, p_activo }) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
             bd.perfiles.find(x => x.id === p_id).activo = p_activo;

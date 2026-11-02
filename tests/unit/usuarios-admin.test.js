@@ -119,3 +119,50 @@ describe('Ajustes → Usuarios', () => {
         expect(document.getElementById('ajUsuariosLista').textContent).toContain('Solo el administrador');
     });
 });
+
+describe('Ajustes → Usuarios: varios a la vez', () => {
+    it('da claves temporales a todos los de la lista (menos al admin), y se pueden descargar', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.usuarios.cargar();
+        expect(document.querySelector('#btnClavesMasivas [data-cuenta]').textContent).toBe('2');
+        App.usuarios.clavesMasivas();
+        expect(document.getElementById('usuarioModalCuerpo').textContent).toContain('2 personas');
+        await confirmar();
+        expect(window.__calls).toContain('rpc:admin_claves_temporales:2');
+        const bd = baseSimulada(App);
+        const vm = bd.usuarios.find(x => x.id === 'u-vm'), gd = bd.usuarios.find(x => x.id === 'u-gd');
+        expect(vm.clave).toMatch(/^[a-z]{4}-[a-z]{4}-\d{4}$/);
+        expect(gd.clave).not.toBe(vm.clave);
+        expect(bd.usuarios.find(x => x.id === 'u-admin').clave).toBe('adminadmin');
+        // Se ven una vez, con el mensaje de cada uno, y el archivo para descargar
+        expect(document.querySelectorAll('#usuarioAccesos li')).toHaveLength(2);
+        expect(document.getElementById('usuarioAccesos').textContent).toContain(vm.clave);
+        const archivo = App.usuarios.accesosCsv();
+        expect(archivo.startsWith('﻿correo,nombre,rol,clave,mensaje')).toBe(true);
+        expect(archivo).toContain(`Clave temporal: ${vm.clave}`);
+        expect(archivo).toContain(gd.clave);
+        expect(fila('u-vm').textContent).toContain('Clave temporal pendiente');
+    });
+
+    it('solo a los filtrados: con el rol "Gerentes de distrito" solo cambia la del GD', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.usuarios.cargar();
+        document.getElementById('ajUsuariosRol').value = 'gd';
+        App.usuarios.pintar();
+        expect(document.querySelector('#btnClavesMasivas [data-cuenta]').textContent).toBe('1');
+        App.usuarios.clavesMasivas();
+        await confirmar();
+        expect(window.__calls).toContain('rpc:admin_claves_temporales:1');
+        expect(baseSimulada(App).usuarios.find(x => x.id === 'u-vm').clave).toBe('123456');
+    });
+
+    it('la lista de usuarios para descargar no lleva claves', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.usuarios.cargar();
+        const lista = App.usuarios.listaCsv();
+        expect(lista.split('\n')[0]).toBe('﻿nombre,correo,rol,visitador,distritos,acceso,clave_temporal_pendiente,ultimo_ingreso');
+        expect(lista).toContain('"vm@lasante.com"');
+        expect(lista).not.toContain('123456');
+        expect(lista).not.toContain('adminadmin');
+    });
+});

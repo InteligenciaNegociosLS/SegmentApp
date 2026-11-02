@@ -189,6 +189,9 @@ try {
         await page.evaluate(async () => { App.usuarios.clave('u-gd'); await App.usuarios.crearClave(); });
         await foto('4i-admin-usuario-clave');
         await page.evaluate(() => App.usuarios.cerrar());
+        await page.evaluate(async () => { App.usuarios.clavesMasivas(); await App.usuarios.crearClavesMasivas(); });
+        await foto('4j-admin-claves-masivas');
+        await page.evaluate(() => { window.confirm = () => true; App.usuarios.cerrarAccesos(); });
         await page.evaluate(() => App.ajustes.verComo('vm', 'NEIVIS PARRA'));
         await foto('4f-admin-ver-como');
         await page.evaluate(() => App.ajustes.salirVerComo());
