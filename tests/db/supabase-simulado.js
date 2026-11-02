@@ -19,8 +19,24 @@ export const BASE_SUPABASE = `
     create table auth.users (
         id uuid primary key,
         email text,
-        raw_app_meta_data jsonb not null default '{}'
+        raw_app_meta_data jsonb not null default '{}',
+        raw_user_meta_data jsonb not null default '{}',
+        encrypted_password text,
+        last_sign_in_at timestamptz,
+        updated_at timestamptz
     );
+    create table auth.identities (
+        id uuid primary key default gen_random_uuid(),
+        user_id uuid not null references auth.users (id) on delete cascade,
+        provider text not null default 'email',
+        provider_id text,
+        identity_data jsonb not null default '{}',
+        updated_at timestamptz
+    );
+    -- pgcrypto no existe en PGlite: imitación mínima con la misma firma que en Supabase
+    create schema extensions;
+    create function extensions.gen_salt(text) returns text language sql as $$ select '$2a$06$sal' $$;
+    create function extensions.crypt(clave text, sal text) returns text language sql as $$ select sal || md5(clave) $$;
     create function auth.uid() returns uuid language sql stable as
         $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema public, auth to anon, authenticated;
