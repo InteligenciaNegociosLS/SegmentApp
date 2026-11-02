@@ -181,6 +181,14 @@ try {
         await foto('4c3-admin-equipo-prioridades');
         await page.evaluate(() => App.ux.irA('ajustes'));
         await foto('4d-admin-ajustes', { completa: true });
+        await page.evaluate(async () => { await App.usuarios.cargar(); App.ajustes.irA('ajUsuarios'); });
+        await page.waitForTimeout(400);
+        await foto('4g-admin-usuarios');
+        await page.evaluate(() => App.usuarios.editar('u-vm'));
+        await foto('4h-admin-usuario-editar');
+        await page.evaluate(async () => { App.usuarios.clave('u-gd'); await App.usuarios.crearClave(); });
+        await foto('4i-admin-usuario-clave');
+        await page.evaluate(() => App.usuarios.cerrar());
         await page.evaluate(() => App.ajustes.verComo('vm', 'NEIVIS PARRA'));
         await foto('4f-admin-ver-como');
         await page.evaluate(() => App.ajustes.salirVerComo());

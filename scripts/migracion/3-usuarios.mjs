@@ -5,6 +5,10 @@
          node 3-usuarios.mjs               (crea / actualiza los usuarios)
          node 3-usuarios.mjs --nueva-clave correo@empresa.com
                                            (clave temporal nueva para quien la olvidó)
+   Si alguien ya tiene usuario con OTRO correo (ej. el interno de la app
+   vieja, nombre@segmentapp.internal), se le CAMBIA el correo y conserva su
+   clave: VM por su visitador, GD por su distrito, admin y Gte. Nacional
+   por su rol (si hay uno solo).
    La app NO envía correos: al crear usuarios (o dar una clave nueva),
    el script deja accesos.csv con el correo, la clave temporal y un
    mensaje listo para que el dueño lo envíe por Gmail o WhatsApp.
@@ -60,7 +64,7 @@ try {
         console.log(`${filas.length} usuarios en el CSV. ${simulacro ? '🔎 SIMULACRO (no se crea nada)' : '✍️  MODO REAL'}\n`);
         const r = await aplicarUsuarios({ db, authAdmin, filas, claves: exp.claves, claveAdmin: exp.claveAdmin, simulacro });
         if (r.errores.length) salir('No se pudo completar:\n   - ' + r.errores.join('\n   - '));
-        console.log(`\nCreados: ${r.creados} · Ya existían: ${r.actualizados} · Con clave temporal: ${r.conClaveTemporal.length}`);
+        console.log(`\nCreados: ${r.creados} · Correo cambiado: ${r.correosCambiados} · Ya existían: ${r.actualizados} · Con clave temporal: ${r.conClaveTemporal.length}`);
         if (!simulacro && r.accesos.length) guardarAccesos(r.accesos);
         if (!simulacro && r.actualizados) console.log('\nℹ️  Los que ya existían conservan su clave. Si alguno la olvidó: node 3-usuarios.mjs --nueva-clave su@correo');
         if (!appUrl()) console.log('\n💡 Pon APP_URL en el .env para que el mensaje incluya la dirección de la app.');

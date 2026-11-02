@@ -392,4 +392,33 @@ window.App.sb.visitadoresConUsuario = async function() {
     return filas;
 };
 
+/* ============================================================
+   USUARIOS (solo admin, migración 14)
+============================================================ */
+window.App.sb.usuarios = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_usuarios');
+    if (error) throw fallo(error, 'Usuarios');
+    return data || [];
+};
+
+window.App.sb.editarUsuario = async function(id, nombre, correo) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_editar_usuario', { p_id: id, p_nombre: nombre, p_correo: correo });
+    if (error) throw fallo(error, 'Editar usuario');
+    return data;
+};
+
+window.App.sb.claveTemporal = async function(id, clave) {
+    const sb = await window.App.sb.cliente();
+    const { error } = await sb.rpc('admin_clave_temporal', { p_id: id, p_clave: clave });
+    if (error) throw fallo(error, 'Clave temporal');
+};
+
+window.App.sb.activarUsuario = async function(id, activo) {
+    const sb = await window.App.sb.cliente();
+    const { error } = await sb.rpc('admin_activar_usuario', { p_id: id, p_activo: activo });
+    if (error) throw fallo(error, 'Activar usuario');
+};
+
 console.log('[SegmentApp] supabase-api.js cargado.');

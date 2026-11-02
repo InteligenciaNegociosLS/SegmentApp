@@ -286,3 +286,73 @@ describe('Latido para que Supabase no se pause (migración 13)', () => {
         expect((await filas(U.admin, 'select * from public.latidos').catch(() => []))).toHaveLength(0);
     });
 });
+
+describe('Usuarios desde la app, solo admin (migración 14)', () => {
+    const OTRO = '00000000-0000-0000-0000-000000000009';
+    beforeAll(async () => {
+        await db.query('insert into auth.users (id, email, raw_app_meta_data) values ($1, $2, $3)',
+            [OTRO, 'ada.dascenzo@segmentapp.internal', { rol: 'vm', nombre: 'ADA DASCENZO' }]);
+        await db.query(`insert into auth.identities (user_id, provider, provider_id, identity_data) values ($1, 'email', $3, $2)`,
+            [OTRO, { sub: OTRO, email: 'ada.dascenzo@segmentapp.internal' }, OTRO]);
+    });
+    const usuario = async () => (await db.query(
+        'select email, raw_app_meta_data, raw_user_meta_data, encrypted_password from auth.users where id = $1', [OTRO])).rows[0];
+
+    it('solo el admin ve la lista de usuarios, con su rol, visitador y distritos', async () => {
+        const lista = await filas(U.admin, 'select * from public.admin_usuarios()');
+        expect(lista.map(u => u.rol)[0]).toBe('admin');
+        expect(lista.find(u => u.id === U.vm1)).toMatchObject({ correo: 'vm1@lasante.com', visitador: 'NEIVIS PARRA', clave_temporal: false });
+        expect(lista.find(u => u.id === U.gd1).distritos).toBe('EI-LING LOPEZ (100007)');
+        for (const quien of [U.gte, U.gd1, U.vm1, U.vm3, U.nuevo, null]) {
+            expect(await falla(quien, 'select * from public.admin_usuarios()')).toBe(true);
+        }
+    });
+
+    it('el admin cambia nombre y correo: cambian el usuario, su identidad y su perfil', async () => {
+        const r = (await filas(U.admin, 'select public.admin_editar_usuario($1, $2, $3) as r',
+            [OTRO, ' Ada D\'Ascenzo ', ' Ada.Dascenzo@LaSante.com.ve ']))[0].r;
+        expect(r).toEqual({ ok: true, correo: 'ada.dascenzo@lasante.com.ve', nombre: 'Ada D\'Ascenzo' });
+        const u = await usuario();
+        expect(u.email).toBe('ada.dascenzo@lasante.com.ve');
+        expect(u.raw_app_meta_data).toMatchObject({ rol: 'vm', nombre: 'Ada D\'Ascenzo' });
+        const ident = (await db.query('select identity_data from auth.identities where user_id = $1', [OTRO])).rows[0].identity_data;
+        expect(ident.email).toBe('ada.dascenzo@lasante.com.ve');
+        const p = (await db.query('select correo, nombre from public.perfiles where id = $1', [OTRO])).rows[0];
+        expect(p).toEqual({ correo: 'ada.dascenzo@lasante.com.ve', nombre: 'Ada D\'Ascenzo' });
+    });
+
+    it('no deja un correo repetido, inválido o un nombre vacío; nadie más puede editar', async () => {
+        const editar = (quien, correo, nombre = 'X') => falla(quien, 'select public.admin_editar_usuario($1, $2, $3)', [OTRO, nombre, correo]);
+        expect(await editar(U.admin, 'VM1@lasante.com')).toBe(true);
+        expect(await editar(U.admin, 'sin-arroba')).toBe(true);
+        expect(await editar(U.admin, 'bien@lasante.com', '  ')).toBe(true);
+        expect(await editar(U.gte, 'otro@lasante.com')).toBe(true);
+        expect(await editar(U.vm1, 'otro@lasante.com')).toBe(true);
+        expect(await editar(null, 'otro@lasante.com')).toBe(true);
+        expect((await usuario()).email).toBe('ada.dascenzo@lasante.com.ve');
+    });
+
+    it('el admin da una clave temporal: queda cifrada y marcada para que la app pida cambiarla', async () => {
+        await filas(U.admin, 'select public.admin_clave_temporal($1, $2)', [OTRO, 'maro-kebi-4821']);
+        const u = await usuario();
+        expect(u.encrypted_password).toMatch(/^\$2a\$/);
+        expect(u.encrypted_password).not.toContain('maro-kebi-4821');
+        expect(u.raw_user_meta_data).toEqual({ clave_temporal: true });
+        const lista = await filas(U.admin, 'select * from public.admin_usuarios()');
+        expect(lista.find(x => x.id === OTRO).clave_temporal).toBe(true);
+        // Clave corta, la propia, o alguien que no es admin: no
+        expect(await falla(U.admin, 'select public.admin_clave_temporal($1, $2)', [OTRO, 'corta'])).toBe(true);
+        expect(await falla(U.admin, 'select public.admin_clave_temporal($1, $2)', [U.admin, 'larga-larga-1234'])).toBe(true);
+        expect(await falla(U.gd1, 'select public.admin_clave_temporal($1, $2)', [OTRO, 'larga-larga-1234'])).toBe(true);
+        expect(await falla(null, 'select public.admin_clave_temporal($1, $2)', [OTRO, 'larga-larga-1234'])).toBe(true);
+    });
+
+    it('el admin desactiva y reactiva un acceso (sin borrar), pero no el suyo', async () => {
+        await filas(U.admin, 'select public.admin_activar_usuario($1, false)', [OTRO]);
+        expect((await db.query('select activo from public.perfiles where id = $1', [OTRO])).rows[0].activo).toBe(false);
+        await filas(U.admin, 'select public.admin_activar_usuario($1, true)', [OTRO]);
+        expect((await db.query('select activo from public.perfiles where id = $1', [OTRO])).rows[0].activo).toBe(true);
+        expect(await falla(U.admin, 'select public.admin_activar_usuario($1, false)', [U.admin])).toBe(true);
+        expect(await falla(U.gd1, 'select public.admin_activar_usuario($1, false)', [OTRO])).toBe(true);
+    });
+});

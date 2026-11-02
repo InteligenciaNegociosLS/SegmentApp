@@ -250,6 +250,7 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261101120000_tableros_por_rol.sql` | Fase 9B: `evolucion_mercados` (participación por mercado en cada versión), `avance_distrito` (avance del VM y promedio de su distrito, sin nombres) y `bitacora` (quién cambió la configuración o publicó una versión; solo la lee el admin) |
 | `supabase/migrations/20261102120000_avisos.sql` | Fase 9C: `avisos_vistos` (hasta cuándo cada persona vio sus avisos; cada una solo ve y cambia su fila) |
 | `supabase/migrations/20261103120000_latido.sql` | Fase 10: `latido()` para que el plan gratis no pause el proyecto (lo llama `.github/workflows/latido.yml` cada 2 días) |
+| `supabase/migrations/20261104120000_usuarios_admin.sql` | Fase 10C: el admin gestiona usuarios desde Ajustes → Usuarios: `admin_usuarios`, `admin_editar_usuario` (nombre y correo), `admin_clave_temporal` (clave cifrada con bcrypt, marcada como temporal), `admin_activar_usuario`. Cada una exige rol admin |
 | `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 
