@@ -43,7 +43,7 @@ window.App.modals.showMarketDetails = function() {
         }
         html += `
             <tr class="${rowStyle}">
-                <td class="p-3 ${nameStyle}">${item.prod} ${item.type === 'PHQ' ? '<span class="text-[9px] bg-blue-100 px-1 rounded ml-1 uppercase">PHQ</span>' : ''}</td>
+                <td class="p-3 ${nameStyle}">${item.prod} ${item.type === 'PHQ' ? '<span class="text-[9px] bg-green-100 text-green-800 px-1 rounded ml-1 font-bold">La Santé</span>' : ''}</td>
                 <td class="p-3 text-right font-mono font-medium">${ui.formatNumber(item.rx)}</td>
                 <td class="p-3 text-center ${shareStyle}">${ui.formatNumber(share, 2)}%</td>
             </tr>
@@ -261,7 +261,7 @@ window.App.modals.openDoctorModal = function(docId) {
                         const isMyProd = d.isPhq(r.prod);
                         const rowClass = isMyProd ? 'bg-blue-50/40' : '';
                         const rxLabVal = isMyProd ? `<span class="font-bold text-blue-600 font-mono">${ui.formatNumber(r.rx)}</span>` : '<span class="text-slate-300">-</span>';
-                        const typeBadge = isMyProd ? '<span class="text-[9px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">PHQ</span>' : '<span class="text-[9px] text-slate-400">Comp</span>';
+                        const typeBadge = isMyProd ? '<span class="text-[9px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-bold">La Santé</span>' : '<span class="text-[9px] text-slate-400">Comp</span>';
                         return `
                             <tr class="${rowClass} transition">
                                 <td class="p-3 text-slate-700 font-medium truncate" title="${r.prod}">${r.prod}</td>
