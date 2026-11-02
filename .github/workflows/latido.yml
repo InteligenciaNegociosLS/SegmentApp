@@ -1,0 +1,59 @@
+# Mantiene Supabase activo: el plan gratis pausa un proyecto tras 7 días
+# sin uso. Cada 2 días este trabajo llama a la función latido() (migración 13)
+# del Supabase de PRODUCCIÓN y, si está configurado, también del de PRUEBAS.
+# Usa solo la clave pública (anon / publishable): no puede leer ningún dato.
+#
+# Secretos que se configuran una vez en GitHub (Settings → Secrets and
+# variables → Actions → New repository secret):
+#   SUPABASE_URL_PRODUCCION   y  SUPABASE_ANON_KEY_PRODUCCION
+#   SUPABASE_URL_PRUEBAS      y  SUPABASE_ANON_KEY_PRUEBAS   (opcionales)
+# Para probarlo a mano: pestaña Actions → "Mantener Supabase activo" → Run workflow.
+name: Mantener Supabase activo
+
+on:
+  schedule:
+    - cron: '23 13 */2 * *'   # cada 2 días, 9:23 a. m. de Venezuela
+  workflow_dispatch:
+
+permissions:
+  actions: write      # para mantener encendido este horario (ver el último paso)
+  contents: read
+
+jobs:
+  latido:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Latido a Supabase
+        env:
+          URL_PRODUCCION: ${{ secrets.SUPABASE_URL_PRODUCCION }}
+          CLAVE_PRODUCCION: ${{ secrets.SUPABASE_ANON_KEY_PRODUCCION }}
+          URL_PRUEBAS: ${{ secrets.SUPABASE_URL_PRUEBAS }}
+          CLAVE_PRUEBAS: ${{ secrets.SUPABASE_ANON_KEY_PRUEBAS }}
+        run: |
+          fallas=0
+          latido() {
+            nombre="$1"; url="${2%/}"; clave="$3"
+            if [ -z "$url" ] || [ -z "$clave" ]; then echo "$nombre: sin configurar (se omite)"; return 0; fi
+            # Hasta 3 intentos por si el proyecto está despertando
+            for intento in 1 2 3; do
+              if r=$(curl -sS -f --max-time 30 -X POST "$url/rest/v1/rpc/latido" \
+                    -H "apikey: $clave" -H "Content-Type: application/json" -d '{}'); then
+                echo "$nombre: $r"; return 0
+              fi
+              sleep 20
+            done
+            echo "::error::$nombre no respondió. Revisa en supabase.com si el proyecto está en pausa (botón Restore)."
+            return 1
+          }
+          latido PRODUCCION "$URL_PRODUCCION" "$CLAVE_PRODUCCION" || fallas=1
+          latido PRUEBAS "$URL_PRUEBAS" "$CLAVE_PRUEBAS" || fallas=1
+          exit $fallas
+
+      # GitHub apaga los horarios de un repositorio público tras 60 días sin
+      # cambios. "Volver a encenderlo" cada vez reinicia esa cuenta.
+      - name: Mantener encendido este horario
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/latido.yml/enable" || echo "No se pudo (no es grave)."
