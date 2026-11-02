@@ -74,7 +74,7 @@ export function leerCsvUsuarios(texto) {
 
 /* ---------- Claves temporales (sin correo automático) ---------- */
 // Fácil de dictar o escribir en el teléfono: "maro-kebi-4821". Sin letras que se confundan.
-const SILABAS = ['ba', 'be', 'bi', 'bo', 'bu', 'ca', 'co', 'cu', 'da', 'de', 'do', 'fa', 'fe', 'fi', 'fo', 'ga', 'go', 'gu',
+export const SILABAS = ['ba', 'be', 'bi', 'bo', 'bu', 'ca', 'co', 'cu', 'da', 'de', 'do', 'fa', 'fe', 'fi', 'fo', 'ga', 'go', 'gu',
     'ka', 'ke', 'ki', 'ko', 'ku', 'ma', 'me', 'mi', 'mo', 'mu', 'na', 'ne', 'ni', 'no', 'nu', 'pa', 'pe', 'pi', 'po', 'pu',
     'ra', 're', 'ri', 'ro', 'ru', 'sa', 'se', 'si', 'so', 'su', 'ta', 'te', 'ti', 'to', 'tu', 'va', 've', 'vi', 'za', 'zo'];
 export function generarClaveTemporal(azar = (n) => crypto.randomInt(n)) {
@@ -97,7 +97,8 @@ export function accesosCsv(accesos, appUrl = '') {
 }
 
 /* ---------- Aplicar ---------- */
-// authAdmin: { crear({email, password, app_metadata}) → id, buscarPorCorreo(email) → id|null, actualizar(id, {app_metadata}) }
+// authAdmin: { crear, buscarPorCorreo(email) → id|null, actualizar(id, {app_metadata}), cambiarCorreo(id, email),
+//             tieneClaveTemporal(id) → bool, cambiarClave(id, clave) }
 export async function aplicarUsuarios({ db, authAdmin, filas, claves, claveAdmin, simulacro = false, log = console.log }) {
     const vis = new Map((await db.query('select id, nombre_sector from public.visitadores')).rows.map(r => [r.nombre_sector, r.id]));
     const dis = new Map((await db.query('select id, codigo from public.distritos')).rows.map(r => [r.codigo, r.id]));
@@ -108,7 +109,24 @@ export async function aplicarUsuarios({ db, authAdmin, filas, claves, claveAdmin
     }
     if (errores.length) return { errores, creados: 0, actualizados: 0, conClaveTemporal: [], accesos: [] };
 
-    const resumen = { errores: [], creados: 0, actualizados: 0, conClaveTemporal: [], accesos: [] };
+    // Usuario que ya ocupa ese puesto (para cambiarle el correo en vez de crear otro):
+    // VM → el de su visitador; GD → el de su distrito; admin y Gte. Nacional → el único con ese rol.
+    const porRol = (rol) => filas.filter(x => x.rol === rol).length;
+    const actualDelPuesto = async (f) => {
+        let q;
+        if (f.rol === 'vm') q = await db.query('select p.id, p.correo from public.visitadores v join public.perfiles p on p.id = v.perfil_id where v.nombre_sector = $1', [f.visitador]);
+        else if (f.rol === 'gd') q = await db.query(`select p.id, p.correo from public.perfil_distritos pd join public.distritos d on d.id = pd.distrito_id
+            join public.perfiles p on p.id = pd.perfil_id where d.codigo = any($1) and p.rol = 'gd' limit 1`, [f.distritos]);
+        else {
+            if (porRol(f.rol) !== 1) return null;
+            q = await db.query('select id, correo from public.perfiles where rol = $1', [f.rol]);
+            if (q.rows.length !== 1) return null;
+        }
+        const p = q.rows[0];
+        return p && p.correo !== f.correo ? p : null;
+    };
+
+    const resumen = { errores: [], creados: 0, actualizados: 0, correosCambiados: 0, conClaveTemporal: [], accesos: [] };
     for (const f of filas) {
         let clave = '';
         if (f.rol === 'vm') clave = claves.get(f.visitador) || '';
@@ -117,13 +135,36 @@ export async function aplicarUsuarios({ db, authAdmin, filas, claves, claveAdmin
         const app_metadata = { rol: f.rol, nombre: f.nombre };
         const etiqueta = `${f.rol.padEnd(12)} ${f.correo.padEnd(36)} ${f.visitador || f.distritos.join('|') || ''}`;
 
+        const yaConCorreo = simulacro
+            ? (await db.query('select id from public.perfiles where correo = $1', [f.correo])).rows[0]?.id
+            : await authAdmin.buscarPorCorreo(f.correo);
+        const anterior = yaConCorreo ? null : await actualDelPuesto(f);
         if (simulacro) {
-            log(`  [simulacro] ${etiqueta} ${usaClave ? '(clave actual)' : '(clave temporal)'}`);
-            if (!usaClave) resumen.conClaveTemporal.push(f.correo);
+            if (anterior) log(`  [simulacro] ✎ cambia correo ${anterior.correo} → ${etiqueta} (conserva su clave)`);
+            else if (yaConCorreo) log(`  [simulacro] ↻ ya existe ${etiqueta}`);
+            else log(`  [simulacro] ${etiqueta} ${usaClave ? '(clave actual)' : '(clave temporal)'}`);
+            if (anterior) resumen.correosCambiados++;
+            else if (yaConCorreo) resumen.actualizados++;
+            else if (!usaClave) resumen.conClaveTemporal.push(f.correo);
             continue;
         }
-        let id = await authAdmin.buscarPorCorreo(f.correo);
-        if (id) {
+        let id = yaConCorreo;
+        if (anterior) {
+            // Ya tenía usuario con otro correo (ej. el interno de la app vieja): se cambia el correo y conserva su clave
+            id = anterior.id;
+            await authAdmin.cambiarCorreo(id, f.correo);
+            await authAdmin.actualizar(id, { app_metadata });
+            resumen.correosCambiados++;
+            let temporal = null;
+            if (await authAdmin.tieneClaveTemporal(id)) {
+                // Su clave temporal anterior no se conoce: se le da una nueva para poder enviársela
+                temporal = generarClaveTemporal();
+                await authAdmin.cambiarClave(id, temporal);
+                resumen.conClaveTemporal.push(f.correo);
+            }
+            resumen.accesos.push({ correo: f.correo, nombre: f.nombre, rol: f.rol, clave: temporal, tipo: temporal ? 'temporal' : 'actual' });
+            log(`  ✎ correo cambiado ${anterior.correo} → ${etiqueta} ${temporal ? '(clave temporal nueva)' : '(conserva su clave)'}`);
+        } else if (id) {
             await authAdmin.actualizar(id, { app_metadata });
             resumen.actualizados++;
             log(`  ↻ ya existía (rol actualizado, clave sin cambios) ${etiqueta}`);

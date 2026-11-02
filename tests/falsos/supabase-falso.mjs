@@ -243,6 +243,39 @@ export function createClient(url, clave, opciones = {}) {
             if (!p || p.rol !== 'vm') return { data: null, error: null };
             return { data: bd.avanceDistrito || { total: 142, evaluados: 0, promedio_pct: 12.5, visitadores: 8 }, error: null };
         },
+        // Usuarios (migración 14): solo admin
+        admin_usuarios() {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            registrar('rpc:admin_usuarios');
+            return { data: bd.perfiles.filter(p => p.rol).map(p => {
+                const u = bd.usuarios.find(x => x.id === p.id) || {};
+                const v = bd.visitadores.find(x => x.perfil_id === p.id);
+                return { id: p.id, correo: p.correo, nombre: p.nombre, rol: p.rol, activo: p.activo, visitador: v ? v.nombre_sector : null,
+                    distritos: (p.distritos || []).join(', ') || null, clave_temporal: !!(u.metadata && u.metadata.clave_temporal), ultimo_ingreso: u.ultimo_ingreso || null };
+            }), error: null };
+        },
+        admin_editar_usuario({ p_id, p_nombre, p_correo }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const correo = String(p_correo || '').trim().toLowerCase(), nombre = String(p_nombre || '').trim();
+            if (bd.usuarios.some(x => x.email === correo && x.id !== p_id)) return { data: null, error: { message: 'Ese correo ya lo usa otra persona.' } };
+            const u = bd.usuarios.find(x => x.id === p_id), p = bd.perfiles.find(x => x.id === p_id);
+            u.email = correo; p.correo = correo; p.nombre = nombre;
+            registrar(`rpc:admin_editar_usuario:${correo}`);
+            return { data: { ok: true, correo, nombre }, error: null };
+        },
+        admin_clave_temporal({ p_id, p_clave }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const u = bd.usuarios.find(x => x.id === p_id);
+            u.clave = p_clave; u.metadata = { ...(u.metadata || {}), clave_temporal: true };
+            registrar('rpc:admin_clave_temporal');
+            return { data: { ok: true }, error: null };
+        },
+        admin_activar_usuario({ p_id, p_activo }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            bd.perfiles.find(x => x.id === p_id).activo = p_activo;
+            registrar(`rpc:admin_activar_usuario:${p_activo}`);
+            return { data: { ok: true, activo: p_activo }, error: null };
+        },
         bitacora_reciente() {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador' } };
             registrar('rpc:bitacora_reciente');

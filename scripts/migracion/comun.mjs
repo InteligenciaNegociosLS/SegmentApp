@@ -97,13 +97,17 @@ export async function conectarBase(dbUrl) {
 export async function authAdminSupabase(url) {
     const { createClient } = await import('@supabase/supabase-js');
     const sb = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-    let cache = null;
+    let cache = null;                 // correo → id
+    const temporales = new Set();     // ids con clave temporal sin cambiar
     const cargarTodos = async () => {
         cache = new Map();
         for (let page = 1; ; page++) {
             const { data, error } = await sb.auth.admin.listUsers({ page, perPage: 1000 });
             if (error) throw error;
-            data.users.forEach(u => cache.set(String(u.email).toLowerCase(), u.id));
+            data.users.forEach(u => {
+                cache.set(String(u.email).toLowerCase(), u.id);
+                if (u.user_metadata && u.user_metadata.clave_temporal) temporales.add(u.id);
+            });
             if (data.users.length < 1000) break;
         }
     };
@@ -126,6 +130,20 @@ export async function authAdminSupabase(url) {
         async cambiarClave(id, password) {
             const { error } = await sb.auth.admin.updateUserById(id, { password, user_metadata: { clave_temporal: true } });
             if (error) throw new Error(`No se pudo cambiar la clave: ${error.message}`);
+            temporales.add(id);
+        },
+        // Cambia el correo con el que entra (sin enviarle nada; la clave no cambia)
+        async cambiarCorreo(id, email) {
+            const { error } = await sb.auth.admin.updateUserById(id, { email, email_confirm: true });
+            if (error) throw new Error(`No se pudo cambiar el correo a ${email}: ${error.message}`);
+            if (cache) {
+                for (const [c, i] of cache) if (i === id) cache.delete(c);
+                cache.set(email.toLowerCase(), id);
+            }
+        },
+        async tieneClaveTemporal(id) {
+            if (!cache) await cargarTodos();
+            return temporales.has(id);
         }
     };
 }
