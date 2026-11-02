@@ -175,6 +175,11 @@ try {
         await foto('4b-admin-matriz');
         await page.evaluate(() => App.ux.irA('equipo'));
         await foto('4c-admin-equipo', { completa: true });
+        await page.evaluate(() => { App.equipo.verVista('visitadores'); const e = App.equipo.estadisticas(); App.equipo.abrirVm(0, e.vms.slice().sort((a, b) => b.pct - a.pct)[0].nombre); });
+        await foto('4c1-admin-equipo-detalle-vm');
+        await page.evaluate(() => { App.ux.iniciarGuia(true); App.ux.pasoGuia(4); });
+        await foto('4c0-guia-paso-mas');
+        await page.evaluate(() => App.ux.terminarGuia());
         await page.evaluate(() => { App.equipo.verVista('visitadores'); App.equipo.abrirVm(0, App.equipo.estadisticas().vms.slice().sort((a, b) => b.pct - a.pct)[0].nombre); });
         await foto('4c2-admin-equipo-visitadores');
         await page.evaluate(() => App.equipo.verVista('prioridades'));
