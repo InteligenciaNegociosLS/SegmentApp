@@ -352,8 +352,6 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
         }
     }
 
-    // Totales reales por producto (para "Principal Competidor")
-    const realProductTotals = {};
     const todosLosProductos = st.FILTER_STATE.Product.length === st.FILTER_OPTIONS.Product.length;
     const productosElegidos = new Set(st.FILTER_STATE.Product);
     const docMap = grupos.map(g => {
@@ -363,14 +361,9 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
             if (d.isPhq(prod) && (todosLosProductos || productosElegidos.has(prod))) {
                 doc.rxPhq += rx;
             }
-            realProductTotals[prod] = (realProductTotals[prod] || 0) + rx;
         });
         return doc;
     });
-    const compBreakdown = Object.entries(realProductTotals)
-        .map(([k, v]) => ({ prod: k, rx: v, type: d.isPhq(k) ? 'PHQ' : 'Comp' }))
-        .sort((a, b) => b.rx - a.rx);
-
     // Cálculo de share, gap y categoría de adopción
     let doctors = docMap.map(doc => {
         const denominator = doc.rxTotalSum;
@@ -452,6 +445,17 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
 
     const grandTotalRx = doctors.reduce((s, x) => s + x.totalRx, 0);
     doctors.sort((a, b) => b.totalRx - a.totalRx);
+
+    // Totales por producto SOLO de los médicos que quedaron (alcance de la persona y filtros):
+    // así "Principal competidor" y "Composición del mercado" suman 100% (antes usaba todo el país)
+    const totalesAlcance = {};
+    doctors.forEach(doc => {
+        if (doc.isZeroRx || !doc.uniqueProds) return;
+        Object.entries(doc.uniqueProds).forEach(([prod, rx]) => { totalesAlcance[prod] = (totalesAlcance[prod] || 0) + rx; });
+    });
+    const compBreakdown = Object.entries(totalesAlcance)
+        .map(([k, v]) => ({ prod: k, rx: v, type: d.isPhq(k) ? 'PHQ' : 'Comp' }))
+        .sort((a, b) => b.rx - a.rx);
 
     // Pareto de potencialidad + etiqueta final
     let runningTotal = 0;
@@ -559,8 +563,14 @@ window.App.matrix.renderDashboard = function(grandTotal, topCompName, topCompRx)
     const elBarPhq  = document.getElementById('barPhq');  if (elBarPhq)  elBarPhq.style.width  = pctPhq  + "%";
     const elBarComp = document.getElementById('barComp'); if (elBarComp) elBarComp.style.width = pctComp + "%";
     const elBarRest = document.getElementById('barRest'); if (elBarRest) elBarRest.style.width = pctRest + "%";
+    // Texto dentro de la barra solo si cabe (en el teléfono, un tramo angosto se veía encimado)
+    const ancho = (document.getElementById('barRest') || {}).parentElement ? document.getElementById('barRest').parentElement.clientWidth || 600 : 600;
+    const cabe = (pct, px) => pct / 100 * ancho >= px;
+    if (elBarPhq)  elBarPhq.textContent  = cabe(pctPhq, 26) ? 'LS' : '';
+    if (elBarComp) elBarComp.textContent = cabe(pctComp, 64) ? 'Top Comp' : '';
+    if (elBarRest) elBarRest.textContent = cabe(pctRest, 44) ? 'Resto' : '';
 
-    ui.safeSetText('labelPhq',  `PHQ: ${ui.formatNumber(pctPhq, 2)}%`);
+    ui.safeSetText('labelPhq',  `La Santé: ${ui.formatNumber(pctPhq, 2)}%`);
     ui.safeSetText('labelComp', `${topCompName.substring(0, 8)}..: ${ui.formatNumber(pctComp, 2)}%`);
     ui.safeSetText('labelRest', `Resto: ${ui.formatNumber(pctRest, 2)}%`);
 

@@ -379,6 +379,11 @@
     .ajuste-item small { display: block; font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
     .ajuste-icono { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
+    /* Teléfono: barra superior limpia (avisos y menú ⋮). Cargar datos, versión y usuario están en el menú ⋮ */
+    @media (max-width: 767px) {
+        #btnVersionDatos, #btnUploadData, #navUserInfo { display: none !important; }
+    }
+
     /* Botón ojo para ver u ocultar la clave (Fase 11) */
     .ver-clave { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 9999px;
         display: inline-flex; align-items: center; justify-content: center; color: var(--md-on-surface-variant);

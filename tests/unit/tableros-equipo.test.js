@@ -73,16 +73,11 @@ describe('Tableros del inicio', () => {
         const c = App.tableros.calcular();
         expect(c.embudo.fichados).toBe(2);
         expect(c.embudo.conRx).toBe(2);
-        // Fase 11: "Médicos en el fichero" y "Evaluados" son los mismos números que los filtros rápidos
-        App.ux.renderChipsRapidos();
-        const chip = (t) => Number([...document.querySelectorAll('#chipsRapidos .chip')].find(b => b.textContent.includes(t)).querySelector('.cuenta').textContent.replace(/\D/g, ''));
-        const conFichero = App.state.PROCESSED_DATA.filter(x => x.isZeroRx || (x.ficheroData && x.ficheroData.length));
-        expect(c.embudo.fichados).toBe(conFichero.length);
-        expect(c.embudo.evaluadosFichero).toBe(conFichero.filter(x => App.ux.estaEvaluado(x)).length);
-        if (conFichero.length === App.state.PROCESSED_DATA.length) {
-            expect(chip('Todos')).toBe(c.embudo.fichados);
-            expect(chip('Evaluados')).toBe(c.embudo.evaluadosFichero);
-        }
+        // Fase 11b: "Médicos en el fichero" = médicos ÚNICOS del fichero (igual que Equipo), con y sin recetas
+        expect(c.embudo.fichados).toBe(App.state.FICHERO_MAP.size);
+        const eq = App.equipo.estadisticas();
+        const unicos = new Set(); eq.vms.forEach(v => v.fichero.forEach(m => unicos.add(m)));
+        expect(c.embudo.fichados).toBe(unicos.size);
         expect(c.mercados[0].mercado).toBe('DESLER MERCADO');
         expect(c.mercados[0].gap).toBeGreaterThan(0);
         App.tableros.render();
@@ -180,5 +175,25 @@ describe('Fase 11: resumen en Excel en vez de "Reportes avanzados"', () => {
         expect(csv.split('\n')[0]).toContain('visitador;distrito;linea;medicos_fichero;medicos_evaluados');
         expect(csv).toContain('"NEIVIS PARRA"'.replace('NEIVIS PARRA', App.ui.nombreVisible('NEIVIS PARRA')));
         expect(document.getElementById('ajDatos').textContent).not.toContain('Reportes avanzados');
+    });
+});
+
+describe('Fase 11b: permisos y pantalla', () => {
+    it('GD: no ve "Cargar datos" ni Ajustes, no puede abrir la carga ni guardar evaluaciones', async () => {
+        await ingresar('gd@lasante.com', '123456');
+        expect(document.getElementById('btnUploadData').classList.contains('hidden')).toBe(true);
+        expect([...document.querySelectorAll('#menuMas .solo-admin')].every(b => b.classList.contains('hidden'))).toBe(true);
+        expect(App.state.soloLectura).toBe(true);
+        expect(document.querySelector('#navRiel [data-seccion="ajustes"], #navInferior [data-seccion="ajustes"]')).toBeNull();
+    });
+
+    it('Composición del mercado: La Santé + competidor + resto suman 100% en el alcance de la persona', async () => {
+        await ingresar('gd@lasante.com', '123456');
+        const pct = (id) => parseFloat(document.getElementById(id).style.width) || 0;
+        expect(document.getElementById('barPhq').textContent).toBe('LS');
+        expect(document.getElementById('labelPhq').innerText).toMatch(/^La Santé: /);
+        const total = pct('barPhq') + pct('barComp') + pct('barRest');
+        expect(Math.abs(total - 100)).toBeLessThan(0.01);
+        expect(pct('barRest')).toBeGreaterThanOrEqual(0);
     });
 });
