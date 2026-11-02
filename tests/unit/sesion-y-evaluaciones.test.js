@@ -45,7 +45,9 @@ describe('Pantalla de ingreso', () => {
     });
     it('clave incorrecta muestra mensaje y no entra', async () => {
         await ingresar('vm@lasante.com', 'mala');
-        expect(toast()).toBe('Correo o clave incorrectos.');
+        // El mensaje se ve DENTRO de la ventana de ingreso (antes quedaba tapado debajo)
+        expect(document.getElementById('loginMensaje').textContent).toBe('Correo o clave incorrectos.');
+        expect(document.getElementById('loginMensaje').classList.contains('hidden')).toBe(false);
         expect(App.state.currentUserRole).toBe('guest');
     });
     it('usuario sin rol asignado: se cierra su sesión', async () => {
@@ -121,13 +123,11 @@ describe('Pantalla de ingreso', () => {
         expect(App.state.isAdmin).toBe(false);
         expect(App.state.currentUserRole).toBe('guest');
     });
-    it('recuperar clave pide el correo y envía el mensaje', async () => {
-        document.getElementById('loginEmail').value = '';
-        await App.auth.sendPasswordReset();
-        expect(window.__calls.some(c => c.startsWith('reset:'))).toBe(false);
+    it('recuperar clave: sin correo automático, indica pedir una clave temporal al administrador', async () => {
         document.getElementById('loginEmail').value = 'Ana@Empresa.com';
         await App.auth.sendPasswordReset();
-        expect(window.__calls).toContain('reset:ana@empresa.com');
+        expect(window.__calls.some(c => c.startsWith('reset:'))).toBe(false);
+        expect(document.getElementById('loginMensaje').textContent).toContain('clave temporal');
     });
     it('nueva clave: exige 8 caracteres y que coincidan', async () => {
         await ingresar('vm@lasante.com', '123456');

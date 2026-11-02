@@ -62,6 +62,28 @@ window.App.ui.showToast = function(msg, opciones = {}) {
     temporizadorToast = setTimeout(() => t.classList.remove('show'), opciones.duracion || (opciones.accion ? 6000 : 3500));
 };
 
+// Botón ojo: muestra u oculta lo que se escribe en un campo de clave
+window.App.ui.verClave = function(boton, id) {
+    const campo = document.getElementById(id);
+    if (!campo || !boton) return;
+    const mostrar = campo.type === 'password';
+    campo.type = mostrar ? 'text' : 'password';
+    boton.setAttribute('aria-pressed', String(mostrar));
+    boton.setAttribute('aria-label', mostrar ? 'Ocultar la clave' : 'Mostrar la clave');
+    const icono = boton.querySelector('.material-symbols-outlined');
+    if (icono) icono.textContent = mostrar ? 'visibility_off' : 'visibility';
+};
+
+// Mensaje dentro de una ventana (se ve aunque la ventana tape el resto de la pantalla)
+window.App.ui.mensajeEn = function(id, texto, tipo = 'error') {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = texto || '';
+    el.classList.toggle('hidden', !texto);
+    el.classList.toggle('bg-rose-50', tipo === 'error'); el.classList.toggle('text-rose-800', tipo === 'error');
+    el.classList.toggle('bg-blue-50', tipo === 'info');  el.classList.toggle('text-blue-900', tipo === 'info');
+};
+
 /* ------------------------------------------------------------
    HELPER PARA ACTUALIZAR TEXTO DE UN ELEMENTO POR ID
    Seguro: si el elemento no existe, no rompe la app.
