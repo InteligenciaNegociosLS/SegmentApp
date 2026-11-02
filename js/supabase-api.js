@@ -58,7 +58,8 @@ window.App.sb.enviarRecuperacion = async function(correo) {
 
 window.App.sb.cambiarClave = async function(nueva) {
     const sb = await window.App.sb.cliente();
-    const { error } = await sb.auth.updateUser({ password: nueva });
+    // Al crear la propia, deja de ser "clave temporal"
+    const { error } = await sb.auth.updateUser({ password: nueva, data: { clave_temporal: false } });
     if (error) throw fallo(error, 'Cambio de clave');
 };
 

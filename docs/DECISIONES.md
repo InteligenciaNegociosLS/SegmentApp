@@ -384,3 +384,34 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 - Plan del Supabase de producción: recomendado **Pro** (el gratis se pausa
   tras 7 días sin uso y se llena en ~8 meses).
 - Fecha y hora del pase.
+
+## 02/11/2026 (Fase 10 aprobada · decisiones del pase)
+
+1. **Repositorio público con el fichero médico:** el dueño eligió la opción
+   (c) (sacarlo del historial) y que el proyecto sea gratis. La opción (c)
+   exige reescribir el historial de **todas** las ramas, incluidas `main` y
+   `respaldo-2026-10-27`, que las reglas del proyecto prohíben tocar, y no
+   borra las copias ya descargadas. **Pendiente** de confirmación. Alternativa
+   gratis propuesta, **(d)**: repositorio **privado** y publicar en Vercel con
+   GitHub Actions (CLI de Vercel con un token guardado en los secretos de
+   GitHub), que no depende del plan Pro y no borra ni reescribe nada.
+2. **Supabase de producción gratis.** Para que no se pause tras 7 días sin
+   uso: latido automático cada 2 días con GitHub Actions
+   (`.github/workflows/latido.yml`, migración 13 `latido()`). Guía:
+   `docs/ACTIVO.md`.
+3. **Correo con el Gmail del dueño** (clave de aplicación de Google; Brevo no
+   permite cuentas de Venezuela). Guía actualizada: `docs/CORREO.md`.
+4. **Pase a producción hoy** (la app no se está usando).
+
+### Ajuste del mismo día (antes de fusionar el PR 25)
+- **Sin correo automático** (el dueño lo prefiere más simple): se quita la
+  opción de correo del pase. El script de usuarios da **claves temporales**
+  (fáciles de escribir: `maro-kebi-4821`) y deja `accesos.csv` con un mensaje
+  listo por persona; el dueño los envía por Gmail o WhatsApp. Al entrar con
+  la clave temporal, la app pide **crear la propia**. Nuevo en el menú "Más":
+  **Cambiar mi clave**. Para quien la olvide:
+  `node 3-usuarios.mjs --nueva-clave correo`. `docs/CORREO.md` queda como
+  opción para más adelante.
+- **Repositorio:** ni (c) ni (d). Los datos públicos del repositorio son de
+  prueba (aclaración del dueño), así que no hace falta.
+- El latido para que Supabase gratis no se pause **se mantiene**.

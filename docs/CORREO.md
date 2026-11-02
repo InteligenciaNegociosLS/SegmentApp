@@ -1,4 +1,8 @@
-# Correo propio para SegmentApp (recuperar clave y bienvenida)
+# Correo propio para SegmentApp (OPCIONAL, para más adelante)
+
+> **Decisión del 02/11/2026: por ahora NO se usa.** Los accesos se entregan
+> con claves temporales (`docs/SALIDA.md`). Esta guía queda por si más
+> adelante quieres que la app envíe sola los correos de "¿Olvidaste tu clave?".
 
 **Para quién:** el dueño del proyecto. **Tiempo:** unos 30 minutos.
 **Por qué:** el correo que trae Supabase de fábrica envía muy pocos correos
@@ -6,48 +10,32 @@ por hora y **solo** a los miembros de tu equipo de Supabase (por eso en la
 Fase 5 no te llegaba el enlace). Con un correo propio, cada visitador recibe
 su enlace "Crea tu clave" y puede recuperar su clave solo.
 
-> Las claves del servicio de correo se pegan **directamente en Supabase**.
+> La clave de aplicación de Gmail se pega **directamente en Supabase**.
 > Nunca en el chat, nunca en GitHub.
 
 ---
 
-## 1. Elegir el servicio de correo (te recomiendo Brevo)
+## 1. Usar tu Gmail (decisión del 02/11/2026)
 
-**Brevo** (https://www.brevo.com): plan gratis de 300 correos al día, en
-español y fácil de configurar. Con ~70 personas sobra.
+Brevo no permite cuentas de Venezuela, así que usamos **tu Gmail** (hasta
+~500 correos al día: sobra para ~70 personas). Más adelante, si TI lo
+permite, se puede cambiar a un remitente con el dominio de la empresa.
 
-Hay dos formas. Pregúntale a la persona de **sistemas/TI** de La Santé si
-puede agregar "registros DNS" al dominio de la empresa:
-
-| | Opción A (recomendada) | Opción B (sin TI) |
-|---|---|---|
-| Remitente | `no-responder@` + dominio de la empresa | un correo que ya existe (ej. el tuyo) |
-| Qué hace falta | TI agrega 3 registros DNS que da Brevo | Brevo te manda un código a ese correo |
-| ¿Llega a la bandeja? | Sí, casi siempre | A veces cae en "Spam" |
-
-### Pasos en Brevo
-1. Crea la cuenta en https://www.brevo.com (gratis).
-2. **Opción A:** menú **Remitentes, dominios e IP dedicadas → Dominios →
-   Agregar un dominio**. Brevo muestra 3 registros (DKIM, SPF y DMARC):
-   envíaselos a TI. Cuando estén, pulsa **Autenticar**.
-   **Opción B:** **Remitentes → Agregar un remitente** con tu correo y
-   confirma el código que te llega.
-3. Menú **SMTP y API → pestaña SMTP**. Ahí ves:
-   - **Servidor SMTP:** `smtp-relay.brevo.com`
-   - **Puerto:** `587`
-   - **Inicio de sesión** (algo como `xxxx@smtp-brevo.com`)
-   - Pulsa **Generar una nueva clave SMTP** y **cópiala a un bloc de notas**
-     (solo se ve una vez).
+1. Entra a https://myaccount.google.com/security con tu cuenta de Gmail.
+2. Activa la **Verificación en dos pasos** (si no la tienes).
+3. Entra a https://myaccount.google.com/apppasswords → escribe el nombre
+   `SegmentApp` → **Crear**. Google muestra una **clave de 16 letras**:
+   cópiala a un bloc de notas (solo se ve una vez). **No la pegues en el chat.**
 
 ## 2. Conectarlo en Supabase (hazlo en PRUEBAS y luego en PRODUCCIÓN)
 
 1. Supabase → tu proyecto → **Authentication → Emails → SMTP Settings**.
 2. Activa **Enable custom SMTP** y llena:
-   - **Sender email:** el remitente del paso 1 (ej. `no-responder@…`)
+   - **Sender email:** tu Gmail
    - **Sender name:** `SegmentApp La Santé`
-   - **Host:** `smtp-relay.brevo.com` · **Port:** `587`
-   - **Username:** el "Inicio de sesión" de Brevo
-   - **Password:** la clave SMTP de Brevo
+   - **Host:** `smtp.gmail.com` · **Port:** `587`
+   - **Username:** tu Gmail (completo)
+   - **Password:** la clave de 16 letras del paso 1 (sin espacios)
 3. **Save changes**.
 4. **Authentication → Rate Limits → "Rate limit for sending emails"**: súbelo a
    **100** por hora (el día del pase se envían ~60 correos de bienvenida).
@@ -77,5 +65,6 @@ En GitHub abre cada archivo, botón **Copy raw file**, y pégalo en el cuadro
 1. Abre la app → **Ingresar** → escribe tu correo → **¿Olvidaste tu clave?**
 2. Debe llegarte en 1 o 2 minutos el correo **"SegmentApp · Crea tu clave"**,
    en español, con el logo.
-3. Si no llega: revisa **Spam**; en Brevo mira **Estadísticas → Correos
-   transaccionales** (dice si se envió o por qué no).
+3. Si no llega: revisa **Spam**; mira la carpeta **Enviados** de tu Gmail
+   (si está ahí, salió bien); en Supabase, **Logs → Auth** dice si hubo un
+   error con el correo.

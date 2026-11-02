@@ -152,6 +152,7 @@
             <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); showConfirmClearModal()"><span class="material-symbols-outlined">restart_alt</span> Volver a descargar los datos</button>
         </div>
         <div class="py-2 border-t border-slate-200">
+            <button class="item-menu con-sesion hidden" role="menuitem" onclick="App.ux.cerrarMas(); App.auth.mostrarNuevaClave('cambiar')"><span class="material-symbols-outlined">key</span> Cambiar mi clave</button>
             <button class="item-menu text-rose-700 con-sesion hidden" role="menuitem" onclick="App.ux.cerrarMas(); logoutSession()"><span class="material-symbols-outlined">logout</span> Cerrar sesión</button>
             <div class="px-5 py-3 text-[11px] text-slate-500">SegmentApp v31 · Dev. Hernando Sanoja</div>
         </div>
@@ -898,8 +899,8 @@
 <div class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 transition-opacity" id="nuevaClaveModal">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in">
         <div class="p-6 bg-indigo-600 text-center">
-            <h2 class="text-xl font-display font-bold text-white">Crea tu nueva clave</h2>
-            <p class="text-indigo-100 text-xs mt-1">Mínimo 8 caracteres.</p>
+            <h2 class="text-xl font-display font-bold text-white" id="nuevaClaveTitulo">Crea tu nueva clave</h2>
+            <p class="text-indigo-100 text-xs mt-1" id="nuevaClaveTexto">Mínimo 8 caracteres.</p>
         </div>
         <div class="p-8 bg-slate-50">
             <label class="block mb-4"><span class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Nueva clave</span>
@@ -909,6 +910,7 @@
             <button id="btnGuardarNuevaClave" onclick="guardarNuevaClave()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-full transition shadow-md flex items-center justify-center gap-2">
                 <span class="material-symbols-outlined">key</span> Guardar clave
             </button>
+            <button id="btnCancelarNuevaClave" onclick="document.getElementById('nuevaClaveModal').classList.add('hidden')" class="hidden w-full mt-3 text-slate-600 font-bold py-2.5 rounded-full">Ahora no</button>
         </div>
     </div>
 </div>

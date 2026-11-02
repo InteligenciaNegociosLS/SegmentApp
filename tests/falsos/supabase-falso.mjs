@@ -141,7 +141,7 @@ export function createClient(url, clave, opciones = {}) {
     const leerSesion = () => {
         try { return JSON.parse(localStorage.getItem(CLAVE_SESION) || 'null'); } catch { return null; }
     };
-    const usuario = (u) => ({ id: u.id, email: u.email });
+    const usuario = (u) => ({ id: u.id, email: u.email, user_metadata: { ...(u.metadata || {}) } });
 
     const auth = {
         async signInWithPassword({ email, password }) {
@@ -155,9 +155,11 @@ export function createClient(url, clave, opciones = {}) {
         async signOut() { localStorage.removeItem(CLAVE_SESION); registrar('signOut'); return { error: null }; },
         async getSession() { const u = leerSesion(); return { data: { session: u ? { user: u } : null } }; },
         async resetPasswordForEmail(email) { registrar('reset:' + email); return { error: null }; },
-        async updateUser({ password }) {
+        async updateUser({ password, data }) {
             const s = leerSesion(); if (!s) return { error: { message: 'sin sesión' } };
-            bd.usuarios.find(x => x.id === s.id).clave = password;
+            const u = bd.usuarios.find(x => x.id === s.id);
+            if (password) u.clave = password;
+            if (data) { u.metadata = { ...(u.metadata || {}), ...data }; localStorage.setItem(CLAVE_SESION, JSON.stringify(usuario(u))); }
             registrar('updateUser'); return { error: null };
         },
         onAuthStateChange(fn) { oyentes.push(fn); return { data: { subscription: { unsubscribe() {} } } }; }

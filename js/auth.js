@@ -72,7 +72,8 @@ window.App.auth.authErrorMessage = function(e) {
     const codigo = String((e && e.code) || '');
     if (/invalid login credentials|invalid_credentials/i.test(texto + codigo)) return "Correo o clave incorrectos.";
     if (/email not confirmed/i.test(texto)) return "Tu correo aún no está confirmado. Contacta al administrador.";
-    if (/rate limit|too many/i.test(texto) || codigo === '429') return "Demasiados intentos. Espera unos minutos o recupera tu clave.";
+    if (/rate limit|too many/i.test(texto) || codigo === '429') return "Demasiados intentos. Espera unos minutos o pídele una clave nueva al administrador.";
+    if (/not authorized|not allowed/i.test(texto)) return "Para recuperar tu clave, pídele al administrador una clave nueva.";
     if (/failed to fetch|network|load failed/i.test(texto)) return "Sin conexión. Revisa tu internet e intenta de nuevo.";
     if (/password should be|weak/i.test(texto)) return "La clave es muy débil: usa al menos 8 caracteres.";
     if (/supabase no está configurado/i.test(texto)) return "La app no está conectada al servidor en este entorno.";
@@ -124,7 +125,7 @@ window.App.auth.sendPasswordReset = async function() {
     if (btn) btn.disabled = true;
     try {
         await window.App.sb.enviarRecuperacion(email);
-        ui.showToast("Si el correo está registrado, te llegará un mensaje para crear una clave nueva. Revisa también la carpeta de spam.");
+        ui.showToast("Si tu correo puede recibir mensajes de la app, te llegará un enlace (revisa también spam). Si no te llega en unos minutos, pídele una clave nueva al administrador.", { duracion: 9000 });
     } catch (e) {
         console.error("Error enviando correo de recuperación", e);
         ui.showToast(window.App.auth.authErrorMessage(e));
@@ -136,7 +137,19 @@ window.App.auth.sendPasswordReset = async function() {
 /* ============================================================
    "CREA TU CLAVE NUEVA" (al abrir el enlace del correo)
 ============================================================ */
-window.App.auth.mostrarNuevaClave = function() {
+// motivo: 'recuperar' (enlace del correo), 'temporal' (primera vez con la clave que
+// le envió el administrador) o 'cambiar' (desde el menú "Más")
+window.App.auth.mostrarNuevaClave = function(motivo = 'recuperar') {
+    const textos = {
+        recuperar: ['Crea tu nueva clave', 'Mínimo 8 caracteres.'],
+        temporal: ['Crea tu clave personal', 'Entraste con una clave temporal. Elige la tuya (mínimo 8 caracteres): desde ahora usarás esa.'],
+        cambiar: ['Cambiar mi clave', 'Escribe tu clave nueva (mínimo 8 caracteres).']
+    };
+    const [titulo, texto] = textos[motivo] || textos.recuperar;
+    window.App.ui.safeSetText('nuevaClaveTitulo', titulo);
+    window.App.ui.safeSetText('nuevaClaveTexto', texto);
+    // La clave temporal se debe cambiar: sin botón "Ahora no"
+    document.getElementById('btnCancelarNuevaClave')?.classList.toggle('hidden', motivo !== 'cambiar');
     document.getElementById('loginModal').classList.add('hidden');
     document.getElementById('nuevaClaveModal').classList.remove('hidden');
     setTimeout(() => document.getElementById('nuevaClave1').focus(), 50);
@@ -247,6 +260,8 @@ window.App.auth.entrar = async function(user, { avisar = false } = {}) {
     const rolVista = perfil.rol === 'vm' ? 'visitador' : 'admin';
     const nombre = perfil.rol === 'vm' ? perfil.visitadorNombre : (perfil.nombre || 'Equipo');
     window.App.auth.loginSuccess(rolVista, nombre);
+    // Primera vez con la clave temporal que envió el administrador: crear la propia
+    if (user && user.user_metadata && user.user_metadata.clave_temporal) window.App.auth.mostrarNuevaClave('temporal');
     if (avisar) {
         const saludo = { admin: 'Modo Administrador activado', gte_nacional: 'Bienvenido/a, Gerente Nacional (solo consulta)', gd: 'Bienvenido/a, Gerente de Distrito (solo consulta)' };
         ui.showToast(saludo[perfil.rol] || `¡Bienvenido/a, ${nombre.substring(0, 15)}!`);
