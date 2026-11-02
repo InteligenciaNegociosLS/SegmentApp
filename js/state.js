@@ -55,6 +55,8 @@ window.App.state = {
     soloLectura: false,           // gd y gte_nacional: ven el equipo pero no editan
     visitadorId: null,            // id del visitador (solo vm)
     REPS_PERMITIDOS: null,        // Set de visitadores visibles (null = todos)
+    REPS_OCULTOS: null,           // Set de visitadores desactivados que no se muestran (Fase 11)
+    EQUIPOS_OTC: null,            // Códigos de "Equipo" del fichero que son línea OTC (configuración)
 
     // --- Versiones de datos ---
     VERSIONES: [],                // versiones publicadas (y borradores para el admin)

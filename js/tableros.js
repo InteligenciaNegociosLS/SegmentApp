@@ -68,16 +68,15 @@
         if (memoTab && memoTab.firma.every((v, i) => v === firma[i])) return memoTab.datos;
 
         const docs = st.PROCESSED_DATA || [];
-        const permitido = (rep) => !st.REPS_PERMITIDOS || st.REPS_PERMITIDOS.has(rep);
-        // Médicos del fichero del alcance de la persona
-        let fichados = 0;
-        st.FICHERO_MAP.forEach(filas => {
-            if (filas.some(r => { const k = d.getFicheroRepKey(r); return k && r[k] && permitido(String(r[k]).trim().toUpperCase()); })) fichados++;
-        });
+        // Médicos del fichero del alcance de la persona: los MISMOS de la lista de médicos
+        // (con y sin recetas), para que coincida con los filtros rápidos "Todos" y "Evaluados"
+        const delFichero = docs.filter(x => !x.isInst && (x.isZeroRx || (x.ficheroData && x.ficheroData.length)));
+        const fichados = delFichero.length;
+        const evaluadosFichero = delFichero.filter(x => window.App.ux.estaEvaluado(x)).length;
         const conFichero = docs.filter(x => !x.isZeroRx && x.ficheroData && x.ficheroData.length);
         const evaluados = conFichero.filter(x => window.App.ux.estaEvaluado(x));
         const embudo = {
-            fichados, conRx: conFichero.length, evaluados: evaluados.length,
+            fichados, evaluadosFichero, conRx: conFichero.length, evaluados: evaluados.length,
             enA: evaluados.filter(x => x.closeupPotency === 'A').length,
             sinFichero: docs.filter(x => !x.isZeroRx && !(x.ficheroData && x.ficheroData.length)).length
         };
@@ -118,16 +117,18 @@
     ============================================================ */
     function renderEmbudo(c) {
         const e = c.embudo;
+        // [texto, número, color, base del porcentaje, de qué es el porcentaje]
         const pasos = [
             ['Médicos en el fichero', e.fichados, 'bg-blue-700'],
-            ['Con recetas en CloseUp', e.conRx, 'bg-blue-500'],
-            ['Evaluados', e.evaluados, 'bg-green-600'],
-            ['Evaluados de potencial alto (A)', e.enA, 'bg-green-800']
+            ['Evaluados', e.evaluadosFichero, 'bg-green-600', e.fichados, 'del fichero'],
+            ['Con recetas en CloseUp', e.conRx, 'bg-blue-500', e.fichados, 'del fichero'],
+            ['Evaluados con recetas', e.evaluados, 'bg-green-600', e.conRx, 'de los con recetas'],
+            ['Evaluados de potencial alto (A)', e.enA, 'bg-green-800', e.evaluados, 'de los evaluados con recetas']
         ];
         const max = Math.max(1, ...pasos.map(p => p[1]));
-        return `<ol class="space-y-2.5">${pasos.map(([t, n, color], i) => `<li>
+        return `<ol class="space-y-2.5">${pasos.map(([t, n, color, base, deQue]) => `<li>
             <div class="flex items-baseline justify-between gap-2 text-sm"><span class="text-slate-700">${t}</span>
-                <span class="font-bold text-slate-800">${fmtT(n)}${i ? ` <span class="text-[11px] font-semibold text-slate-500">${fmtT(pasos[i - 1][1] ? n / pasos[i - 1][1] * 100 : 0, 0)}%</span>` : ''}</span></div>
+                <span class="font-bold text-slate-800">${fmtT(n)}${base !== undefined ? ` <span class="text-[11px] font-semibold text-slate-500" title="${deQue}">${fmtT(base ? n / base * 100 : 0, 0)}% ${deQue}</span>` : ''}</span></div>
             <div class="h-3 rounded-full bg-slate-100 mt-1 overflow-hidden"><div class="h-full rounded-full ${color}" style="width:${(n / max * 100).toFixed(1)}%"></div></div>
         </li>`).join('')}</ol>
         ${e.sinFichero ? `<p class="text-[11px] text-slate-500 mt-3">Además, ${fmtT(e.sinFichero)} médicos con recetas no están en el fichero.</p>` : ''}`;
@@ -235,7 +236,7 @@
             texto(`Médicos con recetas: ${fmtT(docs.length)}   ·   Recetas del mercado: ${fmtT(total)}   ·   Recetas La Santé: ${fmtT(phq)}   ·   Participación: ${fmtT(total ? phq / total * 100 : 0, 2)}%`);
             titulo('Cobertura');
             const e = c.embudo;
-            texto(`Fichero ${fmtT(e.fichados)}  →  con recetas ${fmtT(e.conRx)}  →  evaluados ${fmtT(e.evaluados)} (${fmtT(e.conRx ? e.evaluados / e.conRx * 100 : 0, 0)}%)  →  de potencial A ${fmtT(e.enA)}`);
+            texto(`Fichero ${fmtT(e.fichados)} (evaluados ${fmtT(e.evaluadosFichero)})  →  con recetas ${fmtT(e.conRx)}  →  evaluados con recetas ${fmtT(e.evaluados)} (${fmtT(e.conRx ? e.evaluados / e.conRx * 100 : 0, 0)}%)  →  de potencial A ${fmtT(e.enA)}`);
             titulo('Mercados con más oportunidad');
             c.mercados.slice(0, 6).forEach((m, i) => texto(`${i + 1}. ${m.mercado}: +${fmtT(m.gap)} Rx · La Santé ${fmtT(m.total ? m.phq / m.total * 100 : 0, 1)}% · ${fmtT(m.medicos)} médicos`));
             if (esNacionalT() && eq.distritos.length) {

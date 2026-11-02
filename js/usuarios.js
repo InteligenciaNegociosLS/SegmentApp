@@ -266,7 +266,7 @@
         abrir(activar ? 'Activar acceso' : 'Desactivar acceso', `
             <p class="text-sm text-slate-700">${activar
                 ? `<b>${esc(actual.nombre)}</b> podrá volver a entrar a SegmentApp con su correo y su clave.`
-                : `<b>${esc(actual.nombre)}</b> ya no podrá entrar a SegmentApp. <b>No se borra nada</b>: sus evaluaciones quedan guardadas y puedes reactivarlo cuando quieras.`}</p>
+                : `<b>${esc(actual.nombre)}</b> ya no podrá entrar a SegmentApp${actual.rol === 'vm' ? ', y sus médicos y números dejarán de verse en Equipo, Inicio y las listas' : ''}. <b>No se borra nada</b>: sus evaluaciones quedan guardadas y, si lo reactivas, todo vuelve a aparecer.`}</p>
             <p id="usuarioError" class="text-sm text-rose-700 mt-3 min-h-[20px]" role="alert"></p>
             ${botones('App.usuarios.confirmarActivar()', activar ? 'Activar' : 'Desactivar', activar ? 'person_check' : 'person_off')}`);
     };
@@ -279,7 +279,12 @@
             await window.App.sb.activarUsuario(actual.id, activar);
             actual.activo = activar;
             U.pintar();
-            toast(activar ? `${actual.nombre} puede entrar de nuevo.` : `Acceso de ${actual.nombre} desactivado.`);
+            const esVm = actual.rol === 'vm';
+            const texto = activar ? `${actual.nombre} puede entrar de nuevo.` : `Acceso de ${actual.nombre} desactivado.`;
+            // Sus médicos y números se ocultan (o vuelven) al actualizar la app
+            if (esVm) window.App.ui.showToast(`${texto} Actualiza para ${activar ? 'ver de nuevo' : 'ocultar'} sus médicos y números.`,
+                { accion: 'Actualizar', alAccionar: () => window.location.reload(), duracion: 9000 });
+            else toast(texto);
             U.cerrar();
         } catch (e) {
             ocupado(false);

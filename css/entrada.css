@@ -271,7 +271,7 @@
 
     /* Aviso inferior (snackbar M3) */
     #toast {
-        visibility: hidden; min-width: 250px; max-width: calc(100vw - 32px); background-color: var(--md-inverse-surface); color: var(--md-inverse-on-surface); text-align: left; border-radius: 8px; padding: 14px 16px; position: fixed; z-index: 100; left: 50%; bottom: 24px; transform: translate(-50%, 16px); font-size: 14px; line-height: 1.4; box-shadow: theme('boxShadow.lg'); opacity: 0;
+        visibility: hidden; min-width: 250px; max-width: calc(100vw - 32px); background-color: var(--md-inverse-surface); color: var(--md-inverse-on-surface); text-align: left; border-radius: 8px; padding: 14px 16px; position: fixed; z-index: 210; left: 50%; bottom: 24px; transform: translate(-50%, 16px); font-size: 14px; line-height: 1.4; box-shadow: theme('boxShadow.lg'); opacity: 0;
         transition: opacity var(--md-motion-medium) var(--md-ease-standard), transform var(--md-motion-medium) var(--md-ease-emphasized), visibility 0s linear var(--md-motion-medium);
     }
     #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, 0); transition-delay: 0s; }
@@ -378,6 +378,12 @@
     .ajuste-item b { display: block; font-size: 14px; color: var(--md-on-surface); }
     .ajuste-item small { display: block; font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
     .ajuste-icono { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* Botón ojo para ver u ocultar la clave (Fase 11) */
+    .ver-clave { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 9999px;
+        display: inline-flex; align-items: center; justify-content: center; color: var(--md-on-surface-variant);
+        transition: background-color var(--md-motion-short) var(--md-ease-standard); }
+    .ver-clave .material-symbols-outlined { font-size: 20px; }
 
     /* Ajustes → Usuarios (Fase 10C) */
     .usuario-fila { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
