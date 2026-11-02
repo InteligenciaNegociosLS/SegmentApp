@@ -47,7 +47,6 @@
         zona.innerHTML = `
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <h2 class="font-display font-bold text-slate-800 text-xl">${esNacionalT() ? 'El país de un vistazo' : 'Tu distrito de un vistazo'}</h2>
-                <button class="h-10 px-4 rounded-full bg-blue-700 text-white text-sm font-bold flex items-center gap-2" onclick="App.tableros.resumenPdf()"><span class="material-symbols-outlined text-[20px]">summarize</span> Resumen en PDF</button>
             </div>
             <div class="grid lg:grid-cols-2 gap-3">
                 ${tarjeta('filter_alt', 'Cobertura', renderEmbudo(c))}
@@ -64,17 +63,30 @@
     window.App.tableros.calcular = function() {
         const st = window.App.state;
         const d = window.App.data;
-        const firma = [st.PROCESSED_DATA, st._versionEvaluaciones, st.ALL_EVALUATIONS.length, st.FICHERO_MAP, st.TH_LOY_LOW, st.TH_LOY_HIGH, st.FILTER_STATE.Product];
+        const firma = [st.PROCESSED_DATA, st._versionEvaluaciones, st.ALL_EVALUATIONS.length, st.FICHERO_MAP, st.TH_LOY_LOW, st.TH_LOY_HIGH, st.FILTER_STATE.Product, st.REPS_PERMITIDOS];
         if (memoTab && memoTab.firma.every((v, i) => v === firma[i])) return memoTab.datos;
 
         const docs = st.PROCESSED_DATA || [];
-        // Médicos del fichero del alcance de la persona: los MISMOS de la lista de médicos
-        // (con y sin recetas), para que coincida con los filtros rápidos "Todos" y "Evaluados"
-        const delFichero = docs.filter(x => !x.isInst && (x.isZeroRx || (x.ficheroData && x.ficheroData.length)));
-        const fichados = delFichero.length;
-        const evaluadosFichero = delFichero.filter(x => window.App.ux.estaEvaluado(x)).length;
-        const conFichero = docs.filter(x => !x.isZeroRx && x.ficheroData && x.ficheroData.length);
-        const evaluados = conFichero.filter(x => window.App.ux.estaEvaluado(x));
+        // Médicos ÚNICOS del fichero (CRM) del alcance de la persona: una matrícula = un médico,
+        // aunque aparezca en varias filas, con varios visitadores o varias veces en CloseUp.
+        // Es el mismo número que "Médicos en fichero" de Equipo.
+        const permitido = (rep) => !st.REPS_PERMITIDOS || st.REPS_PERMITIDOS.has(rep);
+        const clavesFichero = new Set();
+        st.FICHERO_MAP.forEach((filas, clave) => {
+            if (filas.some(r => { const k = d.getFicheroRepKey(r); return k && r[k] && permitido(String(r[k]).trim().toUpperCase()); })) clavesFichero.add(clave);
+        });
+        const evaluada = (clave) => window.App.evaluation.getEvaluationsForDoc(null, clave).length > 0;
+        const fichados = clavesFichero.size;
+        let evaluadosFichero = 0;
+        clavesFichero.forEach(c => { if (evaluada(c)) evaluadosFichero++; });
+        // Con recetas en CloseUp (con los filtros elegidos): un médico por matrícula
+        const conRxPorClave = new Map();
+        docs.forEach(x => {
+            const c = x._clave || d.normalizeKey(x.id);
+            if (!x.isZeroRx && !x.isInst && clavesFichero.has(c) && !conRxPorClave.has(c)) conRxPorClave.set(c, x);
+        });
+        const conFichero = [...conRxPorClave.values()];
+        const evaluados = conFichero.filter(x => evaluada(x._clave || d.normalizeKey(x.id)));
         const embudo = {
             fichados, evaluadosFichero, conRx: conFichero.length, evaluados: evaluados.length,
             enA: evaluados.filter(x => x.closeupPotency === 'A').length,

@@ -271,7 +271,7 @@ window.App.ajustes.renderSalud = async function() {
     const filas = [
         v.recetas ? fila('ok', `Recetas: ${escA(v.recetas.nombre)}`, `Datos al ${fecha(v.recetas.fecha)} · ${fmtA(v.recetas.filas)} filas · publicada ${fecha(String(v.recetas.publicado_en || '').slice(0, 10))}`)
                   : fila('aviso', 'No hay versión de recetas en uso', 'Carga y publica una versión desde "Cargar datos".'),
-        v.fichero ? fila('ok', `Fichero: ${escA(v.fichero.nombre)}`, `Datos al ${fecha(v.fichero.fecha)} · ${fmtA(v.fichero.filas)} filas`)
+        v.fichero ? fila('ok', `Fichero: ${escA(v.fichero.nombre)}`, `Datos al ${fecha(v.fichero.fecha)} · ${fmtA(v.fichero.filas)} filas · <b>${fmtA(st.FICHERO_MAP.size)} médicos únicos</b> · ${fmtA(Object.keys(st.REP_MANAGER_MAP || {}).length)} visitadores · ${fmtA(new Set(Object.values(st.REP_MANAGER_MAP || {})).size)} distritos (compáralo con el CRM)`)
                   : fila('aviso', 'No hay fichero en uso', 'Sin fichero no se sabe qué médicos atiende cada visitador.'),
         fila(e.sinFichero ? 'info' : 'ok', `${fmtA(e.sinFichero)} médicos con recetas no están en el fichero`, 'Están en CloseUp pero ningún visitador los tiene asignados.'),
         fila('info', `${fmtA(Math.max(0, (e.fichados || 0) - (e.conRx || 0)))} médicos del fichero sin recetas en CloseUp`, 'Con los filtros elegidos ahora (mercados, productos).'),
