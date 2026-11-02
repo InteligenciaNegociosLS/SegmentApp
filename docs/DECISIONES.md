@@ -415,3 +415,17 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 - **Repositorio:** ni (c) ni (d). Los datos públicos del repositorio son de
   prueba (aclaración del dueño), así que no hace falta.
 - El latido para que Supabase gratis no se pause **se mantiene**.
+
+### Ajuste durante el pase (02/11/2026, tarde) · Fase 10C
+- En producción los usuarios quedaron con el **correo interno de la app
+  vieja** (`nombre@segmentapp.internal`), porque la plantilla los trae así.
+  El dueño eligió la opción **B: correos reales de La Santé**, incluido el
+  suyo.
+- `3-usuarios.mjs` ahora **cambia el correo** de quien ya tiene usuario (VM
+  por su visitador, GD por su distrito, admin y Gte. Nacional por su rol) y
+  **conserva su clave**. `accesos.csv` trae el mensaje con el correo nuevo.
+- Pedido del dueño: **gestionar usuarios desde la propia app**. Nueva sección
+  **Ajustes → Usuarios** (migración 14): buscar, cambiar nombre y correo, dar
+  una **clave temporal** (se ve una sola vez, con el mensaje listo para
+  WhatsApp o correo) y activar o desactivar el acceso. No se borra nada.
+  Crear personas nuevas sigue siendo con `3-usuarios.mjs`.

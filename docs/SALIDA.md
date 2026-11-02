@@ -88,7 +88,7 @@ Cada script pide escribir **`MIGRAR PRODUCCION`**.
 node 0-preparar-base.mjs
 ```
 
-Debe decir: ✅ Base lista: se aplicaron 13 archivo(s).
+Debe decir: ✅ Base lista: se aplicaron 14 archivo(s).
 
 ```bash
 node 1-exportar-firebase.mjs
@@ -146,6 +146,28 @@ cada persona. Descárgalo (no lo envíes todavía):
 cloudshell download accesos.csv
 ```
 
+### Si los usuarios quedaron con el correo interno (`nombre@segmentapp.internal`)
+Pasa si la plantilla se usó sin cambiar los correos. No hace falta borrar
+nada: el script **les cambia el correo y conservan su clave**.
+1. En Cloud Shell sube el ZIP nuevo de `rediseno` y ábrelo encima del anterior
+   (se conservan `.env`, `usuarios.csv` y la exportación):
+
+```bash
+cd ~/produccion && unzip -qo "$(ls -t SegmentApp-rediseno*.zip | head -1)" && cd SegmentApp-rediseno/scripts/migracion
+```
+
+2. Agrega a la base lo nuevo (migración 14, usuarios desde la app):
+
+```bash
+node 0-preparar-base.mjs
+```
+
+3. Descarga `usuarios.csv`, cambia en Excel la columna **correo** por los
+   correos reales (también el tuyo en la fila admin, y pon tu nombre), llena
+   GD y Gerente Nacional, guarda como **CSV UTF-8** y súbelo.
+4. `node 3-usuarios.mjs --simulacro` debe decir **"✎ cambia correo …"** en
+   cada persona. Luego `node 3-usuarios.mjs` y descarga `accesos.csv`.
+
 ## Parte 6 · Publicar la app nueva (10 min)
 1. GitHub → **Pull requests → New pull request** → base **main**, compare
    **rediseno** → **Create** → acéptalo **tú** (yo nunca toco `main`).
@@ -174,8 +196,12 @@ estaba. Cópiame el error y lo resolvemos.
 ---
 
 ## Después del pase
-- **Alguien olvidó su clave:** en Cloud Shell, `node 3-usuarios.mjs --nueva-clave su@correo`
-  → descarga `accesos.csv` → envíale el mensaje → `rm accesos.csv`.
+- **Alguien olvidó su clave:** en la app, **Ajustes → Usuarios** → busca a
+  la persona → **🔑 Dar clave temporal** → copia el mensaje o envíalo por
+  WhatsApp. (También se puede en Cloud Shell:
+  `node 3-usuarios.mjs --nueva-clave su@correo`.)
+- **Cambiar el nombre o el correo de alguien, o quitarle el acceso:** en la
+  app, **Ajustes → Usuarios** (no se borra nada).
 - **Persona nueva:** agrégala a `usuarios.csv` y vuelve a ejecutar
   `node 3-usuarios.mjs` (los demás no cambian).
 - **Cargar datos nuevos** (CloseUp o fichero): desde la app, **Ajustes →
