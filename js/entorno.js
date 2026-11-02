@@ -1,0 +1,98 @@
+/* ============================================================
+   SegmentApp - Entorno (Producción / Pruebas / Local)
+   Archivo: js/entorno.js
+   Responsable de:
+   - Leer la configuración PÚBLICA que genera scripts/build.mjs
+     (js/env.js → window.__SEGMENTAPP_ENV__)
+   - Preparar la conexión a Supabase (login, datos y evaluaciones)
+   - Mostrar la etiqueta "PRUEBAS" fuera de producción
+   DEBE CARGARSE ANTES que el resto de los archivos de la app.
+============================================================ */
+
+window.App = window.App || {};
+
+(function() {
+    const crudo = window.__SEGMENTAPP_ENV__ || {};
+    const env = {
+        APP_ENV: crudo.APP_ENV || 'development',
+        SUPABASE_URL: crudo.SUPABASE_URL || '',
+        SUPABASE_ANON_KEY: crudo.SUPABASE_ANON_KEY || '',
+        SUPABASE_PROBLEMA: crudo.SUPABASE_PROBLEMA || '',
+        ERROR_LOG_REMOTE: crudo.ERROR_LOG_REMOTE === true,
+        VERSION: crudo.VERSION || 'local',
+        CONSTRUIDO_EN: crudo.CONSTRUIDO_EN || ''
+    };
+    env.esProduccion = env.APP_ENV === 'production';
+    window.App.env = Object.freeze(env);
+})();
+
+/* ============================================================
+   SUPABASE (la librería se descarga solo cuando se necesita)
+============================================================ */
+window.App.supabase = {
+    // Versión fija de la librería (se descarga solo cuando se necesite)
+    LIBRERIA: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm',
+    _cliente: null,
+
+    configurado: function() {
+        return !!(window.App.env.SUPABASE_URL && window.App.env.SUPABASE_ANON_KEY);
+    },
+
+    // Devuelve el cliente de Supabase (o null si este entorno no lo tiene configurado)
+    cliente: async function() {
+        if (!window.App.supabase.configurado()) return null;
+        if (!window.App.supabase._cliente) {
+            const { createClient } = await import(window.App.supabase.LIBRERIA);
+            window.App.supabase._cliente = createClient(
+                window.App.env.SUPABASE_URL,
+                window.App.env.SUPABASE_ANON_KEY
+            );
+        }
+        return window.App.supabase._cliente;
+    },
+
+    // Comprueba que Supabase responde (para la etiqueta de pruebas)
+    estado: async function() {
+        const env = window.App.env;
+        if (env.SUPABASE_PROBLEMA) return `revisar SUPABASE_URL (${env.SUPABASE_PROBLEMA})`;
+        if (!env.SUPABASE_URL) return 'sin configurar (falta SUPABASE_URL)';
+        if (!env.SUPABASE_ANON_KEY) return 'sin configurar (falta SUPABASE_ANON_KEY)';
+        try {
+            const r = await fetch(env.SUPABASE_URL + '/auth/v1/health', {
+                headers: { apikey: env.SUPABASE_ANON_KEY }
+            });
+            if (r.ok) return 'conectado';
+            if (r.status === 401 || r.status === 403) return 'la clave no corresponde a esa URL';
+            if (r.status === 404) return 'URL no encontrada: revisa SUPABASE_URL';
+            return `error ${r.status}`;
+        } catch (e) {
+            return navigator.onLine ? 'sin respuesta (¿proyecto en pausa o URL mal escrita?)' : 'sin conexión (trabajando con lo guardado)';
+        }
+    }
+};
+
+/* ============================================================
+   ETIQUETA "PRUEBAS" (solo fuera de producción)
+============================================================ */
+window.App.mostrarEtiquetaEntorno = async function() {
+    const env = window.App.env;
+    if (env.esProduccion || document.getElementById('etiquetaEntorno')) return;
+
+    const etiqueta = document.createElement('div');
+    etiqueta.id = 'etiquetaEntorno';
+    etiqueta.setAttribute('role', 'status');
+    etiqueta.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:200;' +
+        'background:#7D5700;color:#fff;font:600 11px/1.3 system-ui,sans-serif;' +
+        'padding:6px 12px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.25);' +
+        'pointer-events:none;max-width:calc(100vw - 24px)';
+    const nombre = env.APP_ENV === 'preview' ? 'PRUEBAS' : 'LOCAL';
+    etiqueta.textContent = `${nombre} · v${env.VERSION} · Supabase: comprobando…`;
+    document.body.appendChild(etiqueta);
+
+    const estado = await window.App.supabase.estado();
+    etiqueta.textContent = `${nombre} · v${env.VERSION} · Supabase: ${estado}`;
+};
+
+window.addEventListener('DOMContentLoaded', () => window.App.mostrarEtiquetaEntorno());
+
+console.log(`[SegmentApp] entorno.js cargado (${window.App.env.APP_ENV}).`);

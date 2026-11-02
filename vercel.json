@@ -1,20 +1,36 @@
 {
+  "installCommand": "echo 'Sin dependencias para publicar'",
+  "buildCommand": "node scripts/build.mjs",
+  "outputDirectory": "dist",
   "headers": [
     {
-      "source": "/(.*\\.csv\\.gz)",
+      "source": "/js/env.js",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=2592000"
+          "value": "no-cache"
         }
       ]
     },
     {
-      "source": "/(.*\\.csv)",
+      "source": "/sw.js",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=2592000"
+          "value": "no-cache"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
         }
       ]
     }

@@ -84,11 +84,12 @@ window.App.filters.fillGenericDropdown = function(key, dataList) {
     dataList.forEach(item => {
         let cleanName = item;
         if (key === 'Market') cleanName = item.replace(/Mercado/i, '').trim() || item;
-        const div = document.createElement('div');
+        // Toda la fila marca o desmarca (no solo la casilla)
+        const div = document.createElement('label');
         div.className = 'checkbox-item';
         div.innerHTML = `
             <input type="checkbox" value="${item}" onchange="updateGenericSelected('${key}')">
-            <span class="text-sm font-medium text-slate-700">${cleanName}</span>
+            <span class="text-sm font-medium text-slate-700 min-w-0 break-words">${window.App.ui.escapeHtml(cleanName)}</span>
         `;
         // Dejarlo marcado por defecto
         div.querySelector('input').checked = true;
@@ -123,6 +124,7 @@ window.App.filters.populateFilters = function() {
             if (repKey && r[repKey]) repSet.add(String(r[repKey]).trim().toUpperCase());
         });
     });
+    if (st.REPS_PERMITIDOS) [...repSet].forEach(r => { if (!st.REPS_PERMITIDOS.has(r)) repSet.delete(r); });
     window.App.filters.fillGenericDropdown('Rep', Array.from(repSet).sort());
 
     window.App.filters.fillGenericDropdown('Region',   getUnique('region'));
@@ -163,8 +165,10 @@ window.App.filters.resetAllFilters = function() {
    las movemos al módulo matrix.js en el paso 8.
 ------------------------------------------------------------ */
 window.App.filters.applyFilters = function() {
-    if (typeof resetPaginationAndRender === 'function') resetPaginationAndRender();
-    if (typeof aggregateAndCalculate === 'function')    aggregateAndCalculate();
+    // Recalcular ya vuelve a dibujar la lista desde la página 1 (antes se dibujaba dos veces)
+    window.App.state.currentPage = 1;
+    if (typeof aggregateAndCalculate === 'function') aggregateAndCalculate();
+    else if (typeof resetPaginationAndRender === 'function') resetPaginationAndRender();
 };
 
 window.App.filters.resetPaginationAndRender = function() {

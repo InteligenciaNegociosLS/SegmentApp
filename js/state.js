@@ -14,6 +14,7 @@ window.App.state = {
     PROCESSED_DATA: [],           // Médicos agregados y calculados
     CURRENT_TABLE_DATA: [],       // Datos actualmente mostrados en la tabla
     MARKET_CACHE: {},             // Cache de clasificaciones por mercado
+    MARKET_SERVIDOR: null,        // VM/GD: totales nacionales por mercado (vienen del servidor)
     FICHERO_MAP: new Map(),       // Mapa Matricula -> filas del fichero médico
     REP_MANAGER_MAP: {},          // Mapa Visitador -> Gerente de Distrito
     CURRENT_COMP_BREAKDOWN: [],   // Ranking de productos (para tarjeta competencia)
@@ -47,9 +48,17 @@ window.App.state = {
     ALL_EVALUATIONS: [],          // Todas las evaluaciones (modo admin)
 
     // --- Sesión y roles ---
-    currentUserRole: 'guest',     // 'guest' | 'visitador' | 'gerente' | 'admin'
+    currentUserRole: 'guest',     // vista: 'guest' | 'visitador' | 'admin' (equipo)
     currentVisitadorName: "",
-    isAdmin: false,
+    isAdmin: false,               // true = vista de equipo (admin, gd, gte_nacional)
+    rolReal: null,                // rol en Supabase: 'vm' | 'gd' | 'gte_nacional' | 'admin'
+    soloLectura: false,           // gd y gte_nacional: ven el equipo pero no editan
+    visitadorId: null,            // id del visitador (solo vm)
+    REPS_PERMITIDOS: null,        // Set de visitadores visibles (null = todos)
+
+    // --- Versiones de datos ---
+    VERSIONES: [],                // versiones publicadas (y borradores para el admin)
+    VERSIONES_EN_USO: {},         // { fichero, recetas } que se están viendo
 
     // --- UI ---
     currentMatrixMode: 'closeup', // 'closeup' | 'survey'

@@ -71,6 +71,17 @@ window.App.matrix.getDoctorMarketClassification = function(docId, targetMarket) 
     const d  = window.App.data;
     if (!targetMarket || targetMarket === 'General') return "";
 
+    // VM y GD: los totales nacionales vienen del servidor; aquí solo se aplican los umbrales
+    if (st.MARKET_SERVIDOR) {
+        const g = st.MARKET_SERVIDOR[targetMarket] && st.MARKET_SERVIDOR[targetMarket].get(d.normalizeKey(docId));
+        if (!g) return "";
+        const pct = g.totalMercado > 0 ? (g.acumulado / g.totalMercado) * 100 : 100;
+        const p = pct <= st.TH_POT_LOW ? 'A' : (pct <= st.TH_POT_HIGH ? 'B' : 'C');
+        const share = g.total > 0 ? (g.phq / g.total) * 100 : 0;
+        const l = share >= st.TH_LOY_HIGH ? 'A' : (share > st.TH_LOY_LOW ? 'B' : 'C');
+        return p + (l === 'C' ? '-' : (l === 'A' ? '+' : ''));
+    }
+
     if (!st.MARKET_CACHE[targetMarket]) {
         const mktRows = st.RAW_DATA.filter(r => r.market === targetMarket);
         const grouped = {};
@@ -126,16 +137,16 @@ window.App.matrix.generateMatrixGridHTML = function() {
     cellIds.slice(0, 3).forEach(c => html += window.App.matrix.generateSingleCellHTML(c));
     html += window.App.matrix.generateSummaryCellHTML('row_A', 'Potencial A');
 
-    html += `<div class="matrix-header-row border-r-2 pr-4 border-slate-100">
-        <span class="text-blue-700 text-center font-bold">Medio Potencial (B)</span>
-        <span class="text-[10px] font-medium text-slate-400 mt-2" id="row_label_B">33% - 66%</span>
+    html += `<div class="matrix-header-row">
+        <span class="text-slate-700 text-center font-bold">Potencial medio (B)</span>
+        <span class="text-[10px] font-medium text-slate-500 mt-2 hidden sm:inline" id="row_label_B">33% - 66%</span>
     </div>`;
     cellIds.slice(3, 6).forEach(c => html += window.App.matrix.generateSingleCellHTML(c));
     html += window.App.matrix.generateSummaryCellHTML('row_B', 'Potencial B');
 
-    html += `<div class="matrix-header-row border-r-2 pr-4 border-slate-100">
-        <span class="text-slate-400 text-center font-bold">Bajo Potencial (C)</span>
-        <span class="text-[10px] font-medium text-slate-300 mt-2" id="row_label_C">> 66%</span>
+    html += `<div class="matrix-header-row">
+        <span class="text-slate-700 text-center font-bold">Potencial bajo (C)</span>
+        <span class="text-[10px] font-medium text-slate-500 mt-2 hidden sm:inline" id="row_label_C">> 66%</span>
     </div>`;
     cellIds.slice(6, 9).forEach(c => html += window.App.matrix.generateSingleCellHTML(c));
     html += window.App.matrix.generateSummaryCellHTML('row_C', 'Potencial C');
@@ -144,32 +155,37 @@ window.App.matrix.generateMatrixGridHTML = function() {
     html += window.App.matrix.generateSummaryCellHTML('col_C', 'Adopción Baja');
     html += window.App.matrix.generateSummaryCellHTML('col_B', 'Adopción Media');
     html += window.App.matrix.generateSummaryCellHTML('col_A', 'Adopción Alta');
-    html += `<div class="summary-element hidden bg-slate-100 rounded-[24px] items-center justify-center text-xs text-slate-500 font-display font-bold uppercase tracking-widest border border-slate-200">Universo<br>Total</div>`;
+    html += `<div class="summary-element hidden bg-slate-100 rounded-3xl items-center justify-center text-xs text-slate-500 font-display font-bold uppercase tracking-widest border border-slate-200">Universo<br>Total</div>`;
 
     container.innerHTML = html;
 };
 
 window.App.matrix.generateSingleCellHTML = function(c) {
     const key = c.id.replace('cell_', '');
+    const [pot, loy] = key.split('_');
     return `
-    <div class="matrix-cell group cell-${key}" id="${c.id}" onclick="filterByMatrix('${key.split('_')[0]}', '${key.split('_')[1]}')">
+    <div class="matrix-cell group cell-${key}" id="${c.id}" role="button" tabindex="0" aria-label="Cuadrante ${c.label}: ${c.title}"
+         onclick="filterByMatrix('${pot}', '${loy}')" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); filterByMatrix('${pot}', '${loy}'); }">
         <div class="cell-tooltip" id="tooltip_${key}">Top: Cargando...</div>
-        <div class="flex justify-between items-start mb-2 pointer-events-none">
+        <div class="celda-cabecera flex justify-between items-center pointer-events-none">
             <span class="font-bold text-[11px] uppercase tracking-widest opacity-80">${c.title}</span>
-            <button onclick="toggleStats(event, '${key}')" class="pointer-events-auto opacity-40 hover:opacity-100 transition p-2 -m-2" title="Ver Promedios"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+            <button onclick="toggleStats(event, '${key}')" class="pointer-events-auto opacity-60 w-9 h-9 -m-2 rounded-full flex items-center justify-center" title="Ver promedios"><span class="material-symbols-outlined text-[18px]">query_stats</span></button>
         </div>
-        <div class="grid grid-cols-2 gap-y-2 gap-x-2 text-[10px] mb-2 pointer-events-none opacity-90 font-medium">
-            <div title="Rx Total"><span class="material-symbols-outlined icon-inline opacity-60">receipt_long</span> Total: <span class="font-bold font-mono text-[11px]" id="rx_${key}">0</span></div>
-            <div title="Rx PHQ" class="text-right"><span class="material-symbols-outlined icon-inline opacity-60">pill</span> Lab: <span class="font-bold font-mono text-[11px]" id="phq_${key}">0</span></div>
-            <div title="Market Share" class="col-span-2 text-center pt-2 mt-1 border-t border-black/5"><span class="material-symbols-outlined icon-inline opacity-60">donut_large</span> MS: <span class="font-bold text-[12px]" id="ms_${key}">0%</span></div>
+        <div class="flex-1 flex flex-col items-center justify-center py-2 pointer-events-none">
+            <div class="celda-letra letter-display">${c.label}</div>
+            <div class="celda-cuenta mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-[20px] opacity-70">groups</span><span id="count_${key}">0</span><span class="text-[11px] font-semibold opacity-70">méd.</span></div>
+        </div>
+        <div class="celda-detalle grid grid-cols-3 gap-1 text-[10px] font-medium text-center opacity-90 pointer-events-none">
+            <div title="Recetas del mercado"><div class="opacity-70 flex items-center justify-center gap-0.5"><span class="material-symbols-outlined text-[13px]">receipt_long</span>Recetas</div><div class="font-bold font-mono text-[12px]" id="rx_${key}">0</div></div>
+            <div title="Recetas La Santé"><div class="opacity-70 flex items-center justify-center gap-0.5"><span class="material-symbols-outlined text-[13px]">pill</span>La Santé</div><div class="font-bold font-mono text-[12px]" id="phq_${key}">0</div></div>
+            <div title="Participación"><div class="opacity-70 flex items-center justify-center gap-0.5"><span class="material-symbols-outlined text-[13px]">donut_large</span>Part.</div><div class="font-bold text-[12px]" id="ms_${key}">0%</div></div>
         </div>
         <div class="stats-drawer text-[10px] flex justify-between px-3 bg-black/5 rounded-xl pointer-events-auto" id="drawer_${key}">
             <div class="flex flex-col items-center py-2 opacity-80"><span class="uppercase tracking-wide text-[8px] font-bold">Media Tot</span><span class="font-bold text-xs font-mono" id="avg_tot_${key}">0</span></div>
             <div class="flex flex-col items-center py-2 opacity-80"><span class="uppercase tracking-wide text-[8px] font-bold">Media Lab</span><span class="font-bold text-xs font-mono" id="avg_phq_${key}">0</span></div>
         </div>
-        <div class="flex-1 flex flex-col items-center justify-center my-3 pointer-events-none drop-shadow-sm"><div class="text-6xl font-display font-black tracking-tighter letter-display transition-transform duration-300 group-hover:scale-110">${c.label}</div></div>
-        <div class="flex items-center justify-center gap-1 text-xl font-display font-bold leading-none mb-1 mt-auto border-t border-black/5 pt-3 pointer-events-none"><span class="material-symbols-outlined opacity-60 text-[22px]" style="vertical-align: -3px;">groups</span><span id="count_${key}">0</span></div>
-        <div class="text-center pointer-events-none"><div class="text-[11px] font-bold opacity-70"><span id="pct_drs_${key}">0%</span></div></div>
+        <div class="celda-barra pointer-events-none" title="Porcentaje de médicos en este cuadrante"><span id="barra_${key}" style="width:0%"></span></div>
+        <div class="celda-pct text-center text-[10px] font-bold opacity-70 mt-1 pointer-events-none"><span id="pct_drs_${key}">0%</span> de los médicos</div>
     </div>`;
 };
 
@@ -225,24 +241,14 @@ window.App.matrix.switchMatrixMode = function(mode) {
     const btnData   = document.getElementById('btnMatrixData');
     const btnSurvey = document.getElementById('btnMatrixSurvey');
 
-    if (mode === 'closeup') {
-        btnData.classList.replace('text-slate-500', 'text-white');
-        btnData.classList.replace('hover:text-slate-700', 'bg-blue-600');
-        btnData.classList.replace('hover:bg-white', 'shadow-sm');
-        btnData.classList.add('bg-blue-600');
-
-        btnSurvey.classList.replace('bg-blue-600', 'hover:bg-white');
-        btnSurvey.classList.replace('text-white', 'text-slate-500');
-        btnSurvey.classList.remove('shadow-sm');
-    } else {
-        btnSurvey.classList.replace('text-slate-500', 'text-white');
-        btnSurvey.classList.replace('hover:bg-white', 'bg-blue-600');
-        btnSurvey.classList.add('shadow-sm', 'bg-blue-600');
-
-        btnData.classList.replace('bg-blue-600', 'hover:bg-white');
-        btnData.classList.replace('text-white', 'text-slate-500');
-        btnData.classList.remove('shadow-sm');
-    }
+    // Botón segmentado: el elegido queda relleno (primary) y el otro sin fondo
+    [[btnData, mode === 'closeup'], [btnSurvey, mode !== 'closeup']].forEach(([btn, activo]) => {
+        btn.classList.toggle('bg-blue-600', activo);
+        btn.classList.toggle('text-white', activo);
+        btn.classList.toggle('shadow-sm', activo);
+        btn.classList.toggle('text-slate-500', !activo);
+        btn.setAttribute('aria-pressed', activo ? 'true' : 'false');
+    });
 
     window.App.ui.showToast(mode === 'closeup' ? 'Viendo Matriz: Datos de Rx' : 'Viendo Matriz: Encuestas Asesor');
     window.App.matrix.aggregateAndCalculate();
@@ -251,7 +257,13 @@ window.App.matrix.switchMatrixMode = function(mode) {
 /* ============================================================
    AGGREGATE AND CALCULATE — el cálculo más pesado de la app
 ============================================================ */
-window.App.matrix.aggregateAndCalculate = function() {
+/* ------------------------------------------------------------
+   CÁLCULO (sin dibujar nada): de las filas de recetas a la lista de
+   médicos con su cuadrante. Se usa para los datos actuales y, con la
+   misma regla, para la versión anterior (movimientos y tendencias).
+   usarCache: solo para los datos actuales.
+------------------------------------------------------------ */
+window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
     const st = window.App.state;
     const d  = window.App.data;
 
@@ -269,56 +281,98 @@ window.App.matrix.aggregateAndCalculate = function() {
         Generic: fGeneric
     });
 
-    // Si los filtros pesados no cambiaron, usar el universo cacheado
+    // Si los filtros pesados no cambiaron, usar el universo cacheado.
+    // Se recuerdan los últimos 4 universos (con su agrupación por médico): ir y
+    // volver entre un mercado y "Todos" ya no repite el trabajo con 28 mil médicos.
+    if (!st._cacheUniversos || st._cacheUniversosDatos !== filasFuente) { st._cacheUniversos = new Map(); st._cacheUniversosDatos = filasFuente; }
+    const recordado = usarCache && st._lastUniverseSignature !== null ? st._cacheUniversos.get(filterSignature) : null;
     let universeRows;
-    if (st._lastUniverseSignature === filterSignature && st._lastUniverseRows) {
+    if (usarCache && st._lastUniverseSignature === filterSignature && st._lastUniverseRows) {
         universeRows = st._lastUniverseRows;
+    } else if (recordado) {
+        universeRows = recordado.filas;
+        st._lastUniverseSignature = filterSignature;
+        st._lastUniverseRows = universeRows;
+        st._lastGroupsRows = universeRows;
+        st._lastGroups = recordado.grupos;
     } else {
         // Recalcular universo desde cero
-        universeRows = st.RAW_DATA.filter(row => {
-            if (!st.FILTER_STATE.Market.includes(row.market))     return false;
-            if (!st.FILTER_STATE.Region.includes(row.region))     return false;
-            if (!st.FILTER_STATE.Spec.includes(row.spec))         return false;
-            if (!st.FILTER_STATE.Molecule.includes(row.molecule)) return false;
-            if (!st.FILTER_STATE.Class.includes(row.class))       return false;
-            if (!st.FILTER_STATE.Lab.includes(row.lab))           return false;
+        // Conjuntos (búsqueda instantánea) en vez de recorrer cada lista por fila
+        const fs = st.FILTER_STATE;
+        const mk = new Set(fs.Market), rg = new Set(fs.Region), sp = new Set(fs.Spec),
+              mo = new Set(fs.Molecule), cl = new Set(fs.Class), lb = new Set(fs.Lab);
+        universeRows = filasFuente.filter(row => {
+            if (!mk.has(row.market))   return false;
+            if (!rg.has(row.region))   return false;
+            if (!sp.has(row.spec))     return false;
+            if (!mo.has(row.molecule)) return false;
+            if (!cl.has(row.class))    return false;
+            if (!lb.has(row.lab))      return false;
             if (fGeneric !== 'all' && row.generic !== fGeneric)   return false;
             return true;
         });
         // Guardar en cache para próximas llamadas
-        st._lastUniverseSignature = filterSignature;
-        st._lastUniverseRows = universeRows;
+        if (usarCache) {
+            st._lastUniverseSignature = filterSignature;
+            st._lastUniverseRows = universeRows;
+        }
     }
 
-    // Agrupación por médico (ID único = matrícula + nombre)
-    const docMap = {};
-    universeRows.forEach(row => {
-        const cleanLicense = row.license ? String(row.license).trim().replace(/^0+/, '') : "";
-        const id = cleanLicense + "_" + row.doc.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (!docMap[id]) {
-            docMap[id] = { id, name: row.doc, address: row.address, spec: row.spec, rxPhq: 0, rxTotalSum: 0, rows: [], uniqueProds: {} };
+    // Agrupación por médico (ID único = matrícula + nombre).
+    // Solo depende del universo: si cambian productos, visitadores, umbrales
+    // o el modo de la matriz, se reutiliza la agrupación anterior.
+    let grupos;
+    if (usarCache && st._lastGroupsRows === universeRows && st._lastGroups) {
+        grupos = st._lastGroups;
+    } else {
+        const docMap = {};
+        universeRows.forEach(row => {
+            // El id no cambia entre filtros: se calcula una vez y se guarda en la fila
+            let id = row._id;
+            if (id === undefined) {
+                const cleanLicense = row.license ? String(row.license).trim().replace(/^0+/, '') : "";
+                id = row._id = cleanLicense + "_" + row.doc.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                row._clave = d.normalizeKey(id);
+            }
+            let g = docMap[id];
+            if (!g) g = docMap[id] = { id, clave: row._clave, name: row.doc, address: row.address, spec: row.spec, rows: [], uniqueProds: {} };
+            g.rows.push(row);
+            g.uniqueProds[row.prod] = Math.max(g.uniqueProds[row.prod] || 0, row.rx);
+        });
+        grupos = Object.values(docMap);
+        grupos.forEach(g => { g.prodsLista = Object.entries(g.uniqueProds); });
+        if (usarCache) {
+            st._lastGroupsRows = universeRows;
+            st._lastGroups = grupos;
+            if (st._lastUniverseSignature === filterSignature) {
+                st._cacheUniversos.delete(filterSignature);
+                st._cacheUniversos.set(filterSignature, { filas: universeRows, grupos });
+                if (st._cacheUniversos.size > 4) st._cacheUniversos.delete(st._cacheUniversos.keys().next().value);
+            }
         }
-        docMap[id].rows.push(row);
-        docMap[id].uniqueProds[row.prod] = Math.max(docMap[id].uniqueProds[row.prod] || 0, row.rx);
-    });
+    }
 
     // Totales reales por producto (para "Principal Competidor")
     const realProductTotals = {};
-    Object.values(docMap).forEach(doc => {
-        Object.entries(doc.uniqueProds).forEach(([prod, rx]) => {
+    const todosLosProductos = st.FILTER_STATE.Product.length === st.FILTER_OPTIONS.Product.length;
+    const productosElegidos = new Set(st.FILTER_STATE.Product);
+    const docMap = grupos.map(g => {
+        const doc = { id: g.id, _clave: g.clave, name: g.name, address: g.address, spec: g.spec, rxPhq: 0, rxTotalSum: 0, rows: g.rows, uniqueProds: g.uniqueProds };
+        g.prodsLista.forEach(([prod, rx]) => {
             doc.rxTotalSum += rx;
-            if (d.isPhq(prod) && (st.FILTER_STATE.Product.length === st.FILTER_OPTIONS.Product.length || st.FILTER_STATE.Product.includes(prod))) {
+            if (d.isPhq(prod) && (todosLosProductos || productosElegidos.has(prod))) {
                 doc.rxPhq += rx;
             }
             realProductTotals[prod] = (realProductTotals[prod] || 0) + rx;
         });
+        return doc;
     });
-    st.CURRENT_COMP_BREAKDOWN = Object.entries(realProductTotals)
+    const compBreakdown = Object.entries(realProductTotals)
         .map(([k, v]) => ({ prod: k, rx: v, type: d.isPhq(k) ? 'PHQ' : 'Comp' }))
         .sort((a, b) => b.rx - a.rx);
 
     // Cálculo de share, gap y categoría de adopción
-    let doctors = Object.values(docMap).map(doc => {
+    let doctors = docMap.map(doc => {
         const denominator = doc.rxTotalSum;
         const share = denominator > 0 ? (doc.rxPhq / denominator) * 100 : 0;
         let catLoyalty = 'C';
@@ -337,37 +391,40 @@ window.App.matrix.aggregateAndCalculate = function() {
 
         return {
             ...doc, totalRx: denominator, share, catLoyalty, gap, targetLabel,
-            ficheroData: st.FICHERO_MAP.get(d.normalizeKey(doc.id)) || [],
+            ficheroData: st.FICHERO_MAP.get(doc._clave) || [],
             isZeroRx: false
         };
     });
 
-    // Vista de visitador: filtrar solo médicos asignados
+    // Solo los médicos de los visitadores permitidos (VM: los suyos; GD: los de su distrito)
     let visTotalFichero = 0, visTotalCruzados = 0;
-    if (st.currentUserRole === 'visitador') {
+    const repsPermitidos = st.REPS_PERMITIDOS ||
+        (st.currentUserRole === 'visitador' ? new Set([String(st.currentVisitadorName).toUpperCase().trim()]) : null);
+    if (repsPermitidos) {
         const assignedDocsMap = new Map();
         st.FICHERO_MAP.forEach((rows, docId) => {
             const isAssigned = rows.some(fRow => {
                 const repKey = d.getFicheroRepKey(fRow);
-                return repKey && fRow[repKey] && String(fRow[repKey]).toUpperCase().trim() === st.currentVisitadorName.toUpperCase();
+                return repKey && fRow[repKey] && repsPermitidos.has(String(fRow[repKey]).toUpperCase().trim());
             });
             if (isAssigned) { visTotalFichero++; assignedDocsMap.set(docId, rows); }
         });
         doctors = doctors.filter(doc => {
-            const hasAssigned = assignedDocsMap.has(d.normalizeKey(doc.id));
+            const hasAssigned = assignedDocsMap.has(doc._clave);
             if (hasAssigned) visTotalCruzados++;
             return hasAssigned;
         });
         // Agregar médicos del fichero sin Rx
+        const conRx = new Set(doctors.map(x => x._clave));
         assignedDocsMap.forEach((rows, docId) => {
-            if (!doctors.find(x => d.normalizeKey(x.id) === docId)) {
+            if (!conRx.has(docId)) {
                 const baseRow = rows[0];
                 let nameKey = Object.keys(baseRow).find(k => /^(nombre|medico|médico|doctor|doc)$/i.test(k.trim().toLowerCase()));
                 if (!nameKey) nameKey = Object.keys(baseRow).find(k => /nombre|med|doc/i.test(k) && !/visit|rep|agente|promotor|asesor/i.test(k));
                 const specKey = Object.keys(baseRow).find(k => /esp|spec/i.test(k));
                 const addrKey = Object.keys(baseRow).find(k => /dir|address|inst/i.test(k));
                 doctors.push({
-                    id: docId,
+                    id: docId, _clave: docId,
                     name: (nameKey && baseRow[nameKey]) ? String(baseRow[nameKey]).trim() : `Médico no mapeado (${docId})`,
                     spec: (specKey && baseRow[specKey]) ? String(baseRow[specKey]).trim() : "S/E",
                     address: (addrKey && baseRow[addrKey]) ? String(baseRow[addrKey]).trim() : "",
@@ -409,7 +466,7 @@ window.App.matrix.aggregateAndCalculate = function() {
 
         // Matriz Encuesta
         doc.surveyPotency = null; doc.surveyLoyalty = null; doc.surveyLabel = "N/A";
-        const evals = (typeof getEvaluationsForDoc === 'function') ? getEvaluationsForDoc(doc.id) : [];
+        const evals = window.App.evaluation ? window.App.evaluation.getEvaluationsForDoc(doc.id, doc._clave) : [];
         if (evals && evals.length > 0) {
             const obj = window.App.matrix.calculateObjectiveScore(evals[0].survey);
             if (obj.pot) {
@@ -428,18 +485,34 @@ window.App.matrix.aggregateAndCalculate = function() {
         return doc;
     });
 
+    return { doctors, compBreakdown, grandTotalRx, visTotalFichero, visTotalCruzados };
+};
+
+window.App.matrix.aggregateAndCalculate = function() {
+    const st = window.App.state;
+    const r = window.App.matrix.calcularMedicos(st.RAW_DATA, true);
+    const doctors = r.doctors;
+    st.CURRENT_COMP_BREAKDOWN = r.compBreakdown;
     st.PROCESSED_DATA = doctors;
-    Object.keys(docMap).forEach(k => delete docMap[k]);
+    // Comparación con la versión anterior (movimientos y tendencias), si está cargada
+    if (window.App.comparar) window.App.comparar.alRecalcular();
 
     // Principal competidor
     let topCompName = "N/A", topCompRx = 0;
     const competitorsOnly = st.CURRENT_COMP_BREAKDOWN.filter(c => c.type === 'Comp');
     if (competitorsOnly.length > 0) { topCompName = competitorsOnly[0].prod; topCompRx = competitorsOnly[0].rx; }
 
-    window.App.matrix.renderDashboard(grandTotalRx, topCompName, topCompRx);
+    window.App.matrix.renderDashboard(r.grandTotalRx, topCompName, topCompRx);
     window.App.matrix.updateImpactSimulator(doctors);
     if (st.currentUserRole === 'visitador') {
-        if (typeof updateVisitadorDashboard === 'function') updateVisitadorDashboard(visTotalFichero, visTotalCruzados);
+        if (typeof updateVisitadorDashboard === 'function') updateVisitadorDashboard(r.visTotalFichero, r.visTotalCruzados);
+    }
+    // Al final: los tableros del inicio usan el avance del VM ya actualizado
+    if (window.App.tableros) window.App.tableros.alRecalcular();
+    // La campanita se pone al día justo después (sin frenar lo que se ve)
+    if (window.App.avisos && st.isAdmin) {
+        clearTimeout(window.App.matrix._esperaAvisos);
+        window.App.matrix._esperaAvisos = setTimeout(() => { if (typeof window !== 'undefined' && window.App && window.App.avisos) window.App.avisos.actualizar(); }, 300);
     }
 };
 
@@ -503,7 +576,12 @@ window.App.matrix.renderDashboard = function(grandTotal, topCompName, topCompRx)
         const sumRx  = subset.reduce((s, doc) => s + doc.totalRx, 0);
         const sumPhq = subset.reduce((s, doc) => s + doc.rxPhq, 0);
 
-        ui.safeSetText(`count_${key}`, ui.formatNumber(count));
+        window.App.ux ? window.App.ux.animarNumero(`count_${key}`, count) : ui.safeSetText(`count_${key}`, ui.formatNumber(count));
+        const proporcion = cruzadosData.length > 0 ? count / cruzadosData.length : 0;
+        const celda = document.getElementById(`cell_${key}`);
+        if (celda) celda.style.setProperty('--intensidad', Math.min(1, proporcion * 2.5).toFixed(3));
+        const barra = document.getElementById(`barra_${key}`);
+        if (barra) barra.style.width = `${(proporcion * 100).toFixed(1)}%`;
         ui.safeSetText(`rx_${key}`,    ui.compactNum(sumRx));
         ui.safeSetText(`phq_${key}`,   ui.compactNum(sumPhq));
         ui.safeSetText(`ms_${key}`,    ui.formatNumber(sumRx > 0 ? (sumPhq / sumRx) * 100 : 0, 2) + '%');
@@ -519,7 +597,7 @@ window.App.matrix.renderDashboard = function(grandTotal, topCompName, topCompRx)
                     if (cur.totalRx > prev.totalRx) return cur;
                     return (prev.rxPhq >= cur.rxPhq) ? prev : cur;
                 });
-                tooltip.innerHTML = `<span class="text-blue-300">Top Doc:</span><br><b>${topDoc.name.substring(0, 18)}</b><br>Rx Mercado: ${ui.formatNumber(topDoc.totalRx)}<br>Rx Lab: ${ui.formatNumber(topDoc.rxPhq)}`;
+                tooltip.innerHTML = `<span class="opacity-80">Médico con más recetas:</span><br><b>${ui.escapeHtml(topDoc.name.substring(0, 22))}</b><br>Recetas: ${ui.formatNumber(topDoc.totalRx)} · La Santé: ${ui.formatNumber(topDoc.rxPhq)}`;
             } else {
                 tooltip.innerHTML = `Sin datos`;
             }
@@ -551,6 +629,7 @@ window.App.matrix.filterByMatrix = function(pot, loy) {
     document.getElementById('clearFilterBtn').classList.remove('hidden');
     window.App.ui.safeSetText('tableSubtitle', `Filtrado: Cuadrante ${pot}${(loy === 'C' ? '-' : (loy === 'A' ? '+' : ''))}`);
     window.App.filters.resetPaginationAndRender();
+    if (window.App.ux) window.App.ux.alElegirCuadrante(pot, loy);
 };
 
 window.App.matrix.clearMatrixFilter = function() {
@@ -618,6 +697,9 @@ window.App.matrix.renderTable = function() {
         );
     }
 
+    // Filtro rápido (pendientes, evaluados, mayor oportunidad, sin recetas): solo la lista
+    if (window.App.ux) data = window.App.ux.aplicarFiltroRapido(data);
+
     // Vista institucional
     if (st.groupByInstitution) {
         const grouped = {};
@@ -667,67 +749,77 @@ window.App.matrix.renderTable = function() {
 
     // Construcción del HTML de todas las filas en buffer (mejor performance en iPad)
     const htmlBuffer = [];
+    const mostrarEval = !st.groupByInstitution && (st.currentUserRole === 'visitador' || st.currentUserRole === 'admin');
     pageData.forEach((doc, idxInPage) => {
         const realIndex = startIdx + idxInPage;
-        let colorClass = "bg-slate-100 text-slate-600";
-        if (doc.catPotency === 'A' || (doc.isInst && doc.catLoyalty === 'A')) colorClass = "bg-purple-100 text-purple-700 border border-purple-200";
-        if (doc.isZeroRx) colorClass = "bg-slate-100 text-slate-400 border border-slate-200 opacity-70";
+        const atenuado = doc.isZeroRx ? 'opacity-75' : '';
 
-        let gapHtml = doc.isZeroRx
-            ? `<span class="text-xs text-slate-400 font-bold">-</span>`
-            : (doc.gap > 0
-                ? `<span class="badge-gap">+${ui.formatNumber(doc.gap)} Rx</span>`
-                : `<span class="text-xs text-green-600 font-bold flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[14px]">task_alt</span> Objetivo</span>`);
-
-        const fichClass = (doc.ficheroData && doc.ficheroData.length > 0 && !doc.isInst) ? "" : "opacity-80";
-        const fichIcon = (doc.ficheroData && doc.ficheroData.length > 0 && !doc.isInst)
-            ? `<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold border border-blue-200 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">how_to_reg</span> Fichado</span>`
-            : "";
-        const instIconHtml = doc.isInst
-            ? `<span class="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-bold ml-2 border border-indigo-200">${doc.docCount} Docs</span>`
-            : "";
-
-        let evalCellHtml = "";
-        if (!doc.isInst && (st.currentUserRole === 'visitador' || st.currentUserRole === 'admin')) {
-            if (st.currentUserRole === 'visitador') {
-                const evalsMap = st.EVALUACIONES_VISITADOR[d.normalizeKey(doc.id)];
-                const evalsList = evalsMap ? Object.values(evalsMap) : [];
-                if (evalsList.length > 0) {
-                    const hasNotes = evalsList.some(e => e.notas && String(e.notas).trim() !== '');
-                    const countText = evalsList.length > 1 ? `${evalsList.length} Mercados` : `${evalsList.length} Mercado`;
-                    evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${doc.id}', '${doc.name.replace(/'/g, "\\'")}')"><button class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex flex-col items-center justify-center gap-0.5 mx-auto"><div class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span><span class="font-display">EVALUADO</span>${hasNotes ? '<span class="material-symbols-outlined text-[14px] text-amber-500">speaker_notes</span>' : ''}</div><span class="text-[9px] font-medium text-indigo-500">${countText}</span></button></td>`;
-                } else {
-                    evalCellHtml = `<td class="p-4 text-center" onclick="event.stopPropagation(); openEvalModal('${doc.id}', '${doc.name.replace(/'/g, "\\'")}')"><button class="bg-white hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-slate-600 hover:text-blue-700 font-bold px-3 py-1.5 rounded-xl shadow-sm transition flex items-center justify-center gap-1 mx-auto group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600"><span class="material-symbols-outlined text-[16px]">touch_app</span><span class="text-xs">Evaluar</span></button></td>`;
-                }
-            } else if (st.currentUserRole === 'admin') {
-                const evalsForDoc = (typeof getEvaluationsForDoc === 'function') ? getEvaluationsForDoc(doc.id) : [];
-                if (evalsForDoc.length > 0) {
-                    const evalSummary = evalsForDoc.map(e => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px] font-bold whitespace-nowrap shadow-sm" title="Eval de: ${e.visitador} en ${e.mercado || 'General'}">${e.cuadrante}</span>`).join(' ');
-                    evalCellHtml = `<td class="p-4 text-center"><div class="flex flex-wrap items-center justify-center gap-1">${evalSummary}</div></td>`;
-                } else {
-                    evalCellHtml = `<td class="p-4 text-center"><span class="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-1 rounded-md border border-slate-200">Pendiente</span></td>`;
-                }
-            }
-        }
-
+        // Cuadrante con el mismo color de la matriz
         let renderLabel = doc.matrixLabel;
         if (st.currentMatrixMode === 'survey' && !doc.isInst) renderLabel = doc.surveyLabel;
+        const colorClass = (window.App.ux && window.App.ux.claseCuadrante(doc)) || "bg-slate-100 text-slate-500";
+        const cuadrante = `<div class="flex flex-col items-start gap-0.5"><span class="inline-flex items-center justify-center min-w-[44px] h-9 px-2 rounded-xl font-display font-extrabold text-sm ${colorClass}">${doc.isZeroRx ? '—' : ui.escapeHtml(renderLabel)}</span>${doc.antes && doc.antes !== doc.closeupLabel ? `<span class="text-[10px] font-semibold ${doc.movimiento === 'mejor' ? 'text-green-700' : 'text-rose-700'}">${doc.movimiento === 'mejor' ? '▲' : '▼'} antes ${ui.escapeHtml(doc.antes)}</span>` : ''}</div>`;
+
+        // Médico: nombre, especialidad y si está fichado, juntos
+        const fichado = doc.ficheroData && doc.ficheroData.length > 0 && !doc.isInst;
+        const etiquetas = [
+            fichado ? '<span class="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-full">Fichado</span>' : '',
+            doc.isZeroRx ? '<span class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">Sin recetas</span>' : '',
+            doc.isInst ? `<span class="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-full">${doc.docCount} médicos</span>` : ''
+        ].join('');
+        const medico = `<div class="min-w-0">
+                <div class="font-semibold text-[15px] text-slate-800 truncate max-w-[340px]" title="${ui.escapeHtml(ui.nombreVisible(doc.name))}">${ui.escapeHtml(ui.nombreVisible(doc.name))}</div>
+                <div class="flex items-center gap-2 mt-0.5 text-xs text-slate-500"><span class="truncate max-w-[200px]">${ui.escapeHtml(doc.spec || '')}</span>${etiquetas}</div>
+            </div>`;
+
+        // Participación: número + barrita
+        // Tendencia frente a la versión anterior (si se cargó)
+        const tendencia = doc.deltaShare == null || Math.abs(doc.deltaShare) < 0.05 ? ''
+            : `<span class="tendencia ${doc.deltaShare > 0 ? 'sube' : 'baja'} ml-1">${doc.deltaShare > 0 ? '▲' : '▼'}${ui.formatNumber(Math.abs(doc.deltaShare), 1)}</span>`;
+        const part = doc.isZeroRx ? '<span class="text-slate-400">—</span>' : `<span class="font-semibold text-slate-700">${ui.formatNumber(doc.share, 1)}%</span>${tendencia}`;
+
+        const gapHtml = doc.isZeroRx
+            ? '<span class="text-slate-400">—</span>'
+            : (doc.gap > 0
+                ? `<span class="badge-gap">+${ui.formatNumber(doc.gap)} Rx</span>`
+                : `<span class="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-green-50 px-2 py-1 rounded-full"><span class="material-symbols-outlined text-[16px]">task_alt</span> En meta</span>`);
+
+        let evalCellHtml = "";
+        if (mostrarEval && !doc.isInst) {
+            evalCellHtml = `<td class="px-4 py-3 text-center" onclick="event.stopPropagation()">${window.App.ux ? window.App.ux.estadoEvaluacion(doc) : ''}</td>`;
+        }
 
         htmlBuffer.push(`
-            <tr class="hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer group" onclick="handleRowClick(${!!doc.isInst}, ${realIndex}, '${doc.id}')">
-                <td class="p-4 ${fichClass}"><span class="font-bold font-display text-xs px-2 py-1.5 rounded-lg ${colorClass}">${doc.isZeroRx ? 'N/A' : renderLabel}</span></td>
-                <td class="p-4 ${fichClass}"><div class="flex flex-col sm:flex-row sm:items-center gap-2 group-hover:text-blue-600 transition"><div class="font-bold text-sm text-slate-700 truncate max-w-[150px] md:max-w-[250px]" title="${doc.name}">${doc.name} ${doc.isZeroRx ? '<span class="text-[9px] bg-slate-200 text-slate-500 px-1 rounded ml-1">Sin Rx</span>' : ''}</div><div class="flex flex-shrink-0 items-center gap-1">${fichIcon} ${instIconHtml}</div></div></td>
-                <td class="p-4 text-xs font-medium text-slate-500 ${fichClass}">${doc.spec}</td>
-                <td class="p-4 text-right font-mono font-medium text-sm text-slate-600 ${fichClass}">${doc.isZeroRx ? '-' : ui.formatNumber(doc.totalRx)}</td>
-                <td class="p-4 text-right font-mono text-sm font-bold text-blue-600 ${fichClass}">${doc.isZeroRx ? '-' : ui.formatNumber(doc.rxPhq)}</td>
-                <td class="p-4 text-center text-xs font-bold text-slate-700 ${fichClass}">${doc.isZeroRx ? '-' : ui.formatNumber(doc.share, 2)}%</td>
-                <td class="p-4 text-center ${fichClass}">${gapHtml}</td>
+            <tr class="cursor-pointer md-estado" onclick="handleRowClick(${!!doc.isInst}, ${realIndex}, '${ui.escapeHtml(doc.id)}')">
+                <td class="px-4 py-3 ${atenuado}">${cuadrante}</td>
+                <td class="px-4 py-3 ${atenuado}">${medico}</td>
+                <td class="px-4 py-3 text-right font-mono text-sm text-slate-700 ${atenuado}">${doc.isZeroRx ? '<span class="text-slate-400">—</span>' : ui.formatNumber(doc.totalRx)}</td>
+                <td class="px-4 py-3 text-right font-mono text-sm font-semibold text-blue-700 ${atenuado}">${doc.isZeroRx ? '<span class="text-slate-400">—</span>' : ui.formatNumber(doc.rxPhq)}</td>
+                <td class="px-4 py-3 text-right text-sm ${atenuado}">${part}</td>
+                <td class="px-4 py-3 text-center ${atenuado}">${gapHtml}</td>
                 ${evalCellHtml}
             </tr>
         `);
     });
-    tbody.innerHTML = htmlBuffer.join('');
+    // Solo se dibuja la forma que se ve: tabla (computadora) o tarjetas (teléfono y tablet).
+    // Dibujar las dos en cada página era la mitad del tiempo de la lista.
+    const forma = window.App.matrix.formaLista();
+    tbody.innerHTML = forma !== 'tarjetas' ? htmlBuffer.join('') : '';
+
+    if (window.App.ux) {
+        if (forma !== 'tabla') window.App.ux.renderTarjetas(pageData, startIdx);
+        else { const z = document.getElementById('dataCards'); if (z) z.innerHTML = ''; }
+        window.App.ux.trasRenderTabla();
+    }
 };
+
+// 'tabla' (pantalla ancha), 'tarjetas' (angosta) o 'ambas' (sin medidas, p. ej. pruebas)
+const CONSULTA_ANCHA = typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 1024px)') : null;
+window.App.matrix.formaLista = () => !CONSULTA_ANCHA ? 'ambas' : (CONSULTA_ANCHA.matches ? 'tabla' : 'tarjetas');
+// Al girar la tablet o cambiar el tamaño de la ventana, se dibuja la otra forma
+if (CONSULTA_ANCHA && CONSULTA_ANCHA.addEventListener) {
+    CONSULTA_ANCHA.addEventListener('change', () => { if ((window.App.state.PROCESSED_DATA || []).length) window.App.matrix.renderTable(); });
+}
 
 /* ============================================================
    ALIAS GLOBALES

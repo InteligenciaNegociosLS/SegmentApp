@@ -28,6 +28,12 @@ window.App.ui.compactNum = function(num) {
 /* ------------------------------------------------------------
    ESCAPAR TEXTO PARA INSERTARLO COMO HTML
 ------------------------------------------------------------ */
+// Nombres del archivo de CloseUp: la "Ñ" viene escrita como "#" (NU#EZ → NUÑEZ).
+// Solo cambia lo que se ve; el dato guardado no se toca.
+window.App.ui.nombreVisible = function(nombre) {
+    return String(nombre == null ? '' : nombre).replace(/([A-ZÁÉÍÓÚ])#(?=[A-ZÁÉÍÓÚ]|\s|$)/g, '$1Ñ');
+};
+
 window.App.ui.escapeHtml = function(value) {
     return String(value == null ? '' : value)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -37,12 +43,23 @@ window.App.ui.escapeHtml = function(value) {
 /* ------------------------------------------------------------
    TOAST (notificación flotante)
 ------------------------------------------------------------ */
-window.App.ui.showToast = function(msg) {
+// Aviso inferior (snackbar). Opcional: un botón de acción, p. ej. "Deshacer".
+let temporizadorToast = null;
+window.App.ui.showToast = function(msg, opciones = {}) {
     const t = document.getElementById('toast');
     if (!t) return;
+    clearTimeout(temporizadorToast);
     t.innerText = msg;
+    if (opciones.accion && typeof opciones.alAccionar === 'function') {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'toast-accion';
+        b.textContent = opciones.accion;
+        b.onclick = () => { t.classList.remove('show'); opciones.alAccionar(); };
+        t.appendChild(b);
+    }
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
+    temporizadorToast = setTimeout(() => t.classList.remove('show'), opciones.duracion || (opciones.accion ? 6000 : 3500));
 };
 
 /* ------------------------------------------------------------
@@ -119,11 +136,11 @@ window.App.ui.updateFileLabel = function(inputId, msgId) {
     if (!input || !msg) return;
     if (input.files && input.files.length > 0) {
         msg.innerText = input.files[0].name;
-        msg.style.color = "#0A56D1";
+        msg.style.color = "#0b57d0";
         msg.style.fontWeight = "bold";
     } else {
         msg.innerText = "O arrastra el archivo aquí";
-        msg.style.color = "#44474E";
+        msg.style.color = "#44474e";
         msg.style.fontWeight = "normal";
     }
 };

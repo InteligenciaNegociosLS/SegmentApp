@@ -5,7 +5,7 @@
    - Abrir/cerrar el modal de evaluación
    - Cargar encuesta por mercado (pre-llenado si existe)
    - Seleccionar cuadrante subjetivo
-   - Guardar evaluación en Firebase o en cola offline
+   - Guardar evaluación en Supabase o en cola offline
    - Traer evaluaciones desde Firestore (visitador y admin)
    - Dashboard de progreso del visitador
 ============================================================ */
@@ -14,135 +14,50 @@ window.App = window.App || {};
 window.App.evaluation = {};
 
 /* ============================================================
-   TRAER EVALUACIONES DEL VISITADOR — OPTIMIZADO
-   - Caché local instantáneo (0 lecturas en visitas siguientes)
-   - Query filtrada SOLO por sus evaluaciones (no descarga las de otros)
-   - Sincronización incremental por timestamp
-   Reducción esperada: ~98% de lecturas Firebase
+   TRAER EVALUACIONES DEL VISITADOR
+   - Muestra al instante la copia guardada en el dispositivo
+   - Luego trae de Supabase SOLO las suyas (las reglas de la base
+     no le dejan ver las de otros) y actualiza la copia
 ============================================================ */
+window.App.evaluation.armarMapaVisitador = function(lista) {
+    const st = window.App.state;
+    st.EVALUACIONES_VISITADOR = {};
+    window.App.evaluation.marcarCambio();
+    lista.forEach(data => {
+        const key = window.App.data.normalizeKey(data.medico_id);
+        if (!st.EVALUACIONES_VISITADOR[key]) st.EVALUACIONES_VISITADOR[key] = {};
+        st.EVALUACIONES_VISITADOR[key][data.mercado || 'General'] = data;
+    });
+    // Las hechas sin conexión que todavía no se subieron también cuentan como evaluadas
+    if (window.App.offline) window.App.offline.pendientesPropias().forEach(data => {
+        const key = window.App.data.normalizeKey(data.medico_id);
+        if (!st.EVALUACIONES_VISITADOR[key]) st.EVALUACIONES_VISITADOR[key] = {};
+        st.EVALUACIONES_VISITADOR[key][data.mercado || 'General'] = { ...(st.EVALUACIONES_VISITADOR[key][data.mercado || 'General'] || {}), ...data, porSubir: true };
+    });
+};
+
 window.App.evaluation.fetchEvaluacionesYCalcular = async function() {
     const st = window.App.state;
     const ui = window.App.ui;
-
-    if (st.currentUserRole !== 'visitador' || !window.firebaseAuth || !window.firebaseAuth.currentUser) {
+    const refrescar = () => {
         window.App.filters.resetPaginationAndRender();
         window.App.matrix.aggregateAndCalculate();
-        return;
-    }
+    };
+    if (st.currentUserRole !== 'visitador') { refrescar(); return; }
 
-    const cacheKey = `VISITADOR_EVALS_${st.currentVisitadorName}`;
-    const lastSyncKey = `VISITADOR_SYNC_${st.currentVisitadorName}`;
-
+    const cacheKey = `VISITADOR_EVALS_${st.visitadorId || st.currentVisitadorName}`;
     try {
-        // PASO 1: Cargar caché local instantáneamente (0 lecturas Firebase)
-        let cachedEvals = [];
-        let lastSync = null;
+        const enCache = window.localforage ? (await localforage.getItem(cacheKey)) || [] : [];
+        if (enCache.length) { window.App.evaluation.armarMapaVisitador(enCache); refrescar(); }
 
-        if (window.localforage) {
-            cachedEvals = (await localforage.getItem(cacheKey)) || [];
-            lastSync = await localforage.getItem(lastSyncKey);
-        }
-
-        // PASO 2: Reconstruir el mapa desde caché (UX rápida)
-        if (cachedEvals.length > 0) {
-            st.EVALUACIONES_VISITADOR = {};
-            cachedEvals.forEach(data => {
-                if (!st.EVALUACIONES_VISITADOR[data.medico_id]) {
-                    st.EVALUACIONES_VISITADOR[data.medico_id] = {};
-                }
-                const mkt = data.mercado || 'General';
-                st.EVALUACIONES_VISITADOR[data.medico_id][mkt] = data;
-            });
-            // Renderizar de inmediato con datos cacheados
-            window.App.filters.resetPaginationAndRender();
-            window.App.matrix.aggregateAndCalculate();
-            console.log(`[SegmentApp] Caché visitador cargado: ${cachedEvals.length} evals (sync: ${lastSync || 'nunca'})`);
-        }
-
-        // PASO 3: Consultar Firestore SOLO las evaluaciones de este visitador
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-        const { query, where } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const colRef = window.firebaseCollection(
-            window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz'
-        );
-
-        // Si no hay caché previo, descarga TODAS las del visitador (no las de otros)
-        if (cachedEvals.length === 0 || !lastSync) {
-            const fullQuery = query(colRef, where('visitador', '==', st.currentVisitadorName));
-            const snapshot = await window.firebaseGetDocs(fullQuery);
-
-            const myEvals = [];
-            st.EVALUACIONES_VISITADOR = {};
-            snapshot.forEach(doc => {
-                const data = { firebaseId: doc.id, ...doc.data() };
-                myEvals.push(data);
-                if (!st.EVALUACIONES_VISITADOR[data.medico_id]) {
-                    st.EVALUACIONES_VISITADOR[data.medico_id] = {};
-                }
-                const mkt = data.mercado || 'General';
-                st.EVALUACIONES_VISITADOR[data.medico_id][mkt] = data;
-            });
-
-            if (window.localforage) {
-                await localforage.setItem(cacheKey, myEvals);
-                await localforage.setItem(lastSyncKey, new Date().toISOString());
-            }
-            console.log(`[SegmentApp] Carga COMPLETA visitador: ${myEvals.length} evaluaciones (${snapshot.size} lecturas — solo las suyas)`);
-
-            window.App.filters.resetPaginationAndRender();
-            window.App.matrix.aggregateAndCalculate();
-            return;
-        }
-
-        // PASO 4: Sincronización incremental — solo lo nuevo desde lastSync
-        const incrementalQuery = query(
-            colRef,
-            where('visitador', '==', st.currentVisitadorName),
-            where('timestamp', '>', lastSync)
-        );
-        const snapshot = await window.firebaseGetDocs(incrementalQuery);
-
-        if (snapshot.empty) {
-            console.log(`[SegmentApp] Sin cambios desde ${lastSync}. 0 lecturas adicionales. ✅`);
-            if (window.localforage) {
-                await localforage.setItem(lastSyncKey, new Date().toISOString());
-            }
-            return;
-        }
-
-        // Mergear cambios
-        const updates = [];
-        snapshot.forEach(doc => updates.push({ firebaseId: doc.id, ...doc.data() }));
-        console.log(`[SegmentApp] Sincronización incremental visitador: ${updates.length} cambios (${snapshot.size} lecturas)`);
-
-        // Aplicar updates en memoria + caché
-        const mergedMap = new Map(cachedEvals.map(e => [e.firebaseId, e]));
-        updates.forEach(u => mergedMap.set(u.firebaseId, u));
-        const merged = Array.from(mergedMap.values());
-
-        // Reconstruir el mapa de evaluaciones
-        st.EVALUACIONES_VISITADOR = {};
-        merged.forEach(data => {
-            if (!st.EVALUACIONES_VISITADOR[data.medico_id]) {
-                st.EVALUACIONES_VISITADOR[data.medico_id] = {};
-            }
-            const mkt = data.mercado || 'General';
-            st.EVALUACIONES_VISITADOR[data.medico_id][mkt] = data;
-        });
-
-        if (window.localforage) {
-            await localforage.setItem(cacheKey, merged);
-            await localforage.setItem(lastSyncKey, new Date().toISOString());
-        }
-
-        window.App.filters.resetPaginationAndRender();
-        window.App.matrix.aggregateAndCalculate();
-
+        const propias = await window.App.sb.evaluaciones();
+        window.App.evaluation.armarMapaVisitador(propias);
+        if (window.localforage) await localforage.setItem(cacheKey, propias);
+        refrescar();
     } catch (e) {
         console.error('[SegmentApp] Error cargando evaluaciones visitador:', e);
-        ui.showToast('Error al sincronizar. Usando datos en caché.');
-        window.App.filters.resetPaginationAndRender();
-        window.App.matrix.aggregateAndCalculate();
+        ui.showToast('Sin conexión con el servidor. Se muestran tus datos guardados en este dispositivo.');
+        refrescar();
     }
 };
 
@@ -150,129 +65,69 @@ window.App.evaluation.fetchEvaluacionesYCalcular = async function() {
 /* ============================================================
    OBTENER EVALUACIONES DE UN MÉDICO (según rol)
 ============================================================ */
-window.App.evaluation.getEvaluationsForDoc = function(docId) {
+// Cada vez que cambia una evaluación en memoria se sube este número: así los
+// índices y conteos guardados (para ir rápido) saben que deben rehacerse.
+window.App.evaluation.marcarCambio = function() {
+    const st = window.App.state;
+    st._versionEvaluaciones = (st._versionEvaluaciones || 0) + 1;
+};
+
+// clave (opcional): la matrícula ya normalizada, para no volver a calcularla
+window.App.evaluation.getEvaluationsForDoc = function(docId, clave) {
     const st = window.App.state;
     const d  = window.App.data;
+    const k = clave || d.normalizeKey(docId);
     if (st.currentUserRole === 'visitador') {
-        const evMap = st.EVALUACIONES_VISITADOR[d.normalizeKey(docId)];
+        const evMap = st.EVALUACIONES_VISITADOR[k];
         return evMap ? Object.values(evMap) : [];
     } else {
         // Índice por médico; se reconstruye solo si cambia la lista de evaluaciones
         const idx = window.App.evaluation._adminIndex;
-        if (!idx || idx.source !== st.ALL_EVALUATIONS || idx.length !== st.ALL_EVALUATIONS.length) {
+        if (!idx || idx.source !== st.ALL_EVALUATIONS || idx.length !== st.ALL_EVALUATIONS.length || idx.version !== st._versionEvaluaciones) {
             const byDoc = new Map();
             st.ALL_EVALUATIONS.forEach(e => {
                 const k = d.normalizeKey(e.medico_id);
                 if (!byDoc.has(k)) byDoc.set(k, []);
                 byDoc.get(k).push(e);
             });
-            window.App.evaluation._adminIndex = { source: st.ALL_EVALUATIONS, length: st.ALL_EVALUATIONS.length, byDoc };
+            window.App.evaluation._adminIndex = { source: st.ALL_EVALUATIONS, length: st.ALL_EVALUATIONS.length, version: st._versionEvaluaciones, byDoc };
         }
-        return window.App.evaluation._adminIndex.byDoc.get(d.normalizeKey(docId)) || [];
+        return window.App.evaluation._adminIndex.byDoc.get(k) || [];
     }
 };
 /* ============================================================
-   TRAER TODAS LAS EVALUACIONES (modo admin) — CACHÉ INTELIGENTE
-   - Carga caché local instantáneo (0 lecturas)
-   - Sincroniza SOLO los cambios desde la última visita
-   - Reduce drásticamente el consumo de cuota
+   TRAER TODAS LAS EVALUACIONES (vista de equipo)
+   admin y Gte. Nacional reciben todas; el GD, solo las de su
+   distrito (lo decide la base con sus reglas por fila).
 ============================================================ */
-window.App.evaluation.fetchAllEvaluacionesAdmin = async function(forceFullReload = false) {
+window.App.evaluation.fetchAllEvaluacionesAdmin = async function() {
     const st = window.App.state;
     const ui = window.App.ui;
-
-    if (!st.isAdmin || !window.firebaseAuth || !window.firebaseAuth.currentUser) {
+    const refrescar = () => {
         if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
         window.App.filters.resetPaginationAndRender();
-        return;
-    }
+    };
+    if (!st.isAdmin) { refrescar(); return; }
 
-    const CACHE_KEY = 'ADMIN_EVALS_CACHE';
-    const LAST_SYNC_KEY = 'ADMIN_EVALS_LAST_SYNC';
-
+    const CACHE_KEY = 'EQUIPO_EVALS_CACHE';
     try {
-        // PASO 1: Cargar caché local instantáneo
-        let cachedEvals = [];
-        let lastSync = null;
+        const enCache = window.localforage ? (await localforage.getItem(CACHE_KEY)) || [] : [];
+        if (enCache.length) { st.ALL_EVALUATIONS = enCache; refrescar(); }
 
-        if (!forceFullReload && window.localforage) {
-            cachedEvals = (await localforage.getItem(CACHE_KEY)) || [];
-            lastSync = await localforage.getItem(LAST_SYNC_KEY);
-        }
-
-        // PASO 2: Mostrar caché inmediatamente (UX rápida)
-        if (cachedEvals.length > 0) {
-            st.ALL_EVALUATIONS = cachedEvals;
-            if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
-            window.App.filters.resetPaginationAndRender();
-            console.log(`[SegmentApp] Caché cargado: ${cachedEvals.length} evaluaciones (sync: ${lastSync || 'nunca'})`);
-        }
-
-        // PASO 3: Sincronizar SOLO los cambios desde lastSync
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
-        const colRef = window.firebaseCollection(
-            window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz'
-        );
-
-        // Si NO hay caché o se forzó reload → descargar TODO
-        if (forceFullReload || cachedEvals.length === 0 || !lastSync) {
-            const snapshot = await window.firebaseGetDocs(colRef);
-            const allFromServer = [];
-            snapshot.forEach(doc => allFromServer.push({ firebaseId: doc.id, ...doc.data() }));
-
-            st.ALL_EVALUATIONS = allFromServer;
-            if (window.localforage) {
-                await localforage.setItem(CACHE_KEY, allFromServer);
-                await localforage.setItem(LAST_SYNC_KEY, new Date().toISOString());
-            }
-            console.log(`[SegmentApp] Carga COMPLETA desde Firestore: ${allFromServer.length} evaluaciones (${snapshot.size} lecturas)`);
-
-            if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
-            window.App.filters.resetPaginationAndRender();
-            return;
-        }
-
-        // PASO 4: SINCRONIZACIÓN INCREMENTAL (solo nuevos/modificados desde lastSync)
-        // Importamos query y where dinámicamente
-        const { query, where } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const incrementalQuery = query(colRef, where('timestamp', '>', lastSync));
-        const snapshot = await window.firebaseGetDocs(incrementalQuery);
-
-        if (snapshot.empty) {
-            console.log(`[SegmentApp] Sin cambios desde ${lastSync}. 0 lecturas adicionales. ✅`);
-            // Actualizar lastSync para futuras comparaciones
-            if (window.localforage) {
-                await localforage.setItem(LAST_SYNC_KEY, new Date().toISOString());
-            }
-            return;
-        }
-
-        // Hay cambios: mergear con el caché existente
-        const updates = [];
-        snapshot.forEach(doc => updates.push({ firebaseId: doc.id, ...doc.data() }));
-        console.log(`[SegmentApp] Sincronización incremental: ${updates.length} evaluaciones nuevas/modificadas (${snapshot.size} lecturas)`);
-
-        // Merge: actualiza existentes, agrega nuevas
-        const mergedMap = new Map(cachedEvals.map(e => [e.firebaseId, e]));
-        updates.forEach(u => mergedMap.set(u.firebaseId, u));
-        const merged = Array.from(mergedMap.values());
-
-        st.ALL_EVALUATIONS = merged;
-        if (window.localforage) {
-            await localforage.setItem(CACHE_KEY, merged);
-            await localforage.setItem(LAST_SYNC_KEY, new Date().toISOString());
-        }
-
-        if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
-        window.App.filters.resetPaginationAndRender();
-
+        st.ALL_EVALUATIONS = await window.App.sb.evaluaciones();
+        window.App.evaluation.marcarCambio();
+        st._lastUniverseSignature = null;
+        if (window.localforage) await localforage.setItem(CACHE_KEY, st.ALL_EVALUATIONS);
+        console.log(`[SegmentApp] ${st.ALL_EVALUATIONS.length} evaluaciones del equipo.`);
+        refrescar();
+        window.App.matrix.aggregateAndCalculate();
     } catch (e) {
         console.error('[SegmentApp] Error en sincronización:', e);
-        ui.showToast('Error al sincronizar. Usando datos en caché.');
-        if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
-        window.App.filters.resetPaginationAndRender();
+        ui.showToast('Sin conexión con el servidor. Se muestran los datos guardados en este dispositivo.');
+        refrescar();
     }
 };
+
 /* ============================================================
    ABRIR MODAL DE EVALUACIÓN
 ============================================================ */
@@ -316,6 +171,7 @@ window.App.evaluation.openEvalModal = function(docId, docName) {
     }
     window.App.evaluation.loadEvalForMarket();
     document.getElementById('evalModal').classList.remove('hidden');
+    if (window.App.ux) window.App.ux.alAbrirEvaluacion(docKey);
 };
 
 /* ============================================================
@@ -354,9 +210,10 @@ window.App.evaluation.loadEvalForMarket = function() {
     }
     document.getElementById('surveyQ1').value = globalQ1;
     document.getElementById('surveyQ5').value = globalQ5;
+    const sincronizar = () => { if (window.App.ux) window.App.ux.sincronizarEvaluacion(); };
 
     // Si no hay mercado seleccionado, salir (no hay datos específicos que cargar)
-    if (!selectedMarket) return;
+    if (!selectedMarket) { sincronizar(); return; }
 
     if (docEvalsMap[selectedMarket]) {
         const prev = docEvalsMap[selectedMarket];
@@ -373,6 +230,7 @@ window.App.evaluation.loadEvalForMarket = function() {
             document.getElementById('surveyQ4').value = prev.survey.q4 || "";
         }
     }
+    sincronizar();
 };
 
 /* ============================================================
@@ -398,7 +256,7 @@ window.App.evaluation.selectEvalQuadrant = function(element, quadrant) {
 };
 
 /* ============================================================
-   GUARDAR EVALUACIÓN (Firebase o cola offline)
+   GUARDAR EVALUACIÓN (Supabase o cola sin conexión)
 ============================================================ */
 window.App.evaluation.saveEvaluation = async function() {
     const st = window.App.state;
@@ -416,11 +274,12 @@ window.App.evaluation.saveEvaluation = async function() {
 
 // --- Validaciones visuales (resaltado + scroll + toast) ---
     const flashError = (elementId, message) => {
-        const el = document.getElementById(elementId);
+        // Si la pregunta se responde con botones, se resalta el grupo de botones
+        const el = document.getElementById(elementId + '_chips') || document.getElementById(elementId);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const originalStyle = el.style.cssText;
-            el.style.cssText = originalStyle + 'border: 2px solid #ef4444 !important; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2) !important; background-color: #fef2f2 !important;';
+            el.style.cssText = originalStyle + 'border: 2px solid #ba1a1a !important; box-shadow: 0 0 0 4px rgba(186, 26, 26, 0.16) !important; background-color: #fff0ee !important;';
             setTimeout(() => { el.style.cssText = originalStyle; }, 3000);
         }
         ui.showToast(message);
@@ -430,16 +289,18 @@ window.App.evaluation.saveEvaluation = async function() {
         flashError('evalMarketSelect', '⚠️ Debes seleccionar un mercado para continuar');
         return;
     }
-    if (!q1) { flashError('surveyQ1', '⚠️ Pregunta 1 sin responder'); return; }
-    if (!q5) { flashError('surveyQ5', '⚠️ Pregunta 2 (costo) sin responder'); return; }
-    if (!q2) { flashError('surveyQ2', '⚠️ Pregunta 3 sin responder'); return; }
-    if (!q3) { flashError('surveyQ3', '⚠️ Pregunta 4 sin responder'); return; }
+    const faltaMedico = (id, msg) => { if (window.App.ux) window.App.ux.editarDatosMedico(true); flashError(id, msg); };
+    if (!q1) { faltaMedico('surveyQ1', 'Falta: pacientes por semana'); return; }
+    if (!q5) { faltaMedico('surveyQ5', 'Falta: costo de la consulta'); return; }
+    const faltaMercado = (id, msg) => { if (window.App.ux) window.App.ux.editarDatosMercado(true); flashError(id, msg); };
+    if (!q2) { faltaMercado('surveyQ2', 'Falta: pacientes con esta clase terapéutica'); return; }
+    if (!q3) { faltaMercado('surveyQ3', 'Falta: pacientes con nuestro producto'); return; }
     if (!quadrant) {
-        flashError('evalGrid', '⚠️ Selecciona un cuadrante en la matriz (Paso 2)');
+        flashError('evalGrid', 'Falta: elige tu clasificación');
         return;
     }
     if (!notas) {
-        flashError('evalNotas', '⚠️ La justificación es obligatoria (Paso 3)');
+        flashError('evalNotas', 'Falta: cuéntanos por qué (es obligatorio)');
         return;
     }
 
@@ -448,81 +309,57 @@ window.App.evaluation.saveEvaluation = async function() {
     btnSave.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Guardando...';
 
     try {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'segmentapp-local';
+        if (st.soloLectura) throw new Error("Tu rol es de solo consulta.");
+        const adminEvalId = document.getElementById('evalFirebaseId').value;
+        const previa = st.isAdmin
+            ? st.ALL_EVALUATIONS.find(e => e.firebaseId === adminEvalId)
+            : (st.EVALUACIONES_VISITADOR[docId] || {})[selectedMarket];
+        const visitadorId = st.isAdmin ? (previa && previa.visitador_id) : st.visitadorId;
+        if (!visitadorId) throw new Error("No se encontró el visitador de esta evaluación.");
 
-        let actualRepName = st.currentVisitadorName;
-        const adminRepNameInput = document.getElementById('evalRepName').value;
-        if (st.isAdmin && adminRepNameInput) actualRepName = adminRepNameInput;
-
-        // Un visitador solo guarda a su nombre (las reglas de Firestore lo exigen)
-        if (!st.isAdmin && actualRepName !== st.currentVisitadorName) {
-            throw new Error("Violación de seguridad de sesión.");
-        }
-
-const sanitizedNotas = notas.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        // Pedido 2: Cruce Errado — leer estado actual del modal
+        const sanitizedNotas = notas.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        // Cruce Errado — leer estado actual del modal
         const isCruceErrado = document.getElementById('evalModal').dataset.cruceErrado === 'true';
         const nombreFichero = isCruceErrado ? window.App.evaluation.getFicheroNameForDoc(docId) : null;
-        const payload = {
-            visitador:   actualRepName,
-            medico_id:   docId,
-            medico_name: document.getElementById('evalModalDocName').innerText,
-            mercado:     selectedMarket,
-            cuadrante:   quadrant,
-            notas:       sanitizedNotas,
-            survey:      { q1, q2, q3, q4, q5 },
-            timestamp:   new Date().toISOString(),
-            _user_role:  st.currentUserRole,
-            // Pedido 2: campos de Cruce Errado
+        let payload = {
+            id:            previa ? previa.id : undefined,
+            firebaseId:    previa ? previa.firebaseId : undefined,
+            visitador_id:  visitadorId,
+            visitador:     previa ? previa.visitador : st.currentVisitadorName,
+            medico_id:     docId,
+            medico_name:   document.getElementById('evalModalDocName').innerText,
+            mercado:       selectedMarket,
+            cuadrante:     quadrant,
+            notas:         sanitizedNotas,
+            survey:        { q1, q2, q3, q4, q5 },
+            timestamp:     new Date().toISOString(),
+            _user_role:    st.rolReal,
             cruceErrado:   isCruceErrado,
             nombreFichero: nombreFichero
         };
 
-        let docRefId = "";
-        const adminFirebaseId = document.getElementById('evalFirebaseId').value;
-        if (st.isAdmin && adminFirebaseId) {
-            docRefId = adminFirebaseId;
-        } else {
-            const safeRepName = actualRepName.replace(/[^a-zA-Z0-9_-]/g, "");
-            const cleanMarket = selectedMarket.replace(/[^a-zA-Z0-9_-]/g, "");
-            docRefId = `${safeRepName}_${docId}_${cleanMarket}`;
-        }
-
-        // --- Online vs Offline ---
-        if (navigator.onLine && window.firebaseAuth && window.firebaseAuth.currentUser) {
-            await window.firebaseSetDoc(
-                window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', docRefId),
-                payload
-            );
-            ui.showToast("Evaluación guardada en Firebase correctamente.");
-        } else {
-            st.OFFLINE_QUEUE.push({ docRefId, payload });
-            await localforage.setItem('OFFLINE_QUEUE', st.OFFLINE_QUEUE);
-            ui.showToast("Sin conexión: Evaluación guardada localmente. Se sincronizará al tener internet.");
-        }
+        payload = await window.App.evaluation.guardarOEncolar(payload, "Evaluación guardada correctamente.");
 
         // --- Actualizar memoria local ---
         if (!st.isAdmin) {
             if (!st.EVALUACIONES_VISITADOR[docId]) st.EVALUACIONES_VISITADOR[docId] = {};
             st.EVALUACIONES_VISITADOR[docId][selectedMarket] = payload;
+            window.App.evaluation.marcarCambio();
 
             // Propagar Q1 y Q5 a otros mercados ya evaluados del mismo médico
             for (const mkt in st.EVALUACIONES_VISITADOR[docId]) {
-                if (mkt !== selectedMarket && st.EVALUACIONES_VISITADOR[docId][mkt].survey) {
-                    st.EVALUACIONES_VISITADOR[docId][mkt].survey.q1 = q1;
-                    st.EVALUACIONES_VISITADOR[docId][mkt].survey.q5 = q5;
-
-                    const otherRefId = `${actualRepName.replace(/[^a-zA-Z0-9_-]/g, "")}_${docId}_${mkt.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-                    if (navigator.onLine && window.firebaseAuth) {
-                        window.firebaseSetDoc(
-                            window.firebaseDoc(window.firebaseDb, 'artifacts', appId, 'public', 'data', 'evaluaciones_matriz', otherRefId),
-                            st.EVALUACIONES_VISITADOR[docId][mkt]
-                        );
-                    } else {
-                        st.OFFLINE_QUEUE.push({ docRefId: otherRefId, payload: st.EVALUACIONES_VISITADOR[docId][mkt] });
-                        localforage.setItem('OFFLINE_QUEUE', st.OFFLINE_QUEUE);
-                    }
+                const otra = st.EVALUACIONES_VISITADOR[docId][mkt];
+                if (mkt !== selectedMarket && otra.survey && (otra.survey.q1 !== q1 || otra.survey.q5 !== q5)) {
+                    otra.survey.q1 = q1;
+                    otra.survey.q5 = q5;
+                    window.App.evaluation.guardarOEncolar(otra, null)
+                        .then(guardada => { st.EVALUACIONES_VISITADOR[docId][mkt] = guardada; })
+                        .catch(e => console.error('[SegmentApp] No se pudo actualizar otro mercado:', e));
                 }
+            }
+            if (window.localforage) {
+                const todas = Object.values(st.EVALUACIONES_VISITADOR).flatMap(m => Object.values(m));
+                localforage.setItem(`VISITADOR_EVALS_${st.visitadorId || st.currentVisitadorName}`, todas);
             }
         }
    if (st.isAdmin) {
@@ -530,18 +367,11 @@ const sanitizedNotas = notas.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             window.App.evaluation.closeEvalModal();
             // En lugar de re-leer todo desde Firestore (lecturas costosas),
             // actualizamos el array en memoria con el payload local
-            const existingIdx = st.ALL_EVALUATIONS.findIndex(e => e.firebaseId === docRefId);
-            const newEvalInMemory = { firebaseId: docRefId, ...payload };
-            if (existingIdx >= 0) {
-                st.ALL_EVALUATIONS[existingIdx] = newEvalInMemory;
-            } else {
-                st.ALL_EVALUATIONS.push(newEvalInMemory);
-            }
-            // Actualizar también el cache local de evaluaciones admin
-            if (window.localforage) {
-                localforage.setItem('ADMIN_EVALS_CACHE', st.ALL_EVALUATIONS);
-                localforage.setItem('ADMIN_EVALS_LAST_SYNC', new Date().toISOString());
-            }
+            const existingIdx = st.ALL_EVALUATIONS.findIndex(e => e.firebaseId === adminEvalId);
+            if (existingIdx >= 0) st.ALL_EVALUATIONS[existingIdx] = payload;
+            else st.ALL_EVALUATIONS.push(payload);
+            window.App.evaluation.marcarCambio();
+            if (window.localforage) localforage.setItem('EQUIPO_EVALS_CACHE', st.ALL_EVALUATIONS);
             // Re-renderizar sin tocar Firestore
             if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
             window.App.filters.resetPaginationAndRender();
@@ -562,11 +392,35 @@ const sanitizedNotas = notas.replace(/</g, "&lt;").replace(/>/g, "&gt;");
       
     } catch (e) {
         console.error('[SegmentApp] Error al guardar evaluación:', e);
-        ui.showToast("Hubo un error al guardar. Revisa tu conexión.");
+        ui.showToast(e && /solo consulta|visitador de esta/i.test(e.message) ? e.message : "Hubo un error al guardar. Intenta de nuevo.");
 } finally {
         btnSave.disabled = false;
         // Pedido 2: respetar el modo Cruce Errado al restaurar el botón
         window.App.evaluation.updateSaveButtonLabel();
+    }
+};
+
+/* ============================================================
+   GUARDAR EN SUPABASE, O EN LA COLA SI NO HAY CONEXIÓN
+   Devuelve la evaluación (con su id si ya quedó en el servidor).
+============================================================ */
+window.App.evaluation.guardarOEncolar = async function(evaluacion, mensajeOk) {
+    const st = window.App.state;
+    const ui = window.App.ui;
+    const encolar = async () => {
+        await window.App.offline.encolar(evaluacion);
+        if (mensajeOk) ui.showToast("Sin conexión: evaluación guardada en este dispositivo. Se subirá sola al volver internet.");
+        return evaluacion;
+    };
+    if (!navigator.onLine) return encolar();
+    try {
+        const guardada = await window.App.sb.guardarEvaluacion(evaluacion);
+        if (mensajeOk) ui.showToast(mensajeOk);
+        return guardada;
+    } catch (e) {
+        // Falla de red: no se pierde, queda en la cola
+        if (/failed to fetch|network|load failed/i.test(String(e && (e.original && e.original.message || e.message)))) return encolar();
+        throw e;
     }
 };
 
@@ -590,6 +444,8 @@ window.App.evaluation.updateVisitadorDashboard = function(totalFichero, totalCru
     const barEval = document.getElementById('visBarEvaluados');
     if (barEval) barEval.style.width = `${pctEvaluados}%`;
     ui.safeSetText('visPctEvaluados', `${ui.formatNumber(pctEvaluados, 0)}%`);
+    const anillo = document.getElementById('anilloProgreso');
+    if (anillo) anillo.style.setProperty('--p', Math.min(100, pctEvaluados).toFixed(1));
 };
 
 /* ============================================================
@@ -617,6 +473,14 @@ window.App.evaluation.continueOrCloseAfterSave = function() {
 
     // Capturar el mercado recién guardado ANTES de cambiar el dropdown
     const savedMarket = marketSelect.value;
+
+    // "Guardar y siguiente": pasar directo al próximo médico pendiente
+    if (st._irAlSiguiente) {
+        st._irAlSiguiente = false;
+        window.App.evaluation.closeEvalModal();
+        if (window.App.ux) window.App.ux.abrirSiguientePendiente(document.getElementById('evalDocId').value, savedMarket);
+        return;
+    }
 
     const docId = document.getElementById('evalDocId').value;
     const allMarkets = st.FILTER_OPTIONS['Market'] || [];
@@ -647,6 +511,7 @@ window.App.evaluation.continueOrCloseAfterSave = function() {
     // Auto-seleccionar el siguiente mercado pendiente y cargar form
     marketSelect.value = nextMarket;
     window.App.evaluation.loadEvalForMarket();
+    if (window.App.ux) window.App.ux.alAbrirEvaluacion(normalizeKey(docId));
 
     // Mostrar banner prominente
     showSaveBanner({
@@ -656,9 +521,10 @@ window.App.evaluation.continueOrCloseAfterSave = function() {
         allDone: false
     });
 
-    // Resaltar visualmente el dropdown
-    marketSelect.classList.add('ring-2', 'ring-emerald-400');
-    setTimeout(() => marketSelect.classList.remove('ring-2', 'ring-emerald-400'), 2000);
+    // Resaltar visualmente el mercado que sigue
+    const chipsMercado = document.getElementById('evalMarketSelect_chips') || marketSelect;
+    chipsMercado.classList.add('ring-2', 'ring-emerald-400', 'rounded-xl');
+    setTimeout(() => chipsMercado.classList.remove('ring-2', 'ring-emerald-400', 'rounded-xl'), 2000);
 };
 
 /* ------------------------------------------------------------
@@ -686,18 +552,18 @@ function showSaveBanner({ savedMarket, nextMarket, pendingCount, allDone }) {
                 z-index: 50;
                 margin: 0 0 16px 0;
                 padding: 14px 18px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                color: white;
-                border-radius: 10px;
-                box-shadow: 0 10px 28px rgba(16, 185, 129, 0.38);
+                background: #146c3c;
+                color: #ffffff;
+                border-radius: 16px;
+                box-shadow: 0 1px 3px 0 rgba(0,0,0,.15), 0 4px 8px 3px rgba(0,0,0,.10);
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 12px;
-                animation: saveBannerIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+                animation: saveBannerIn var(--md-motion-long) var(--md-ease-emphasized);
             }
             #saveSuccessBanner.is-hiding {
-                animation: saveBannerOut 0.3s ease-in forwards;
+                animation: saveBannerOut var(--md-motion-medium) var(--md-ease-exit) forwards;
             }
             #saveSuccessBanner .sb-text  { flex: 1; line-height: 1.45; }
             #saveSuccessBanner .sb-saved { font-size: 15px; font-weight: 700; letter-spacing: 0.2px; }
@@ -707,11 +573,11 @@ function showSaveBanner({ savedMarket, nextMarket, pendingCount, allDone }) {
                 border: 1px solid rgba(255,255,255,0.45);
                 color: white;
                 padding: 7px 16px;
-                border-radius: 7px;
+                border-radius: 9999px;
                 font-size: 13px;
                 font-weight: 600;
                 cursor: pointer;
-                transition: background 0.15s, transform 0.1s;
+                transition: background var(--md-motion-short) var(--md-ease-standard), transform var(--md-motion-short) var(--md-ease-standard);
                 white-space: nowrap;
             }
             #saveSuccessBanner .sb-btn:hover  { background: rgba(255,255,255,0.34); }
@@ -848,14 +714,12 @@ window.App.evaluation.updateSaveButtonLabel = function() {
     const btnSave = document.getElementById('btnSaveEval');
     if (!btnSave) return;
     const isCruceErrado = document.getElementById('evalModal').dataset.cruceErrado === 'true';
-    if (isCruceErrado) {
-        btnSave.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-        btnSave.classList.add('bg-rose-600', 'hover:bg-rose-700');
-        btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">block</span> Confirmar Cruce Errado';
-    } else {
-        btnSave.classList.remove('bg-rose-600', 'hover:bg-rose-700');
-        btnSave.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-        btnSave.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación';
-    }
+    btnSave.classList.toggle('bg-rose-600', isCruceErrado);
+    btnSave.classList.toggle('text-white', isCruceErrado);
+    btnSave.classList.toggle('bg-blue-50', !isCruceErrado);
+    btnSave.classList.toggle('text-blue-800', !isCruceErrado);
+    btnSave.innerHTML = isCruceErrado
+        ? '<span class="material-symbols-outlined text-[18px]">block</span> Confirmar Cruce Errado'
+        : '<span class="material-symbols-outlined text-[18px]">save</span> Guardar';
 };
 console.log('[SegmentApp] evaluation.js cargado.');

@@ -1,0 +1,19 @@
+<!-- Supabase → Authentication → Emails → Templates → "Reset Password"
+     Asunto sugerido: SegmentApp · Crea tu clave
+     (Sirve para "¿Olvidaste tu clave?" y para el correo de bienvenida) -->
+<div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #1b1b1f;">
+  <img src="{{ .SiteURL }}/img/icono-192.png" alt="SegmentApp" width="56" height="56" style="display:block; margin-bottom: 16px;">
+  <h2 style="margin: 0 0 12px; font-size: 22px;">Crea tu clave de SegmentApp</h2>
+  <p style="font-size: 15px; line-height: 1.5; margin: 0 0 20px;">
+    Hola. Para entrar a <b>SegmentApp</b> (La Santé) con el correo <b>{{ .Email }}</b>, toca el botón y escribe la clave que quieras usar (mínimo 8 caracteres).
+  </p>
+  <p style="margin: 0 0 24px;">
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block; background:#0b57d0; color:#ffffff; text-decoration:none; font-weight:bold; padding: 12px 24px; border-radius: 999px;">Crear mi clave</a>
+  </p>
+  <p style="font-size: 13px; line-height: 1.5; color: #44474e; margin: 0 0 8px;">
+    El enlace vence en 1 hora. Si vence, abre la app y toca "¿Olvidaste tu clave?" para recibir otro.
+  </p>
+  <p style="font-size: 13px; line-height: 1.5; color: #44474e; margin: 0;">
+    Si no pediste este correo, puedes ignorarlo: tu cuenta sigue segura.
+  </p>
+</div>

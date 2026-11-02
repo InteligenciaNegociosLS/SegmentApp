@@ -1,0 +1,20 @@
+{
+  "name": "SegmentApp · La Santé",
+  "short_name": "SegmentApp",
+  "description": "Matriz estratégica de médicos de La Santé",
+  "lang": "es-VE",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8f9fc",
+  "theme_color": "#0b57d0",
+  "categories": ["business", "medical", "productivity"],
+  "icons": [
+    { "src": "img/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "img/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "img/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

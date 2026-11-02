@@ -3,204 +3,214 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <meta name="theme-color" content="#f8fafc">
+    <meta name="theme-color" content="#f8f9fc" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f1114" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SegmentApp v29.1 (Seguridad) - Dev. Hernando Sanoja</title>
+    <title>SegmentApp · La Santé</title>
 
-    <!-- M3 Expressive Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230A56D1'><path d='M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z'/></svg>">
+    <!-- Logo (el mismo en la pestaña del navegador y dentro de la app) -->
+    <link rel="icon" href="img/logo.svg" type="image/svg+xml">
+    <!-- App instalable y sin internet (Fase 8) -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="SegmentApp">
 
-    <!-- Tailwind + Fuentes + Material Symbols -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <!-- Entorno y manejo de errores (deben ir primero) -->
+    <script src="js/env.js"></script>
+    <script src="js/entorno.js"></script>
+    <script src="js/errores.js"></script>
+
+    <!-- Estilos (Material 3 Expressive, generados con "npm run css") y fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,75..125,300..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
+    <link rel="stylesheet" href="css/app.css">
 
     <!-- Core Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
-    <!-- Estilos propios -->
-    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="text-slate-800">
 
-<!-- Top Navigation M3 -->
-<nav class="bg-white text-slate-800 shadow-sm fixed w-full z-50 no-print border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="bg-blue-50 text-blue-600 p-2 rounded-xl flex items-center justify-center relative">
-                <span class="material-symbols-outlined text-2xl">apps</span>
+<!-- Pantalla de inicio (se oculta sola cuando la app está lista) -->
+<div id="splash" class="no-print" aria-hidden="true">
+    <svg class="splash-logo" viewBox="0 0 48 48">
+        <rect class="sp" style="--i:0" x="3" y="33" width="12" height="12" rx="3.5" fill="#d3e3fd"/>
+        <rect class="sp" style="--i:1" x="3" y="18" width="12" height="12" rx="3.5" fill="#a8c7fa"/>
+        <rect class="sp" style="--i:1" x="18" y="33" width="12" height="12" rx="3.5" fill="#a8c7fa"/>
+        <rect class="sp" style="--i:2" x="3" y="3" width="12" height="12" rx="3.5" fill="#4c8df6"/>
+        <rect class="sp" style="--i:2" x="18" y="18" width="12" height="12" rx="3.5" fill="#4c8df6"/>
+        <rect class="sp" style="--i:2" x="33" y="33" width="12" height="12" rx="3.5" fill="#4c8df6"/>
+        <rect class="sp" style="--i:3" x="18" y="3" width="12" height="12" rx="3.5" fill="#0b57d0"/>
+        <rect class="sp" style="--i:3" x="33" y="18" width="12" height="12" rx="3.5" fill="#0b57d0"/>
+        <circle class="sp sp-meta" style="--i:5" cx="39" cy="9" r="6.5" fill="#1e9e5a"/>
+    </svg>
+    <div class="splash-nombre">SegmentApp</div>
+    <div class="splash-lema">Matriz estratégica · La Santé</div>
+    <div class="splash-barra"><span></span></div>
+</div>
+
+<!-- Barra superior -->
+<header id="barraSuperior" class="no-print fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+        <a href="#" class="flex items-center gap-3 min-w-0 rounded-2xl pr-2" onclick="App.ux.irA('inicio'); return false;" aria-label="SegmentApp: ir al inicio">
+            <img src="img/logo.svg" alt="" class="w-9 h-9 shrink-0">
+            <div class="min-w-0">
+                <h1 class="font-display font-bold text-lg sm:text-xl leading-tight text-slate-800 tracking-tight truncate">SegmentApp</h1>
+                <span class="hidden sm:block text-[11px] text-slate-500 font-medium">Matriz estratégica · La Santé</span>
             </div>
-            <div class="flex flex-col justify-center">
-                <h1 class="font-display font-bold text-xl leading-tight text-slate-800 tracking-tight">SegmentApp</h1>
-                <span class="text-[10px] text-slate-500 font-medium tracking-wide">Segmentacion Estrategica • v29.1 (Seguridad) • Dev. Hernando Sanoja</span>
-            </div>
-        </div>
-        <div class="flex items-center gap-2 md:gap-4">
-            <div id="offlineIndicator" class="hidden bg-rose-50 border border-rose-200 text-rose-600 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm items-center gap-1 animate-pulse"><span class="material-symbols-outlined text-[16px]">wifi_off</span> <span class="hidden sm:inline">Sin Conexión</span></div>
-            <div id="navUserInfo" class="hidden flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full shadow-sm">
-                <span class="material-symbols-outlined text-indigo-600 text-[18px]">account_circle</span>
-                <span id="navUserName" class="text-xs font-bold text-indigo-800 hidden sm:inline">Visitador</span>
-                <div class="w-px h-4 bg-indigo-200 mx-1"></div>
-                <button onclick="logoutSession()" class="text-indigo-400 hover:text-rose-500 transition" title="Cerrar Sesión">
-                    <span class="material-symbols-outlined text-[16px]">logout</span>
-                </button>
+        </a>
+        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div id="offlineIndicator" class="hidden bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-full text-xs font-bold items-center gap-1"><span class="material-symbols-outlined text-[16px]">wifi_off</span> <span class="hidden sm:inline">Sin conexión</span></div>
+            <button id="chipPendientes" class="hidden bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-xs font-bold items-center gap-1" onclick="App.offline.subirAhora()"><span class="material-symbols-outlined text-[16px]">cloud_upload</span> <span id="lblPendientes">0</span><span class="hidden sm:inline">por subir</span></button>
+            <button id="btnVersionDatos" class="hidden flex items-center gap-1 text-slate-600 border border-slate-200 px-3 py-2 rounded-full text-xs font-bold" onclick="abrirVersiones()" title="Versión de datos">
+                <span class="material-symbols-outlined text-[18px]">history</span> <span id="lblVersionDatos" class="hidden lg:inline whitespace-nowrap">Datos: Hoy</span>
+            </button>
+            <button id="btnUploadData" class="hidden bg-blue-600 text-white px-3 sm:px-5 py-2.5 rounded-full text-sm font-bold shadow-sm items-center gap-2" onclick="abrirCargaDatos()" title="Cargar datos">
+                <span class="material-symbols-outlined text-[18px]">upload</span> <span class="hidden lg:inline whitespace-nowrap">Cargar datos</span>
+            </button>
+            <div id="navUserInfo" class="hidden flex items-center gap-2 bg-blue-50 text-blue-800 pl-2 pr-3 py-1.5 rounded-full">
+                <span class="material-symbols-outlined text-[20px]">account_circle</span>
+                <span id="navUserName" class="text-xs font-bold hidden sm:inline">Visitador</span>
             </div>
             <div id="btnLoginNavContainer" class="flex items-center">
-                <button class="flex items-center gap-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full text-sm font-bold transition shadow-sm border border-indigo-100" onclick="openLoginModal()" title="Ingresar">
+                <button class="flex items-center gap-2 text-blue-700 bg-blue-50 px-4 py-2 rounded-full text-sm font-bold border border-blue-100" onclick="openLoginModal()" title="Ingresar">
                     <span class="material-symbols-outlined text-[18px]">login</span> <span class="hidden sm:inline">Ingresar</span>
                 </button>
             </div>
-            <button class="hidden md:flex items-center gap-1 text-slate-500 hover:text-slate-800 text-sm font-semibold transition p-2" onclick="showConfirmClearModal()">
-                <span class="material-symbols-outlined text-lg">restart_alt</span> <span class="hidden lg:inline">Recargar</span>
+            <button id="btnAvisos" class="hidden relative w-10 h-10 rounded-full items-center justify-center text-slate-700" onclick="App.avisos.abrir()" title="Avisos" aria-label="Avisos" aria-haspopup="dialog">
+                <span class="material-symbols-outlined">notifications</span>
+                <span id="avisosNumero" class="hidden absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold items-center justify-center">0</span>
             </button>
-            <div class="h-6 w-px bg-slate-200 hidden md:block"></div>
-            <button id="btnProductsNav" class="text-slate-500 hover:text-slate-800 flex items-center gap-1 text-sm font-semibold transition p-2" onclick="openProductModal()">
-                <span class="material-symbols-outlined text-lg">medication</span> <span class="hidden sm:inline">Productos</span>
-            </button>
-            <button id="btnUploadData" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-md transition items-center gap-2" onclick="document.getElementById('uploadModal').classList.remove('hidden')">
-                <span class="material-symbols-outlined text-sm">upload</span> <span class="hidden sm:inline">Cargar Datos</span>
+            <button id="btnMas" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700" onclick="App.ux.abrirMas()" title="Más opciones" aria-haspopup="menu" aria-expanded="false">
+                <span class="material-symbols-outlined">more_vert</span>
             </button>
         </div>
     </div>
-</nav>
-<div id="toast">Notificación</div>
+</header>
+<div id="toast" role="status" aria-live="polite">Notificación</div>
 
-<!-- Main Content -->
-<main class="max-w-7xl mx-auto px-4 pt-24 pb-12">
-
-    <div id="restoringSession" class="hidden text-center py-12">
-        <span class="material-symbols-outlined text-5xl text-blue-600 animate-spin-reverse">sync</span>
-        <p class="text-slate-600 text-sm mt-3 font-medium font-display" id="loadingText">Iniciando sistema...</p>
-        <div class="w-64 max-w-full mx-auto mt-4 bg-slate-200 rounded-full h-2 overflow-hidden hidden shadow-inner" id="loadingBarContainer">
-            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" id="loadingBarFill" style="width: 0%"></div>
-        </div>
-        <p class="text-[10px] text-slate-400 mt-1 font-mono font-bold hidden tracking-widest uppercase" id="loadingBytes">0 MB / 0 MB</p>
-    </div>
-
-    <!-- Analysis Tools Bar (Admin Mode) -->
-    <div class="bg-white border border-slate-200 p-5 rounded-3xl mb-6 flex flex-wrap gap-8 items-start shadow-sm no-print animate-fade-in hidden" id="analysisTools">
-        <div class="flex flex-col gap-4 w-full">
-            <div class="flex flex-wrap items-center gap-8 border-b border-slate-100 pb-4">
-                <div class="flex items-center gap-2 text-slate-600 mr-2 border-r border-slate-200 pr-6 h-full">
-                    <span class="material-symbols-outlined text-2xl">tune</span>
-                    <span class="text-xs font-bold uppercase tracking-widest">Ajustes<br><span class="text-[9px] text-slate-400 font-normal">Admin Mode</span></span>
-                </div>
-                <div class="flex flex-col gap-2 w-full sm:w-64">
-                    <div class="flex justify-between text-[10px] font-bold text-slate-500 uppercase"><span>Adopción (Fidelidad)</span></div>
-                    <div class="flex justify-between text-[10px] font-bold text-slate-400"><span>Bajo/Medio: <span id="lblThLow" class="text-blue-600">33%</span></span></div>
-                    <input type="range" min="10" max="50" value="33" id="sliderLow" oninput="updateThresholds()">
-                    <div class="flex justify-between text-[10px] font-bold text-slate-400 mt-1"><span>Medio/Alto: <span id="lblThHigh" class="text-green-600">66%</span></span></div>
-                    <input type="range" min="51" max="90" value="66" id="sliderHigh" oninput="updateThresholds()">
-                </div>
-                <div class="h-20 w-px bg-slate-200 hidden sm:block"></div>
-                <div class="flex flex-col gap-2 w-full sm:w-64">
-                     <div class="flex justify-between text-[10px] font-bold text-slate-500 uppercase"><span>Potencialidad (Volumen)</span></div>
-                    <div class="flex justify-between text-[10px] font-bold text-slate-400"><span>Alto/Medio (A/B): <span id="lblPotLow" class="text-purple-600">33%</span></span></div>
-                    <input type="range" min="10" max="50" value="33" id="sliderPotLow" oninput="updateThresholds()">
-                    <div class="flex justify-between text-[10px] font-bold text-slate-400 mt-1"><span>Medio/Bajo (B/C): <span id="lblPotHigh" class="text-slate-600">66%</span></span></div>
-                    <input type="range" min="51" max="90" value="66" id="sliderPotHigh" oninput="updateThresholds()">
-                </div>
-                <div class="h-20 w-px bg-slate-200 hidden lg:block"></div>
-                <div class="flex flex-wrap sm:flex-nowrap justify-center gap-3 w-full sm:w-auto h-full mt-2 lg:mt-0">
-                    <button onclick="openAccessManager()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
-                        <span class="material-symbols-outlined text-[20px]">vpn_key</span> Claves
-                    </button>
-                    <button onclick="openSurveyConfigModal()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 h-full whitespace-nowrap">
-                        <span class="material-symbols-outlined text-[20px]">tune</span> Ponderación
-                    </button>
-                </div>
-            </div>
-            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-indigo-500 bg-white p-2 rounded-full shadow-sm text-xl">insights</span>
-                    <div>
-                        <h4 class="text-xs font-bold text-indigo-900 uppercase tracking-widest">Simulador de Impacto</h4>
-                        <p class="text-[11px] text-indigo-700">Si lograras llevar a todos tus médicos de <b class="bg-indigo-100 px-1 rounded">Media Adopción (B)</b> a <b class="bg-indigo-100 px-1 rounded">Alta Adopción (A)</b>:</p>
-                    </div>
-                </div>
-                <div class="bg-white px-6 py-2 rounded-xl border border-indigo-200 shadow-sm flex flex-col items-end">
-                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ganancia Proyectada</span>
-                    <span class="text-lg font-display font-black text-green-600" id="simImpactRx">+0 Rx</span>
-                </div>
-            </div>
+<!-- Aviso de "Ver como…" (solo administrador) -->
+<div id="bannerVerComo" class="hidden fixed top-16 inset-x-0 z-[45] no-print">
+    <div class="max-w-3xl mx-auto mt-2 px-3">
+        <div class="bg-purple-700 text-white rounded-full shadow-lg pl-4 pr-1.5 py-1.5 flex items-center gap-3 text-sm">
+            <span class="material-symbols-outlined text-[20px]">visibility</span>
+            <span class="flex-1 min-w-0 truncate">Viendo la app como <b id="bannerVerComoNombre"></b> · solo consulta</span>
+            <button class="h-9 px-4 rounded-full bg-white text-purple-800 font-bold" onclick="App.ajustes.salirVerComo()">Salir</button>
         </div>
     </div>
+</div>
 
-    <!-- Dashboard del Administrador (Gestión de Equipo) -->
-    <div id="adminDashboard" class="hidden mb-8 space-y-6 animate-fade-in no-print">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
-            <h3 class="font-display font-bold text-slate-800 text-xl flex flex-wrap items-center gap-2">
-                <span class="material-symbols-outlined text-indigo-600 bg-indigo-100 p-1.5 rounded-lg text-[22px]">admin_panel_settings</span>
-                Panel de Control del Equipo
-            </h3>
-    <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="openReportsModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-700 px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-[18px]">monitoring</span> Reportes Avanzados
-                </button>
-                <button onclick="exportAdminEvaluationsExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-[18px]">download_for_offline</span> Descargar
-                </button>
-            </div>
+<!-- Instalar en iPhone / iPad (Safari no tiene botón automático) -->
+<div id="instalarIos" class="hidden fixed inset-0 z-[95] hoja-fondo" onclick="if (event.target === this) this.classList.add('hidden')">
+    <div class="hoja p-6" role="dialog" aria-modal="true" aria-labelledby="instalarIosTitulo">
+        <div class="hoja-asa"></div>
+        <h3 id="instalarIosTitulo" class="text-lg font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-700">install_mobile</span> Instalar SegmentApp</h3>
+        <p class="text-sm text-slate-600 mt-2">Así la abres desde la pantalla de inicio, como cualquier app, y funciona sin internet.</p>
+        <ol class="mt-4 space-y-3 text-sm text-slate-800">
+            <li class="flex gap-3 items-start"><span class="w-7 h-7 rounded-full bg-blue-50 text-blue-800 font-bold grid place-items-center shrink-0">1</span><span>Abre esta página en <b>Safari</b> y toca el botón <b>Compartir</b> <span class="material-symbols-outlined text-[18px] align-middle">ios_share</span>.</span></li>
+            <li class="flex gap-3 items-start"><span class="w-7 h-7 rounded-full bg-blue-50 text-blue-800 font-bold grid place-items-center shrink-0">2</span><span>Elige <b>"Agregar a inicio"</b> <span class="material-symbols-outlined text-[18px] align-middle">add_box</span>.</span></li>
+            <li class="flex gap-3 items-start"><span class="w-7 h-7 rounded-full bg-blue-50 text-blue-800 font-bold grid place-items-center shrink-0">3</span><span>Toca <b>"Agregar"</b>. El ícono de SegmentApp aparecerá en tu pantalla.</span></li>
+        </ol>
+        <button class="mt-6 w-full h-11 rounded-full bg-blue-700 text-white text-sm font-bold" onclick="document.getElementById('instalarIos').classList.add('hidden')">Entendido</button>
+    </div>
+</div>
+
+<!-- Avisos (campanita) para GD, Gerente Nacional y administrador · Fase 9C -->
+<div id="panelAvisos" class="hidden fixed inset-0 z-[90] hoja-fondo" onclick="if (event.target === this) App.avisos.cerrar()">
+    <section class="hoja hoja-menu !max-h-[85vh] md:!w-[400px] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="avisosTitulo">
+        <div class="hoja-asa"></div>
+        <header class="px-5 pt-2 pb-3 border-b border-slate-200 flex items-center justify-between gap-2">
+            <div><h2 id="avisosTitulo" class="text-base font-bold text-slate-800">Avisos</h2>
+                <p class="text-xs text-slate-500" id="avisosSubtitulo">Lo que pasó con tu equipo</p></div>
+            <button class="h-9 px-3 rounded-full text-xs font-bold text-blue-700" onclick="App.avisos.marcarLeidos()" id="btnAvisosLeidos">Marcar todo como leído</button>
+        </header>
+        <ul id="avisosLista" class="overflow-y-auto flex-1 py-1"></ul>
+    </section>
+</div>
+
+<!-- Menú "Más" (en el teléfono sube desde abajo) -->
+<div id="menuMas" class="hidden fixed inset-0 z-[90] hoja-fondo" onclick="if (event.target === this) App.ux.cerrarMas()">
+    <nav class="hoja hoja-menu" role="menu" aria-label="Más opciones">
+        <div class="hoja-asa"></div>
+        <div class="px-5 pt-2 pb-3 border-b border-slate-200">
+            <div class="text-sm font-bold text-slate-800" id="masNombre">SegmentApp</div>
+            <div class="text-xs text-slate-500" id="masRol"></div>
         </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white rounded-[2rem] p-6 md:p-8 border border-slate-200 shadow-sm flex flex-col">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                    <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2 uppercase tracking-widest">
-                        <span class="material-symbols-outlined text-blue-500">checklist</span> Progreso de Evaluación
-                    </h4>
-                    <select id="adminManagerFilter" class="text-xs border border-slate-300 rounded-lg px-2 py-1 outline-none bg-slate-50 text-slate-700 font-bold" onchange="renderAdminDashboard()">
-                        <option value="all">Todos los Gerentes</option>
-                    </select>
-                </div>
-                <div id="managerStatsCards" class="grid grid-cols-2 gap-4 mb-4">
-                   <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 flex flex-col justify-center">
-                       <span class="text-[9px] font-bold text-indigo-500 uppercase">Médicos Evaluados vs Fichados</span>
-                       <span class="text-2xl font-black text-indigo-700" id="mgrDocsStat">0 / 0</span>
-                   </div>
-                   <div class="bg-purple-50 p-4 rounded-2xl border border-purple-100 flex flex-col justify-center">
-                       <span class="text-[9px] font-bold text-purple-500 uppercase">Total Encuestas Realizadas</span>
-                       <span class="text-2xl font-black text-purple-700" id="mgrSurveysStat">0</span>
-                   </div>
-                </div>
-                <div class="flex-1 overflow-y-auto max-h-[350px] pr-2 space-y-2" id="adminProgressTable">
-                    <div class="p-4 text-center text-xs text-slate-500">Cargando métricas de equipo...</div>
-                </div>
+        <div class="py-2">
+            <button class="item-menu hidden text-blue-800" id="btnActualizarApp" role="menuitem" onclick="App.ux.cerrarMas(); App.offline.actualizarApp()"><span class="material-symbols-outlined">system_update</span> Actualizar la app (hay versión nueva)</button>
+            <button class="item-menu hidden" id="btnInstalarApp" role="menuitem" onclick="App.ux.cerrarMas(); App.offline.instalar()"><span class="material-symbols-outlined">install_mobile</span> Instalar la app en este dispositivo</button>
+            <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); abrirVersiones()"><span class="material-symbols-outlined">history</span> Versión de datos</button>
+            <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); App.ux.exportar('excel')"><span class="material-symbols-outlined">table_view</span> Exportar a Excel</button>
+            <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); App.ux.exportar('pdf')"><span class="material-symbols-outlined">picture_as_pdf</span> Exportar a PDF</button>
+            <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); App.ux.iniciarGuia(true)"><span class="material-symbols-outlined">tour</span> Guía rápida</button>
+            <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); App.ux.abrirAyudaMatriz()"><span class="material-symbols-outlined">help</span> Cómo leer la matriz</button>
+            <button class="item-menu" role="menuitem" onclick="App.ux.cerrarMas(); showConfirmClearModal()"><span class="material-symbols-outlined">restart_alt</span> Volver a descargar los datos</button>
+        </div>
+        <div class="py-2 border-t border-slate-200">
+            <button class="item-menu text-rose-700 con-sesion hidden" role="menuitem" onclick="App.ux.cerrarMas(); logoutSession()"><span class="material-symbols-outlined">logout</span> Cerrar sesión</button>
+            <div class="px-5 py-3 text-[11px] text-slate-500">SegmentApp v31 · Dev. Hernando Sanoja</div>
+        </div>
+    </nav>
+</div>
+
+<!-- Contenido -->
+<main id="inicio" class="max-w-7xl mx-auto px-3 sm:px-4 pt-20 pb-28 md:pb-12">
+
+    <!-- Cargando: silueta de la pantalla mientras llegan los datos -->
+    <div id="restoringSession" class="hidden" aria-busy="true">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <div class="esqueleto h-24"></div><div class="esqueleto h-24"></div><div class="esqueleto h-24 hidden lg:block"></div><div class="esqueleto h-24 hidden lg:block"></div>
+        </div>
+        <div class="esqueleto h-14 mb-4"></div>
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <div class="esqueleto aspect-square sm:aspect-[4/3]"></div><div class="esqueleto aspect-square sm:aspect-[4/3]"></div><div class="esqueleto aspect-square sm:aspect-[4/3]"></div>
+            <div class="esqueleto aspect-square sm:aspect-[4/3]"></div><div class="esqueleto aspect-square sm:aspect-[4/3]"></div><div class="esqueleto aspect-square sm:aspect-[4/3]"></div>
+            <div class="esqueleto aspect-square sm:aspect-[4/3]"></div><div class="esqueleto aspect-square sm:aspect-[4/3]"></div><div class="esqueleto aspect-square sm:aspect-[4/3]"></div>
+        </div>
+        <div class="text-center">
+            <p class="text-slate-600 text-sm font-medium" id="loadingText">Iniciando…</p>
+            <div class="w-64 max-w-full mx-auto mt-3 bg-slate-200 rounded-full h-1.5 overflow-hidden hidden" id="loadingBarContainer">
+                <div class="bg-blue-600 h-1.5 rounded-full transition-all" id="loadingBarFill" style="width: 0%"></div>
             </div>
-            <div class="bg-white rounded-[2rem] p-6 md:p-8 border border-rose-200 shadow-sm relative flex flex-col">
-                <div class="flex items-center justify-between mb-4 border-b border-rose-100 pb-3">
-                    <h4 class="text-sm font-bold text-rose-800 flex items-center gap-2 uppercase tracking-widest">
-                        <span class="material-symbols-outlined text-rose-500">warning</span> Alertas de Discrepancia
-                    </h4>
-                    <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200" id="discCountBadge">0</span>
-                </div>
-                <p class="text-[10px] text-slate-500 mb-3 bg-rose-50 p-2 rounded-lg border border-rose-100">Muestra médicos con un choque crítico entre la categórica de potencialidad Recetas (Rx) vs la Evaluación del Asesor (Ej: Rx Bajo = C vs Subj Alto = A).</p>
-                <div class="flex-1 overflow-y-auto max-h-[350px] pr-2" id="adminDiscrepancyTable"></div>
-            </div>
+            <p class="text-[11px] text-slate-500 mt-1 font-mono hidden" id="loadingBytes">0 MB / 0 MB</p>
         </div>
     </div>
 
-    <!-- Filters Bar M3 -->
-    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-8 flex flex-col gap-5 no-print animate-fade-in hidden" id="filterBar">
-        <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-100 pb-4">
-            <div class="flex items-center gap-3 text-slate-700">
-                <div class="bg-slate-100 p-2 rounded-full"><span class="material-symbols-outlined text-xl">filter_list</span></div>
-                <span class="font-display font-bold text-base tracking-wide">Panel de Filtros</span>
-                <button onclick="resetAllFilters()" class="ml-2 text-[11px] text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-full font-bold transition flex items-center gap-1 border border-rose-200">
-                    <span class="material-symbols-outlined text-[14px]">restart_alt</span> Restablecer filtros
-                </button>
-            </div>
-            <div class="w-full md:w-80 relative">
-                <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400 text-sm">search</span>
-                <input type="text" id="globalSearch" placeholder="Buscar por Nombre Médico o Matrícula..." class="w-full pl-9 pr-4 py-3 md:py-2 border border-slate-300 rounded-full text-sm focus:ring-2 focus:ring-blue-500 outline-none transition bg-slate-50 hover:bg-white" onkeyup="resetPaginationAndRender()">
-            </div>
+    <!-- Barra de búsqueda y filtros (compacta) -->
+    <section class="flex-col gap-3 mb-4 no-print animate-fade-in hidden" id="filterBar" aria-label="Búsqueda y filtros">
+        <div class="flex items-center gap-2">
+            <label class="relative flex-1 min-w-0">
+                <span class="sr-only">Buscar médico</span>
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">search</span>
+                <input type="search" id="globalSearch" placeholder="Buscar médico o matrícula" autocomplete="off" class="w-full h-12 pl-12 pr-4 rounded-full bg-slate-100 border border-transparent text-sm text-slate-800 placeholder:text-slate-500 focus:bg-white focus:border-blue-600 outline-none transition" oninput="App.ux.alBuscar()">
+            </label>
+            <button id="btnFiltros" onclick="App.ux.abrirFiltros()" class="relative h-12 px-4 rounded-full bg-blue-50 text-blue-800 text-sm font-bold flex items-center gap-2 shrink-0" aria-haspopup="dialog">
+                <span class="material-symbols-outlined">tune</span><span class="hidden sm:inline">Filtros</span>
+                <span id="contadorFiltros" class="hidden min-w-[20px] h-5 px-1.5 rounded-full bg-blue-600 text-white text-[11px] font-bold items-center justify-center">0</span>
+            </button>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div id="chipsRapidos" class="chips-fila" role="group" aria-label="Filtros rápidos"></div>
+        <div id="chipsActivos" class="hidden flex-wrap gap-2"></div>
+    </section>
+
+    <!-- Hoja de filtros -->
+    <div id="hojaFiltros" class="hidden fixed inset-0 z-[80] hoja-fondo" onclick="if (event.target === this) App.ux.cerrarFiltros()">
+        <aside class="hoja hoja-lateral" role="dialog" aria-modal="true" aria-labelledby="tituloFiltros">
+            <div class="hoja-asa"></div>
+            <div class="flex items-center justify-between px-5 py-3">
+                <h2 id="tituloFiltros" class="text-xl font-bold text-slate-800">Filtros</h2>
+                <button class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700" onclick="App.ux.cerrarFiltros()" title="Cerrar"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="px-5 pb-4 overflow-y-auto flex-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Mercados</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Market')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Market')">
                     <span id="textMarket" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelMarket">
@@ -210,7 +220,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Producto (PHQ)</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Product')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Product')">
                     <span id="textProduct" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelProduct">
@@ -220,7 +230,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Asesor Consultivo</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Rep')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Rep')">
                     <span id="textRep" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelRep">
@@ -236,7 +246,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Región</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Region')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Region')">
                     <span id="textRegion" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelRegion">
@@ -246,7 +256,7 @@
             </div>
              <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Especialidad</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Spec')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Spec')">
                     <span id="textSpec" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelSpec">
@@ -256,7 +266,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Molécula</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Molecule')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Molecule')">
                     <span id="textMolecule" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelMolecule">
@@ -266,7 +276,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Clase Terapéutica</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Class')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Class')">
                     <span id="textClass" class="truncate font-medium">Todas</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelClass">
@@ -282,7 +292,7 @@
             </div>
             <div class="relative filter-dropdown-container">
                 <div class="filter-group-label">Laboratorio</div>
-                <button class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 md:p-2.5 text-left flex justify-between items-center transition hover:border-blue-400" onclick="toggleGenericDropdown('Lab')">
+                <button class="w-full bg-white border border-slate-400 text-slate-800 text-sm rounded-lg px-3.5 py-3 text-left flex justify-between items-center transition" onclick="toggleGenericDropdown('Lab')">
                     <span id="textLab" class="truncate font-medium">Todos</span><span class="material-symbols-outlined text-sm shrink-0">arrow_drop_down</span>
                 </button>
                 <div class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-64 overflow-y-auto p-2 filter-dropdown-panel" id="PanelLab">
@@ -290,91 +300,103 @@
                     <div class="space-y-1" id="listLab"></div>
                 </div>
             </div>
-            <div class="flex gap-2 items-end justify-end col-span-1 sm:col-span-2 lg:col-span-4 xl:col-span-5 mt-2">
-                <button class="flex items-center gap-1 px-5 py-3 bg-green-50 text-green-700 hover:bg-green-100 rounded-xl text-sm font-bold transition border border-green-200 justify-center shadow-sm" onclick="showExportModal('excel')">
-                    <span class="material-symbols-outlined text-sm">table_view</span> Generar Excel
-                </button>
-                <button class="flex items-center gap-1 px-5 py-3 bg-red-50 text-red-700 hover:bg-red-100 rounded-xl text-sm font-bold transition border border-red-200 justify-center shadow-sm" onclick="showExportModal('pdf')">
-                    <span class="material-symbols-outlined text-sm">picture_as_pdf</span> Generar PDF
-                </button>
             </div>
-        </div>
+            <div class="flex items-center justify-between gap-3 px-5 py-4 border-t border-slate-200">
+                <button onclick="resetAllFilters()" class="px-4 py-2.5 rounded-full text-sm font-bold text-blue-700">Restablecer</button>
+                <button onclick="App.ux.cerrarFiltros()" class="px-6 py-3 rounded-full bg-blue-600 text-white text-sm font-bold" id="btnVerResultados">Ver resultados</button>
+            </div>
+        </aside>
     </div>
 
     <!-- Empty State M3 -->
-    <div class="flex flex-col items-center justify-center py-16 text-center" id="emptyState">
-        <div class="bg-white p-12 rounded-[2rem] shadow-sm max-w-lg w-full border border-slate-200">
+    <div class="hidden flex flex-col items-center justify-center py-16 text-center" id="emptyState">
+        <div class="bg-white p-12 rounded-3xl shadow-sm max-w-lg w-full border border-slate-200">
             <div class="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span class="material-symbols-outlined text-5xl">cloud_sync</span>
             </div>
             <h2 class="text-3xl font-display font-bold text-slate-800 mb-3">Matriz Estratégica</h2>
-            <p class="text-slate-500 mb-8 text-sm leading-relaxed">No se encontraron datos en memoria. Intenta recargar para obtenerlos del repositorio o contacta al administrador.</p>
-            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="loadRepoData()">
-                <span class="material-symbols-outlined">sync</span> Sincronizar desde Servidor
+            <p class="text-slate-500 mb-8 text-sm leading-relaxed" id="emptyStateMsg">Todavía no hay datos cargados en este dispositivo.</p>
+            <button class="w-full bg-blue-600 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="reintentarCarga()">
+                <span class="material-symbols-outlined">sync</span> Intentar de nuevo
+            </button>
+            <button id="btnCargaDesdeVacio" class="hidden w-full mt-3 bg-white text-indigo-700 border border-indigo-200 font-bold py-4 rounded-full transition shadow-sm flex items-center justify-center gap-2" onclick="abrirCargaDatos()">
+                <span class="material-symbols-outlined">upload</span> Cargar datos (administrador)
             </button>
         </div>
     </div>
 
     <!-- Login requerido (sin sesión no se muestran datos) -->
     <div class="hidden flex-col items-center justify-center py-16 text-center" id="loginRequiredState">
-        <div class="bg-white p-12 rounded-[2rem] shadow-sm max-w-lg w-full border border-slate-200 mx-auto">
+        <div class="bg-white p-12 rounded-3xl shadow-sm max-w-lg w-full border border-slate-200 mx-auto">
             <div class="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span class="material-symbols-outlined text-5xl">lock</span>
             </div>
             <h2 class="text-3xl font-display font-bold text-slate-800 mb-3">Inicia sesión</h2>
             <p class="text-slate-500 mb-8 text-sm leading-relaxed">Para ver la información ingresa con tu correo corporativo y tu clave.</p>
-            <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="openLoginModal()">
+            <button class="w-full bg-indigo-600 text-white font-bold py-4 rounded-full transition shadow-md flex items-center justify-center gap-2" onclick="openLoginModal()">
                 <span class="material-symbols-outlined">login</span> Ingresar
             </button>
         </div>
     </div>
 
-    <!-- Dashboard Content -->
+    <!-- Contenido con datos -->
     <div class="hidden animate-fade-in" id="dashboardContent">
 
-        <!-- Dashboard del Visitador -->
-        <div id="visitadorDashboard" class="hidden mb-6 bg-white p-6 md:p-8 rounded-[2rem] border border-indigo-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
-            <div class="flex-1 w-full">
-                <h3 class="font-display font-bold text-indigo-900 text-xl mb-6 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-indigo-500">monitoring</span> Tu Progreso de Evaluación
-                </h3>
-                <div class="space-y-5">
-                    <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">1. Médicos del Fichero CRM</span><span class="text-slate-700 font-mono text-sm" id="visTotalFichero">0</span></div>
-                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-indigo-300 h-2.5 rounded-full" style="width: 100%"></div></div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">2. Cruzados en Panel (CloseUp)</span><span class="text-blue-600 font-mono text-sm" id="visTotalCruzados">0</span></div>
-                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full transition-all duration-1000" id="visBarCruzados" style="width: 0%"></div></div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest mb-2"><span class="text-slate-500">3. Evaluados/Encuestados</span><span class="text-emerald-600 font-mono text-sm" id="visTotalEvaluados">0 </span></div>
-                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="bg-emerald-500 h-2.5 rounded-full transition-all duration-1000" id="visBarEvaluados" style="width: 0%"></div></div>
-                    </div>
-                </div>
+        <!-- ===== Pantalla: Inicio ===== -->
+        <div data-pantalla="inicio" id="pantallaInicio" class="pantalla">
+
+        <!-- Progreso del visitador (compacto) -->
+        <section id="visitadorDashboard" class="hidden mb-4 bg-white rounded-3xl border border-slate-200 p-3 sm:p-4 flex items-center gap-3 sm:gap-4" aria-label="Tu progreso">
+            <div class="anillo" id="anilloProgreso" style="--p:0">
+                <svg viewBox="0 0 36 36" aria-hidden="true"><circle class="pista" cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5"/><circle class="valor" cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" pathLength="100"/></svg>
+                <span class="anillo-texto" id="visPctEvaluados">0%</span>
             </div>
-            <div class="w-full md:w-56 bg-indigo-50/50 rounded-3xl p-6 flex flex-col items-center justify-center text-center border border-indigo-50 shrink-0">
-                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 text-indigo-500">
-                    <span class="material-symbols-outlined text-3xl">military_tech</span>
-                </div>
-                <span class="text-[10px] font-bold text-indigo-800 uppercase tracking-widest mb-1">Completado</span>
-                <span class="text-4xl font-display font-black text-indigo-600" id="visPctEvaluados">0%</span>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-bold text-slate-800 truncate"><span id="visTotalEvaluados">0</span> de <span id="visTotalFichero">0</span> médicos evaluados</div>
+                <div class="barra-fina mt-2"><div id="visBarEvaluados" style="width:0%"></div></div>
+                <div class="text-xs text-slate-500 mt-1.5 truncate"><span id="visTotalCruzados">0</span> con recetas en CloseUp<span class="hidden" id="visBarCruzados"></span></div>
+                <div class="text-xs text-slate-600 mt-1 hidden" id="visPromedioDistrito"></div>
+            </div>
+            <button onclick="App.ux.filtroRapido('pendientes', true)" class="hidden sm:flex shrink-0 items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 text-white text-sm font-bold"><span class="material-symbols-outlined text-[18px]">checklist</span> Evaluar pendientes</button>
+        </section>
+
+        <!-- Indicadores -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            <div class="kpi-card bg-white p-4 border border-slate-200">
+                <p class="text-xs text-slate-500 font-semibold flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">groups</span> Médicos con recetas</p>
+                <p class="text-2xl sm:text-3xl font-display font-extrabold text-slate-800 mt-1" id="statTotalDocs">0</p>
+                <div class="mt-1 min-h-[18px]" id="tendDocs"></div>
+            </div>
+            <div class="kpi-card bg-white p-4 border border-slate-200">
+                <p class="text-xs text-slate-500 font-semibold flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">receipt_long</span> Recetas del mercado</p>
+                <p class="text-2xl sm:text-3xl font-display font-extrabold text-slate-800 mt-1" id="statTotalMkt">0</p>
+                <div class="mt-1 min-h-[18px]" id="tendMkt"></div>
+            </div>
+            <div class="kpi-card bg-blue-50 p-4">
+                <p class="text-xs text-blue-800 font-semibold flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">pill</span> Recetas La Santé</p>
+                <p class="text-2xl sm:text-3xl font-display font-extrabold text-blue-800 mt-1" id="statMyRx">0</p>
+                <div class="mt-1 min-h-[18px]" id="tendPhq"></div>
+            </div>
+            <div class="kpi-card bg-green-50 p-4">
+                <p class="text-xs text-green-800 font-semibold flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">donut_large</span> Participación</p>
+                <p class="text-2xl sm:text-3xl font-display font-extrabold text-green-800 mt-1" id="statShare">0%</p>
+                <div class="mt-1 min-h-[18px]" id="tendShare"></div>
             </div>
         </div>
 
         <!-- INTELLIGENCE ROW -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="intelligenceRow">
-            <div class="bg-white p-6 rounded-3xl border-l-4 border-rose-500 shadow-sm relative overflow-hidden col-span-1 flex flex-col justify-center">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6" id="intelligenceRow">
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 relative overflow-hidden col-span-1 flex flex-col justify-center">
                 <div class="flex justify-between items-start mb-3">
                     <h3 class="font-bold text-slate-600 text-xs uppercase tracking-widest" id="compCardTitle">Principal Competidor</h3>
-                    <span class="material-symbols-outlined text-rose-200 text-3xl">warning</span>
+                    <span class="material-symbols-outlined text-rose-400">swords</span>
                 </div>
                 <div id="topCompetitorContainer">
-                    <h2 class="text-3xl font-display font-bold text-slate-800" id="topCompName">--</h2>
+                    <h2 class="text-2xl font-display font-bold text-slate-800 truncate" id="topCompName">--</h2>
                     <p class="text-sm text-slate-500 mt-2"><span class="font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded" id="topCompRx">0</span> Rx en mercado</p>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm col-span-1 md:col-span-2 flex flex-col justify-center cursor-pointer group hover:border-blue-300 transition" onclick="showMarketDetails()">
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 col-span-1 md:col-span-2 flex flex-col justify-center cursor-pointer group transition" onclick="showMarketDetails()">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-slate-600 text-xs uppercase tracking-widest">Composición del Mercado</h3>
                     <span class="text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full font-semibold opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
@@ -382,9 +404,9 @@
                     </span>
                 </div>
                 <div class="w-full h-8 flex rounded-full overflow-hidden mb-3 bg-slate-100 shadow-inner">
-                    <div class="bg-blue-600 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" id="barPhq" style="width: 0%">PHQ</div>
-                    <div class="bg-rose-400 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all duration-1000" id="barComp" style="width: 0%">Top Comp</div>
-                    <div class="bg-slate-300 h-full flex items-center justify-center text-[10px] font-bold text-slate-600 transition-all duration-1000" id="barRest" style="width: 100%">Resto</div>
+                    <div class="bg-blue-600 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all" id="barPhq" style="width: 0%">PHQ</div>
+                    <div class="bg-rose-400 h-full flex items-center justify-center text-[10px] font-bold text-white transition-all" id="barComp" style="width: 0%">Top Comp</div>
+                    <div class="bg-slate-300 h-full flex items-center justify-center text-[10px] font-bold text-slate-600 transition-all" id="barRest" style="width: 100%">Resto</div>
                 </div>
                 <div class="flex justify-between text-xs font-medium text-slate-500 px-2">
                     <span id="labelPhq" class="text-blue-700">PHQ: 0%</span>
@@ -394,144 +416,309 @@
             </div>
         </div>
 
-        <!-- Summary Stats M3 -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 text-center kpi-card">
-                <div class="flex items-center justify-center gap-2 mb-2">
-                    <span class="material-symbols-outlined text-slate-400">groups</span>
-                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total Médicos</p>
-                </div>
-                <p class="text-3xl font-display font-black text-slate-800" id="statTotalDocs">0</p>
-            </div>
-            <div class="bg-white p-5 rounded-3xl border border-slate-200 text-center kpi-card">
-                <div class="flex items-center justify-center gap-2 mb-2">
-                    <span class="material-symbols-outlined text-slate-400">receipt_long</span>
-                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Recetas Mercado</p>
-                </div>
-                <p class="text-3xl font-display font-black text-slate-800" id="statTotalMkt">0</p>
-            </div>
-            <div class="bg-blue-50 p-5 rounded-3xl border border-blue-100 text-center kpi-card">
-                <div class="flex items-center justify-center gap-2 mb-2">
-                    <span class="material-symbols-outlined text-blue-500">pill</span>
-                    <p class="text-[10px] text-blue-600 uppercase font-bold tracking-wider">Recetas Lab (PHQ)</p>
-                </div>
-                <p class="text-3xl font-display font-black text-blue-700" id="statMyRx">0</p>
-            </div>
-            <div class="bg-green-50 p-5 rounded-3xl border border-green-100 text-center kpi-card">
-                <div class="flex items-center justify-center gap-2 mb-2">
-                    <span class="material-symbols-outlined text-green-600">pie_chart</span>
-                    <p class="text-[10px] text-green-700 uppercase font-bold tracking-wider">Share Promedio</p>
-                </div>
-                <p class="text-3xl font-display font-black text-green-800" id="statShare">0%</p>
-            </div>
+        <!-- Comparativos: movimientos entre versiones y CloseUp vs. encuesta -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+            <section id="tarjetaMovimientos" class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200" aria-live="polite"></section>
+            <section id="tarjetaConcordancia" class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200" aria-live="polite"></section>
         </div>
 
-        <!-- 9-Box Matrix M3 -->
-        <div class="mb-10 overflow-x-auto pb-6">
-            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 min-w-[700px]">
-                <div class="flex flex-col gap-2">
-                    <h3 class="font-display font-bold text-slate-800 flex items-center gap-2 text-xl">
-                        <span class="material-symbols-outlined text-blue-600 text-2xl">apps</span>
-                        Matriz Estratégica
-                        <span class="text-[10px] font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full ml-3 tracking-widest uppercase">Haz clic para filtrar</span>
-                    </h3>
-                    <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200 w-max shadow-inner">
-                        <button class="px-4 py-1.5 text-xs font-bold rounded-lg transition matrix-toggle-btn bg-blue-600 text-white shadow-sm" id="btnMatrixData" onclick="switchMatrixMode('closeup')">
-                            Datos (CloseUp)
-                        </button>
-                        <button class="px-4 py-1.5 text-xs font-bold rounded-lg transition matrix-toggle-btn text-slate-500 hover:text-slate-700 hover:bg-white" id="btnMatrixSurvey" onclick="switchMatrixMode('survey')">
-                            Encuestas (Asesor)
-                        </button>
-                    </div>
-                </div>
-                <div class="flex gap-2 items-end">
-                    <button onclick="exportMatrixToPNG()" class="text-slate-500 hover:text-blue-600 hover:bg-blue-50 bg-white border border-slate-200 px-4 py-2.5 rounded-full shadow-sm transition flex items-center justify-center gap-1.5" title="Exportar Matriz como Imagen">
-                        <span class="material-symbols-outlined text-[20px]">photo_camera</span>
-                        <span class="text-xs font-bold">Descargar Matriz</span>
-                    </button>
-                    <button onclick="toggleSummaryCells()" class="text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-3 rounded-full transition flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">functions</span>
-                        <span id="btnSummaryText">Ver Subtotales</span>
-                    </button>
-                </div>
-            </div>
+        <!-- Tableros del inicio según el rol (Fase 9B, js/tableros.js). Para el VM se mueven al final de la página -->
+        <div id="zonaTablerosArriba"><div id="tablerosInicio" class="mb-6"></div></div>
 
-            <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200 min-w-[850px]" id="matrixCaptureTarget">
-                <div class="matrix-grid" id="matrixGridElement">
-                    <div></div>
-                    <div class="matrix-header-col"><div class="text-red-400 mb-2"><span class="material-symbols-outlined bg-red-50 p-1 rounded-full">remove</span></div>Baja Adopción (-)<br><span class="text-[10px] font-medium text-slate-400" id="header_label_C">≤ 33%</span></div>
-                    <div class="matrix-header-col"><div class="text-amber-500 mb-2"><span class="material-symbols-outlined bg-amber-50 p-1 rounded-full">drag_handle</span></div>Media Adopción<br><span class="text-[10px] font-medium text-slate-400" id="header_label_B">33% - 66%</span></div>
-                    <div class="matrix-header-col"><div class="text-green-600 mb-2"><span class="material-symbols-outlined bg-green-50 p-1 rounded-full">add</span></div>Alta Adopción (+)<br><span class="text-[10px] font-medium text-slate-400" id="header_label_A">≥ 66%</span></div>
-                    <div class="summary-element hidden flex-col justify-end pb-2 items-center">
-                        <span class="summary-header-title">Resumen de Potencialidad</span>
-                    </div>
-                    <div class="matrix-header-row border-r-2 pr-4 border-slate-100">
-                        <span class="text-slate-700 text-center font-bold">Alto Potencial (A)</span>
-                        <span class="text-[10px] font-medium text-slate-400 mt-2" id="row_label_A">Top 33%</span>
-                    </div>
-                    <div id="matrixContainer" style="display:contents"></div>
-                </div>
-            </div>
         </div>
 
-        <!-- Detail Table -->
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-            <div class="p-5 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-4">
+        <!-- ===== Pantalla: Matriz ===== -->
+        <section id="seccionMatriz" data-pantalla="matriz" class="pantalla mb-6 scroll-mt-20" aria-labelledby="tituloMatriz">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div>
-                    <h3 class="font-display font-bold text-slate-800 text-lg" id="tableTitle">Directorio Analítico</h3>
-                    <p class="text-xs font-medium text-slate-500" id="tableSubtitle">Mostrando todos los registros</p>
+                    <h2 id="tituloMatriz" class="font-display font-bold text-slate-800 text-xl flex items-center gap-1">Matriz estratégica
+                        <button class="w-9 h-9 rounded-full flex items-center justify-center text-blue-700" onclick="App.ux.abrirAyudaMatriz()" title="¿Cómo leer la matriz?" aria-label="¿Cómo leer la matriz?"><span class="material-symbols-outlined text-[20px]">help</span></button>
+                    </h2>
+                    <p class="text-xs text-slate-500">Toca un cuadrante para ver sus médicos</p>
                 </div>
-                <div class="flex items-center gap-4 flex-wrap">
-                    <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm" title="Agrupa médicos que compartan la misma dirección">
-                        <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Vista Institucional</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="instToggle" onchange="toggleInstitutionView()">
-                            <span class="slider-toggle"></span>
-                        </label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <label class="relative">
+                        <span class="sr-only">Mercado</span>
+                        <select id="selectorMercado" class="filter-select !rounded-full !py-2 !text-xs !font-bold max-w-[220px]" onchange="App.ux.elegirMercado(this.value)" title="Elegir mercado"></select>
+                    </label>
+                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-full" role="group" aria-label="Origen de la matriz">
+                        <button class="px-3 sm:px-4 py-2 text-xs font-bold rounded-full matrix-toggle-btn bg-blue-600 text-white shadow-sm" id="btnMatrixData" onclick="switchMatrixMode('closeup')" aria-pressed="true">CloseUp</button>
+                        <button class="px-3 sm:px-4 py-2 text-xs font-bold rounded-full matrix-toggle-btn text-slate-500" id="btnMatrixSurvey" onclick="switchMatrixMode('survey')" aria-pressed="false">Encuestas</button>
                     </div>
-                    <button class="hidden text-xs bg-slate-200 hover:bg-slate-300 px-5 py-2.5 rounded-full text-slate-700 font-bold transition flex items-center gap-1" id="clearFilterBtn" onclick="clearMatrixFilter()">
-                        <span class="material-symbols-outlined text-[14px]">filter_alt_off</span> Limpiar Filtro
-                    </button>
+                    <button onclick="toggleSummaryCells()" class="hidden sm:flex w-10 h-10 rounded-full items-center justify-center text-slate-700 border border-slate-200" title="Ver subtotales"><span class="material-symbols-outlined text-[20px]">functions</span><span id="btnSummaryText" class="sr-only">Ver Subtotales</span></button>
+                    <button onclick="exportMatrixToPNG()" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 border border-slate-200" title="Descargar la matriz como imagen"><span class="material-symbols-outlined text-[20px]">image</span></button>
+                    <button id="btnMatrizCompleta" onclick="App.ux.abrirMatrizCompleta()" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 border border-slate-200" title="Ver la matriz en pantalla completa"><span class="material-symbols-outlined text-[20px]">fullscreen</span></button>
+                    <button id="btnSalirCompleta" onclick="App.ux.cerrarMatrizCompleta()" class="hidden h-10 px-4 rounded-full items-center justify-center gap-1 bg-blue-600 text-white text-sm font-bold" title="Salir de pantalla completa"><span class="material-symbols-outlined text-[20px]">fullscreen_exit</span> Salir</button>
                 </div>
             </div>
-            <div class="responsive-table-wrapper min-h-[400px]">
-                <table class="w-full text-left border-collapse" id="mainTable">
-                    <thead class="bg-slate-200/60 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                        <tr>
-                            <th class="p-4">Clasificación final</th>
-                            <th class="p-4" id="thNameCol">Médico / Entidad</th>
-                            <th class="p-4">Esp.</th>
-                            <th class="p-4 text-right">Recetas Totales</th>
-                            <th class="p-4 text-right text-blue-700">Recetas Lab</th>
-                            <th class="p-4 text-center">Share %</th>
-                            <th class="p-4 text-center">Oportunidad</th>
-                            <th class="p-4 text-center hidden" id="thEvalCol">Evaluación Asesor</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-sm divide-y divide-slate-100" id="dataTable"></tbody>
-                </table>
-            </div>
-            <div class="p-5 border-t border-slate-200 bg-slate-50 flex justify-between items-center rounded-b-[1.5rem]" id="paginationContainer">
-                <span class="text-sm text-slate-600 font-medium" id="pageInfo">Mostrando 0 de 0</span>
-                <div class="flex gap-3">
-                    <button id="btnPrevPage" onclick="prevPage()" class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shadow-sm">
-                        <span class="material-symbols-outlined text-[20px]">chevron_left</span> Anterior
-                    </button>
-                    <button id="btnNextPage" onclick="nextPage()" class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shadow-sm">
-                        Siguiente <span class="material-symbols-outlined text-[20px]">chevron_right</span>
-                    </button>
+            <div class="overflow-x-auto sm:overflow-visible">
+                <div class="bg-white p-3 sm:p-6 rounded-3xl border border-slate-200" id="matrixCaptureTarget">
+                    <div class="matrix-grid" id="matrixGridElement">
+                        <div></div>
+                        <div class="matrix-header-col"><div class="text-red-600 mb-1"><span class="material-symbols-outlined bg-red-50 p-1 rounded-full text-[18px]">remove</span></div>Adopción baja<br><span class="text-[10px] font-medium text-slate-500" id="header_label_C">≤ 33%</span></div>
+                        <div class="matrix-header-col"><div class="text-amber-600 mb-1"><span class="material-symbols-outlined bg-amber-50 p-1 rounded-full text-[18px]">drag_handle</span></div>Adopción media<br><span class="text-[10px] font-medium text-slate-500" id="header_label_B">33% - 66%</span></div>
+                        <div class="matrix-header-col"><div class="text-green-700 mb-1"><span class="material-symbols-outlined bg-green-50 p-1 rounded-full text-[18px]">add</span></div>Adopción alta<br><span class="text-[10px] font-medium text-slate-500" id="header_label_A">≥ 66%</span></div>
+                        <div class="summary-element hidden flex-col justify-end pb-2 items-center">
+                            <span class="summary-header-title">Resumen de Potencialidad</span>
+                        </div>
+                        <div class="matrix-header-row">
+                            <span class="text-slate-700 text-center font-bold">Potencial alto (A)</span>
+                            <span class="text-[10px] font-medium text-slate-500 mt-2 hidden sm:inline" id="row_label_A">Top 33%</span>
+                        </div>
+                        <div id="matrixContainer" style="display:contents"></div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- ===== Pantalla: Médicos ===== -->
+        <section id="seccionMedicos" data-pantalla="medicos" class="pantalla scroll-mt-20" aria-labelledby="tableTitle">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div class="min-w-0">
+                    <h2 class="font-display font-bold text-slate-800 text-xl" id="tableTitle">Médicos</h2>
+                    <p class="text-xs text-slate-500" id="tableSubtitle">Mostrando todos los registros</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button class="hidden chip" id="btnVolverMatriz" onclick="App.ux.irA('matriz')" aria-pressed="false"><span class="material-symbols-outlined text-[18px]">arrow_back</span> Matriz</button>
+                    <button class="hidden chip chip-cerrar" id="clearFilterBtn" onclick="clearMatrixFilter()"><span class="material-symbols-outlined text-[18px]">filter_alt_off</span> Quitar cuadrante</button>
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer px-2 py-1.5 rounded-full" title="Agrupa los médicos que comparten la misma dirección">
+                        Por institución
+                        <span class="toggle-switch"><input type="checkbox" id="instToggle" onchange="toggleInstitutionView()"><span class="slider-toggle"></span></span>
+                    </label>
+                    <div class="relative">
+                        <button id="btnExportar" onclick="App.ux.abrirExportar()" class="h-10 px-4 rounded-full border border-slate-300 text-sm font-bold text-blue-700 flex items-center gap-2" aria-haspopup="menu" aria-expanded="false">
+                            <span class="material-symbols-outlined text-[20px]">download</span> Exportar
+                        </button>
+                        <div id="menuExportar" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-lg border border-slate-200 py-2 z-40" role="menu">
+                            <button class="item-menu" role="menuitem" onclick="App.ux.exportar('excel')"><span class="material-symbols-outlined">table_view</span> Excel</button>
+                            <button class="item-menu" role="menuitem" onclick="App.ux.exportar('pdf')"><span class="material-symbols-outlined">picture_as_pdf</span> PDF</button>
+                            <button class="item-menu" role="menuitem" onclick="App.ux.exportar('imagen')"><span class="material-symbols-outlined">image</span> Imagen de la matriz</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="competenciaCuadrante" class="hidden flex-wrap items-center gap-2 mb-3 bg-white rounded-2xl border border-slate-200 px-4 py-3"></div>
+            <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden flex flex-col">
+                <div class="hidden lg:block responsive-table-wrapper">
+                    <table class="w-full text-left border-collapse" id="mainTable">
+                        <thead class="bg-slate-50 text-xs font-semibold text-slate-600 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-4 py-3 w-[76px]">Cuadrante</th>
+                                <th class="px-4 py-3" id="thNameCol">Médico</th>
+                                <th class="px-4 py-3 text-right">Recetas</th>
+                                <th class="px-4 py-3 text-right text-blue-700">La Santé</th>
+                                <th class="px-4 py-3 text-right">Participación</th>
+                                <th class="px-4 py-3 text-center">Oportunidad</th>
+                                <th class="px-4 py-3 text-center hidden" id="thEvalCol">Evaluación</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm divide-y divide-slate-100" id="dataTable"></tbody>
+                    </table>
+                </div>
+                <div id="dataCards" class="lg:hidden divide-y divide-slate-100"></div>
+                <div class="p-4 border-t border-slate-200 flex justify-between items-center gap-3" id="paginationContainer">
+                    <span class="text-xs sm:text-sm text-slate-600 font-medium" id="pageInfo">Mostrando 0 de 0</span>
+                    <div class="flex gap-2">
+                        <button id="btnPrevPage" onclick="prevPage()" class="w-10 h-10 sm:w-auto sm:px-4 rounded-full border border-slate-300 text-sm font-bold text-slate-700 flex items-center justify-center" title="Anterior">
+                            <span class="material-symbols-outlined text-[20px]">chevron_left</span><span class="hidden sm:inline">Anterior</span>
+                        </button>
+                        <button id="btnNextPage" onclick="nextPage()" class="w-10 h-10 sm:w-auto sm:px-4 rounded-full border border-slate-300 text-sm font-bold text-slate-700 flex items-center justify-center" title="Siguiente">
+                            <span class="hidden sm:inline">Siguiente</span><span class="material-symbols-outlined text-[20px]">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final de la página única del VM: sus médicos con más oportunidad -->
+        <div data-pantalla="medicos" id="zonaTablerosAbajo" class="pantalla mt-6"></div>
+
+        <!-- ===== Pantalla: Equipo (GD, Gerente Nacional y administrador) ===== -->
+        <section data-pantalla="equipo" id="pantallaEquipo" class="pantalla" aria-labelledby="tituloEquipo">
+            <div id="adminDashboard" class="hidden no-print">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+                    <div>
+                        <h2 id="tituloEquipo" class="font-display font-bold text-slate-800 text-2xl">Equipo</h2>
+                        <p class="text-sm text-slate-500" id="equipoSubtitulo">Avance y calidad de las evaluaciones</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="relative" id="equipoDistritoZona">
+                            <span class="sr-only">Distrito</span>
+                            <select id="equipoDistrito" class="filter-select !rounded-full !py-2 !text-xs !font-bold max-w-[220px]" onchange="App.equipo.elegirDistrito(this.value)"></select>
+                        </label>
+                        <button onclick="exportAdminEvaluationsExcel()" class="h-10 px-4 rounded-full border border-slate-300 text-sm font-bold text-blue-700 flex items-center gap-2" title="Descargar las evaluaciones en Excel">
+                            <span class="material-symbols-outlined text-[20px]">download</span><span class="hidden sm:inline">Evaluaciones</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="equipoResumen" class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4"></div>
+                <div class="chips-fila mb-4" id="equipoPestanas" role="tablist" aria-label="Vistas del equipo"></div>
+                <div id="equipoContenido" role="tabpanel" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <!-- ===== Pantalla: Ajustes (solo administrador) ===== -->
+        <section data-pantalla="ajustes" id="pantallaAjustes" class="pantalla" aria-labelledby="tituloAjustes">
+            <div class="mb-4">
+                <h2 id="tituloAjustes" class="font-display font-bold text-slate-800 text-2xl">Ajustes</h2>
+                <p class="text-sm text-slate-500">Lo que cambies aquí se aplica para todo el equipo.</p>
+            </div>
+            <div class="chips-fila mb-4" role="group" aria-label="Ir a">
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajUmbrales')"><span class="material-symbols-outlined text-[18px]">tune</span> Umbrales</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajEncuesta')"><span class="material-symbols-outlined text-[18px]">balance</span> Encuesta</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajDatos')"><span class="material-symbols-outlined text-[18px]">database</span> Datos y equipo</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajSalud')"><span class="material-symbols-outlined text-[18px]">health_and_safety</span> Salud de los datos</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajVerComo')"><span class="material-symbols-outlined text-[18px]">visibility</span> Ver como…</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajBitacora')"><span class="material-symbols-outlined text-[18px]">history_edu</span> Bitácora</button>
+            </div>
+
+            <!-- Umbrales de la matriz -->
+            <article id="ajUmbrales" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-5">
+                    <span class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">tune</span></span>
+                    <div>
+                        <h3 class="text-lg font-display font-bold text-slate-800">Umbrales de la matriz</h3>
+                        <p class="text-sm text-slate-500">Definen dónde empieza y termina cada cuadrante. Mueve los controles: verás el efecto <b>antes</b> de aplicarlo.</p>
+                    </div>
+                </header>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <div class="text-sm font-bold text-slate-800">Adopción <span class="font-medium text-slate-500">· participación de La Santé en sus recetas</span></div>
+                        <div class="umbral-barra mt-3" aria-hidden="true"><span class="seg-c" id="segLoyC"></span><span class="seg-b" id="segLoyB"></span><span class="seg-a" id="segLoyA"></span></div>
+                        <div class="flex justify-between text-[11px] font-semibold text-slate-500 mt-1"><span>Baja (−)</span><span>Media</span><span>Alta (+)</span></div>
+                        <label class="umbral-control mt-4"><span>Baja hasta <b id="lblThLow">33%</b></span>
+                            <input type="range" min="10" max="50" value="33" id="sliderLow" oninput="App.ajustes.alMoverUmbral()"></label>
+                        <label class="umbral-control mt-3"><span>Alta desde <b id="lblThHigh">66%</b></span>
+                            <input type="range" min="51" max="90" value="66" id="sliderHigh" oninput="App.ajustes.alMoverUmbral()"></label>
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-slate-800">Potencial <span class="font-medium text-slate-500">· volumen de recetas (los que más recetan)</span></div>
+                        <div class="umbral-barra mt-3" aria-hidden="true"><span class="seg-a" id="segPotA"></span><span class="seg-b" id="segPotB"></span><span class="seg-c" id="segPotC"></span></div>
+                        <div class="flex justify-between text-[11px] font-semibold text-slate-500 mt-1"><span>Alto (A)</span><span>Medio (B)</span><span>Bajo (C)</span></div>
+                        <label class="umbral-control mt-4"><span>A: los que suman el primer <b id="lblPotLow">33%</b></span>
+                            <input type="range" min="10" max="50" value="33" id="sliderPotLow" oninput="App.ajustes.alMoverUmbral()"></label>
+                        <label class="umbral-control mt-3"><span>B: hasta el <b id="lblPotHigh">66%</b></span>
+                            <input type="range" min="51" max="90" value="66" id="sliderPotHigh" oninput="App.ajustes.alMoverUmbral()"></label>
+                    </div>
+                </div>
+                <div id="ajVistaPrevia" class="mt-6 rounded-2xl bg-slate-50 p-4" aria-live="polite"></div>
+                <div class="mt-4 rounded-2xl bg-green-50 text-green-900 p-4 text-sm flex items-start gap-3">
+                    <span class="material-symbols-outlined text-green-700">trending_up</span>
+                    <p><b>Simulador:</b> si todos los médicos de adopción media pasaran a adopción alta, se ganarían <b id="simImpactRx">+0 Rx</b>.</p>
+                </div>
+                <div class="flex flex-wrap justify-end gap-2 mt-5">
+                    <button type="button" id="btnDescartarUmbrales" class="h-10 px-5 rounded-full text-sm font-bold text-slate-700 border border-slate-300" onclick="App.ajustes.descartarUmbrales()" disabled>Descartar</button>
+                    <button type="button" id="btnAplicarUmbrales" class="h-10 px-5 rounded-full text-sm font-bold bg-blue-700 text-white flex items-center gap-2" onclick="App.ajustes.aplicarUmbrales()" disabled><span class="material-symbols-outlined text-[18px]">check</span> Aplicar para todo el equipo</button>
+                </div>
+            </article>
+
+            <!-- Ponderación de la encuesta -->
+            <article id="ajEncuesta" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-5">
+                    <span class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">balance</span></span>
+                    <div>
+                        <h3 class="text-lg font-display font-bold text-slate-800">Ponderación de la encuesta</h3>
+                        <p class="text-sm text-slate-500">Puntos de cada respuesta. Con la suma (preguntas 1, 2 y 5) se decide el potencial A, B o C de la matriz "Encuestas".</p>
+                    </div>
+                </header>
+                <div id="ajEncuestaCuerpo"></div>
+                <div class="flex flex-wrap justify-between gap-2 mt-5">
+                    <button type="button" class="h-10 px-4 rounded-full text-sm font-bold text-slate-600 flex items-center gap-1" onclick="App.ajustes.valoresOriginales()"><span class="material-symbols-outlined text-[18px]">restart_alt</span> Valores originales</button>
+                    <button type="button" id="btnGuardarEncuesta" class="h-10 px-5 rounded-full text-sm font-bold bg-blue-700 text-white flex items-center gap-2" onclick="App.ajustes.guardarEncuesta()" disabled><span class="material-symbols-outlined text-[18px]">save</span> Guardar para todo el equipo</button>
+                </div>
+            </article>
+
+            <!-- Datos y equipo -->
+            <article id="ajDatos" class="bg-white rounded-3xl border border-slate-200 p-2 sm:p-3 mb-4 scroll-mt-20">
+                <h3 class="text-lg font-display font-bold text-slate-800 px-3 pt-3 pb-2">Datos y equipo</h3>
+                <div class="grid sm:grid-cols-2 gap-1">
+                    <button type="button" class="ajuste-item" onclick="abrirCargaDatos()"><span class="ajuste-icono bg-blue-50 text-blue-700"><span class="material-symbols-outlined">upload</span></span><span><b>Cargar datos</b><small>Subir un mes nuevo de recetas o el fichero</small></span></button>
+                    <button type="button" class="ajuste-item" onclick="abrirVersiones()"><span class="ajuste-icono bg-blue-50 text-blue-700"><span class="material-symbols-outlined">history</span></span><span><b>Versiones de datos</b><small>Ver o volver a una versión anterior</small></span></button>
+                    <button type="button" class="ajuste-item" onclick="openProductModal()"><span class="ajuste-icono bg-green-50 text-green-700"><span class="material-symbols-outlined">medication</span></span><span><b>Productos del laboratorio</b><small>Qué productos cuentan como La Santé</small></span></button>
+                    <button type="button" class="ajuste-item" onclick="openAccessManager()"><span class="ajuste-icono bg-green-50 text-green-700"><span class="material-symbols-outlined">group</span></span><span><b>Usuarios y accesos</b><small>Visitadores del fichero y si ya tienen usuario</small></span></button>
+                    <button type="button" class="ajuste-item" onclick="descargarRegistroFallas()"><span class="ajuste-icono bg-rose-50 text-rose-700"><span class="material-symbols-outlined">bug_report</span></span><span><b>Registro de fallas</b><small>Descargar los errores que ha tenido la app</small></span></button>
+                    <button type="button" class="ajuste-item" onclick="App.reports.openModal()"><span class="ajuste-icono bg-purple-50 text-purple-700"><span class="material-symbols-outlined">monitoring</span></span><span><b>Reportes avanzados</b><small>Reportes por mercado, visitador y producto</small></span></button>
+                </div>
+            </article>
+
+            <!-- Salud de los datos (Fase 9B) -->
+            <article id="ajSalud" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-4">
+                    <span class="w-11 h-11 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">health_and_safety</span></span>
+                    <div><h3 class="text-lg font-display font-bold text-slate-800">Salud de los datos</h3>
+                        <p class="text-sm text-slate-500">Lo que conviene revisar en la versión de datos que se usa hoy.</p></div>
+                </header>
+                <ul id="ajSaludLista" class="divide-y divide-slate-100"></ul>
+            </article>
+
+            <!-- Ver como… (Fase 9B) -->
+            <article id="ajVerComo" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-4">
+                    <span class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">visibility</span></span>
+                    <div><h3 class="text-lg font-display font-bold text-slate-800">Ver la app como…</h3>
+                        <p class="text-sm text-slate-500">Mira exactamente lo que ve un visitador o un gerente de distrito, para ayudarlos. Es solo consulta: no se puede guardar nada.</p></div>
+                </header>
+                <div class="grid sm:grid-cols-2 gap-3">
+                    <label class="flex flex-col gap-1 text-sm font-semibold text-slate-700">Visitador
+                        <select id="ajVerComoVm" class="filter-select !rounded-2xl"></select></label>
+                    <label class="flex flex-col gap-1 text-sm font-semibold text-slate-700">Gerente de distrito
+                        <select id="ajVerComoGd" class="filter-select !rounded-2xl"></select></label>
+                </div>
+                <div class="flex flex-wrap justify-end gap-2 mt-4">
+                    <button type="button" class="h-10 px-5 rounded-full text-sm font-bold bg-purple-700 text-white flex items-center gap-2" onclick="App.ajustes.verComo('vm', document.getElementById('ajVerComoVm').value)"><span class="material-symbols-outlined text-[18px]">person</span> Ver como visitador</button>
+                    <button type="button" class="h-10 px-5 rounded-full text-sm font-bold bg-purple-50 text-purple-800 flex items-center gap-2" onclick="App.ajustes.verComo('gd', document.getElementById('ajVerComoGd').value)"><span class="material-symbols-outlined text-[18px]">groups</span> Ver como gerente</button>
+                </div>
+            </article>
+
+            <!-- Bitácora de cambios (Fase 9B, migración 11) -->
+            <article id="ajBitacora" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-4">
+                    <span class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">history_edu</span></span>
+                    <div><h3 class="text-lg font-display font-bold text-slate-800">Bitácora de cambios</h3>
+                        <p class="text-sm text-slate-500">Quién cambió umbrales, ponderación o productos, y quién publicó cada versión de datos.</p></div>
+                </header>
+                <ul id="ajBitacoraLista" class="divide-y divide-slate-100"></ul>
+            </article>
+        </section>
     </div>
 </main>
+
+<!-- Ayuda: cómo leer la matriz -->
+<div id="ayudaMatriz" class="hidden fixed inset-0 z-[115] bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="if (event.target === this) App.ux.cerrarAyudaMatriz()">
+    <div class="bg-white w-full sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="tituloAyuda">
+        <div class="flex items-center justify-between px-5 pt-5">
+            <h2 id="tituloAyuda" class="text-xl font-bold text-slate-800">Cómo leer la matriz</h2>
+            <button class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700" onclick="App.ux.cerrarAyudaMatriz()" title="Cerrar"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="px-5 pb-6 pt-2 space-y-4 text-sm text-slate-700" id="contenidoAyuda"></div>
+    </div>
+</div>
+
+<!-- Guía rápida (la primera vez) -->
+<div id="guia" class="hidden fixed inset-0 z-[130]" aria-live="polite">
+    <div id="guiaFoco" class="guia-foco"></div>
+    <div id="guiaTarjeta" class="guia-tarjeta" role="dialog" aria-modal="true" aria-labelledby="guiaTitulo">
+        <div class="text-[11px] font-bold text-blue-700 uppercase tracking-widest" id="guiaPaso">Paso 1 de 4</div>
+        <h3 class="text-lg font-bold text-slate-800 mt-1" id="guiaTitulo"></h3>
+        <p class="text-sm text-slate-600 mt-1" id="guiaTexto"></p>
+        <div class="flex items-center justify-between mt-4">
+            <button class="px-3 py-2 rounded-full text-sm font-bold text-slate-600" onclick="App.ux.terminarGuia()">Saltar</button>
+            <button class="px-5 py-2.5 rounded-full bg-blue-600 text-white text-sm font-bold" id="guiaSiguiente" onclick="App.ux.pasoGuia(1)">Siguiente</button>
+        </div>
+    </div>
+</div>
+
+<!-- Navegación: barra inferior (teléfono) y riel lateral (tablet y computadora).
+     Los botones los arma js/ux.js según el rol de cada persona. -->
+<nav id="navInferior" class="hidden md:!hidden no-print fixed bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 flex" aria-label="Secciones"></nav>
+<nav id="navRiel" class="hidden no-print fixed left-0 top-16 bottom-0 z-40 w-[88px] bg-white border-r border-slate-200 flex-col items-center gap-1 pt-4" aria-label="Secciones"></nav>
 
 <!-- ==========================================================
      MODALES (sin cambios)
      ========================================================== -->
 
 <!-- Confirm Clear Rep Evals Modal -->
-<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4" id="confirmClearRepModal">
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4" id="confirmClearRepModal">
     <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden">
         <div class="p-5 border-b border-rose-100 bg-rose-50">
             <h3 class="font-display font-bold text-rose-800 flex items-center gap-2">
@@ -543,14 +730,14 @@
             <input type="hidden" id="hiddenRepToDelete">
         </div>
         <div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="document.getElementById('confirmClearRepModal').classList.add('hidden')">Cancelar</button>
-            <button class="px-5 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-rose-700 transition flex items-center gap-1" onclick="executeClearRepEvals()" id="btnConfirmClearRep">Borrar Datos</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="document.getElementById('confirmClearRepModal').classList.add('hidden')">Cancelar</button>
+            <button class="px-5 py-2.5 bg-rose-600 text-white rounded-full text-sm font-bold shadow-sm transition flex items-center gap-1" onclick="executeClearRepEvals()" id="btnConfirmClearRep">Borrar Datos</button>
         </div>
     </div>
 </div>
 
 <!-- Confirm Clear ALL Evals Modal -->
-<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4" id="confirmClearAllModal">
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4" id="confirmClearAllModal">
     <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden">
         <div class="p-5 border-b border-red-100 bg-red-600">
             <h3 class="font-display font-bold text-white flex items-center gap-2">
@@ -562,15 +749,15 @@
             <p class="text-xs text-rose-500 font-bold bg-rose-50 p-2 rounded-lg border border-rose-100">Usa esto solo para limpiar datos de prueba. No hay vuelta atrás.</p>
         </div>
         <div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="document.getElementById('confirmClearAllModal').classList.add('hidden')">Cancelar</button>
-            <button class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-red-700 transition flex items-center gap-1" onclick="executeClearAllEvals()" id="btnConfirmClearAll">Sí, Limpiar Todo</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="document.getElementById('confirmClearAllModal').classList.add('hidden')">Cancelar</button>
+            <button class="px-5 py-2.5 bg-red-600 text-white rounded-full text-sm font-bold shadow-sm transition flex items-center gap-1" onclick="executeClearAllEvals()" id="btnConfirmClearAll">Sí, Limpiar Todo</button>
         </div>
     </div>
 </div>
 
 <!-- Export Columns Modal -->
-<div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="exportColumnsModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+<div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="exportColumnsModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <div>
                 <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
@@ -578,51 +765,26 @@
                 </h3>
                 <p class="text-xs font-medium text-slate-500 mt-1">Selecciona qué columnas quieres incluir en el archivo definitivo.</p>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="p-6 overflow-y-auto flex-1 bg-white">
             <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
                 <span class="text-xs font-bold uppercase tracking-widest text-slate-500">Columnas Disponibles</span>
-                <button class="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition bg-blue-50 px-3 py-1 rounded-full" onclick="toggleAllExportCB(true)">Marcar Todas</button>
+                <button class="text-[11px] font-bold text-blue-600 transition bg-blue-50 px-3 py-1 rounded-full" onclick="toggleAllExportCB(true)">Marcar Todas</button>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="exportCheckboxContainer"></div>
         </div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end items-center gap-3">
-            <button class="text-slate-600 hover:bg-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold transition" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')">Cancelar</button>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2" onclick="executeExport()" id="exportModalActionBtn">
+            <button class="text-slate-600 px-5 py-2.5 rounded-full text-sm font-bold transition" onclick="document.getElementById('exportColumnsModal').classList.add('hidden')">Cancelar</button>
+            <button class="bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition flex items-center gap-2" onclick="executeExport()" id="exportModalActionBtn">
                 <span class="material-symbols-outlined text-[18px]">download</span> Descargar
             </button>
         </div>
     </div>
 </div>
 
-<!-- Survey Config Modal M3 -->
-<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="surveyConfigModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-            <div>
-                <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-emerald-600">tune</span> Ponderación de Encuesta Objetiva
-                </h3>
-                <p class="text-xs font-medium text-slate-500 mt-1">Ajusta los puntos asignados a cada respuesta y los umbrales para clasificar en A, B o C.</p>
-            </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('surveyConfigModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
-        </div>
-        <div class="p-6 overflow-y-auto flex-1 bg-white space-y-6" id="surveyConfigBody"></div>
-        <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-            <button onclick="restoreDefaultWeights()" class="text-xs font-bold text-slate-500 hover:text-rose-600 transition flex items-center gap-1">
-                <span class="material-symbols-outlined text-[16px]">restart_alt</span> Restaurar Valores por Defecto
-            </button>
-            <div class="flex gap-2">
-                <button class="text-slate-600 hover:bg-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold transition" onclick="document.getElementById('surveyConfigModal').classList.add('hidden')">Cancelar</button>
-                <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="saveSurveyConfig()">Guardar Cambios</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Admin Auth Modal -->
-<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] flex items-center justify-center p-4" id="adminAuthModal">
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] flex items-center justify-center p-4" id="adminAuthModal">
     <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden">
         <div class="p-5 border-b border-slate-100 bg-slate-50">
             <h3 class="font-display font-bold text-slate-800 flex items-center gap-2">
@@ -635,14 +797,14 @@
             <p id="adminAuthError" class="text-rose-500 text-xs font-bold hidden">Clave incorrecta.</p>
         </div>
         <div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="document.getElementById('adminAuthModal').classList.add('hidden')">Cancelar</button>
-            <button class="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-blue-700 transition" onclick="processAdminAuth()">Acceder</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="document.getElementById('adminAuthModal').classList.add('hidden')">Cancelar</button>
+            <button class="px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-sm transition" onclick="processAdminAuth()">Acceder</button>
         </div>
     </div>
 </div>
 
 <!-- Confirm Reset Modal -->
-<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90] flex items-center justify-center p-4" id="confirmResetModal">
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] flex items-center justify-center p-4" id="confirmResetModal">
     <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden">
         <div class="p-5 border-b border-rose-100 bg-rose-50">
             <h3 class="font-display font-bold text-rose-800 flex items-center gap-2">
@@ -653,75 +815,113 @@
             <p class="text-sm text-slate-600">Esto borrará la memoria local y recargará la página. Tendrás que procesar los archivos base nuevamente si no están en el repositorio.</p>
         </div>
         <div class="p-4 bg-slate-50 flex justify-end gap-2 border-t border-slate-100">
-            <button class="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="document.getElementById('confirmResetModal').classList.add('hidden')">Cancelar</button>
-            <button class="px-5 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-rose-700 transition" onclick="executeClearSession()">Borrar Memoria</button>
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="document.getElementById('confirmResetModal').classList.add('hidden')">Cancelar</button>
+            <button class="px-5 py-2.5 bg-rose-600 text-white rounded-full text-sm font-bold shadow-sm transition" onclick="executeClearSession()">Borrar Memoria</button>
         </div>
     </div>
 </div>
 
-<!-- Upload Modal M3 -->
-<div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="uploadModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+<!-- Carga de datos (solo administrador) -->
+<div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="cargaDatosModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="p-4 sm:p-6 border-b border-slate-100 flex flex-wrap justify-between items-center bg-slate-50 gap-3">
             <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
-                <span class="material-symbols-outlined text-blue-600">database</span> Carga Manual (Admin)
+                <span class="material-symbols-outlined text-blue-600">database</span> Datos
             </h3>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('uploadModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
-        </div>
-        <div class="p-8 overflow-y-auto">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                <div>
-                    <h4 class="font-bold text-blue-800 mb-3 flex items-center gap-2">
-                        <span class="bg-blue-100 p-1.5 rounded-lg text-blue-600 material-symbols-outlined text-sm">table_chart</span>
-                        1. Datos de Auditoría
-                    </h4>
-                    <p class="text-[11px] text-slate-500 mb-4 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        Archivo CSV o Excel con columnas base:<br>
-                        <span class="font-mono text-slate-700 font-semibold mt-1 block">Medico, Matricula, Mercado, Producto...</span>
-                    </p>
-                    <div class="file-drop-area mb-5">
-                        <span class="fake-btn">Explorar</span>
-                        <span class="file-msg" id="auditFileMsg">O arrastra el archivo aquí</span>
-                        <input class="file-input" type="file" id="auditFileInput" accept=".csv, .xlsx, .xls" onchange="updateFileLabel('auditFileInput', 'auditFileMsg')">
-                    </div>
-                    <div class="relative mb-3">
-                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
-                        <div class="relative flex justify-center text-[10px] font-bold uppercase tracking-widest"><span class="bg-white px-3 text-slate-400">O pegar texto crudo</span></div>
-                    </div>
-                    <textarea class="w-full h-32 border border-slate-300 rounded-xl p-4 font-mono text-[10px] focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-slate-50 hover:bg-white transition" id="csvInput" placeholder="Pegar datos (Excel/CSV) aquí..."></textarea>
-                </div>
-                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                    <h4 class="font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <span class="bg-purple-100 p-1.5 rounded-lg text-purple-600 material-symbols-outlined text-sm">folder_shared</span>
-                        2. Fichero Médico (Opcional)
-                    </h4>
-                    <p class="text-xs text-slate-500 mb-5">Sube un archivo para cruzar el panel de médicos con tus representantes.</p>
-                    <div class="file-drop-area bg-white shadow-sm">
-                        <span class="fake-btn bg-purple-600">Elegir Fichero</span>
-                        <span class="file-msg" id="ficheroFileMsg">O arrastra el archivo aquí</span>
-                        <input class="file-input" type="file" id="ficheroFileInput" accept=".csv, .xlsx, .xls" onchange="updateFileLabel('ficheroFileInput', 'ficheroFileMsg')">
-                    </div>
-                </div>
+            <div class="order-last w-full sm:order-none sm:w-auto flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+                <button id="cargaTabBtn_nueva" class="flex-1 sm:flex-none px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap" onclick="App.carga.mostrarPestana('nueva')">Cargar nueva</button>
+                <button id="cargaTabBtn_versiones" class="flex-1 sm:flex-none px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap" onclick="App.carga.mostrarPestana('versiones')">Versiones</button>
             </div>
-            <p class="text-rose-500 text-sm font-bold mt-2 hidden text-center bg-rose-50 p-3 rounded-xl" id="errorMsg"></p>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="App.carga.cerrarPanel()" title="Cerrar"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
-        <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-bold shadow-md transition flex items-center gap-2" onclick="processData()">
-                <span class="material-symbols-outlined text-sm">rocket_launch</span> Procesar e Iniciar
+        <div class="p-6 md:p-8 overflow-y-auto">
+            <div id="cargaTab_nueva">
+                <p class="text-xs text-slate-500 mb-5 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    Sube un archivo Excel (.xlsx) o CSV. Primero lo revisamos sin cambiar nada; luego se guarda como <b>borrador</b>.
+                    El equipo solo lo verá cuando lo <b>publiques</b>. Nada se borra: siempre puedes volver a una versión anterior.
+                </p>
+                <div class="mb-5">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">1. ¿Qué archivo es?</span>
+                    <div class="flex flex-wrap gap-3">
+                        <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 cursor-pointer transition text-sm font-bold text-slate-700">
+                            <input type="radio" name="cargaTipo" value="recetas" class="accent-indigo-600"> Recetas (CloseUp)
+                        </label>
+                        <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 cursor-pointer transition text-sm font-bold text-slate-700">
+                            <input type="radio" name="cargaTipo" value="fichero" class="accent-indigo-600"> Fichero médico
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-5">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">2. Elige el archivo</span>
+                    <div class="file-drop-area">
+                        <span class="fake-btn">Explorar</span>
+                        <span class="file-msg" id="cargaArchivoMsg">O arrastra el archivo aquí</span>
+                        <input class="file-input" type="file" id="cargaArchivo" accept=".xlsx,.xls,.csv,.gz" onchange="updateFileLabel('cargaArchivo', 'cargaArchivoMsg')">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                    <label class="block"><span class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">3. Nombre de la versión</span>
+                        <input type="text" id="cargaNombre" maxlength="80" class="w-full border border-slate-300 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej.: Recetas febrero 2026"></label>
+                    <label class="block"><span class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">4. Fecha de corte</span>
+                        <input type="date" id="cargaFecha" class="w-full border border-slate-300 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"></label>
+                </div>
+                <button class="w-full sm:w-auto bg-indigo-600 text-white px-8 py-3 rounded-full font-bold shadow-md transition flex items-center justify-center gap-2 mb-5" onclick="App.carga.revisar()">
+                    <span class="material-symbols-outlined text-sm">fact_check</span> Revisar archivo
+                </button>
+                <div id="cargaResultado"></div>
+                <div id="cargaProgreso" class="hidden mt-4"></div>
+            </div>
+            <div id="cargaTab_versiones" class="hidden">
+                <div id="cargaListaVersiones"></div>
+                <div id="cargaComparacionLista" class="hidden mt-4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Versión de datos (todos) -->
+<div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="versionModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
+        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+            <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-600">history</span> Versión de datos</h3>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="App.versiones.cerrar()" title="Cerrar"><span class="material-symbols-outlined text-[20px]">close</span></button>
+        </div>
+        <div class="p-6 overflow-y-auto" id="versionModalCuerpo"></div>
+        <div class="p-6 border-t border-slate-100 bg-slate-50 flex flex-wrap justify-between gap-2">
+            <button class="px-5 py-2.5 text-slate-600 rounded-full text-sm font-bold transition" onclick="App.versiones.volverAHoy()">Volver a "Hoy"</button>
+            <button class="bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="App.versiones.aplicar()">Ver esta versión</button>
+        </div>
+    </div>
+</div>
+
+<!-- Nueva clave (después del enlace de recuperación) -->
+<div class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 transition-opacity" id="nuevaClaveModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in">
+        <div class="p-6 bg-indigo-600 text-center">
+            <h2 class="text-xl font-display font-bold text-white">Crea tu nueva clave</h2>
+            <p class="text-indigo-100 text-xs mt-1">Mínimo 8 caracteres.</p>
+        </div>
+        <div class="p-8 bg-slate-50">
+            <label class="block mb-4"><span class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Nueva clave</span>
+                <input type="password" id="nuevaClave1" autocomplete="new-password" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></label>
+            <label class="block mb-6"><span class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Repite la clave</span>
+                <input type="password" id="nuevaClave2" autocomplete="new-password" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white" onkeypress="if(event.key==='Enter') guardarNuevaClave()"></label>
+            <button id="btnGuardarNuevaClave" onclick="guardarNuevaClave()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-full transition shadow-md flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">key</span> Guardar clave
             </button>
         </div>
     </div>
 </div>
 
 <!-- Products/Config Modal M3 -->
-<div class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="productModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
+<div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="productModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <div>
                 <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-600">category</span> Productos (PHQ)</h3>
                 <p class="text-xs font-medium text-slate-500 mt-1">Selecciona los productos objetivo para el análisis.</p>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('productModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('productModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="p-6 overflow-y-auto flex-1 bg-white">
             <div class="mb-4">
@@ -737,17 +937,17 @@
             </div>
         </div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-            <button onclick="showConfirmClearModal()" class="text-rose-500 text-xs font-bold hover:text-rose-700 flex items-center gap-1 bg-white px-4 py-2.5 rounded-xl border border-rose-100 shadow-sm transition">
+            <button onclick="showConfirmClearModal()" class="text-rose-500 text-xs font-bold flex items-center gap-1 bg-white px-4 py-2.5 rounded-full border border-rose-100 shadow-sm transition">
                 <span class="material-symbols-outlined text-[18px]">delete_forever</span> Borrar Memoria
             </button>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="saveProductsConfig()">Guardar Configuración</button>
+            <button class="bg-blue-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition" onclick="saveProductsConfig()">Guardar Configuración</button>
         </div>
     </div>
 </div>
 
 <!-- Institution Detail Modal M3 -->
-<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 transition-opacity" id="institutionModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 transition-opacity" id="institutionModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex flex-col gap-4">
             <div class="flex justify-between items-start">
                 <div>
@@ -761,7 +961,7 @@
                         <span class="bg-white px-2 py-1 rounded border border-slate-200">0 Médicos</span>
                     </p>
                 </div>
-                <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('institutionModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+                <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('institutionModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
             </div>
             <div class="flex flex-col md:flex-row gap-4 items-end justify-between border-t border-slate-200/60 pt-4">
                 <div class="w-full md:w-1/2">
@@ -794,8 +994,8 @@
 </div>
 
 <!-- Doctor Detail Modal M3 -->
-<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4" id="doctorDetailModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4" id="doctorDetailModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
         <div class="p-6 md:p-8 border-b border-slate-100 bg-slate-50 flex justify-between items-start">
             <div>
                 <div class="flex flex-wrap items-center gap-2 mb-3" id="modalBadges"></div>
@@ -806,7 +1006,7 @@
                     <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg border border-blue-200 font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">pie_chart</span> <span id="modalDocShare">Share: 0%</span></span>
                 </div>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('doctorDetailModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('doctorDetailModal').classList.add('hidden')"><span class="material-symbols-outlined text-[20px]">close</span></button>
         </div>
         <div class="bg-slate-50 border-b border-slate-200 px-6 md:px-8 flex gap-2">
             <button class="tab-btn active" id="tabBtnFichaje" onclick="switchDocTab('fichaje')">
@@ -834,7 +1034,7 @@
                 <div class="hidden" id="modalGapContainer"></div>
                 <div id="modalFicheroData" class="hidden mb-4">
                     <details class="group border border-purple-200 rounded-2xl bg-purple-50 overflow-hidden shadow-sm">
-                        <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-purple-100 transition text-purple-800 font-display font-bold text-sm" id="ficheroSummaryHeader"></summary>
+                        <summary class="flex items-center justify-between p-4 cursor-pointer select-none transition text-purple-800 font-display font-bold text-sm" id="ficheroSummaryHeader"></summary>
                         <div class="p-5 border-t border-purple-100 bg-white" id="modalFicheroContainer"></div>
                     </details>
                 </div>
@@ -849,9 +1049,38 @@
     </div>
 </div>
 
+<!-- Ficha del médico (Fase 6E): pantalla completa en móvil, ventana grande en computadora -->
+<div class="hidden fixed inset-0 bg-black/40 z-[85] flex items-stretch sm:items-center justify-center sm:p-4" id="fichaMedico" role="dialog" aria-modal="true" aria-labelledby="fichaEncabezado" onclick="if (event.target === this) App.ficha.cerrar()">
+    <div class="ficha-hoja bg-white w-full sm:max-w-4xl sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden h-full sm:h-auto sm:max-h-[92vh] animate-fade-in">
+        <div class="ficha-cuerpo overflow-y-auto flex-1 overscroll-contain">
+            <div class="sticky top-0 z-10 bg-white/95 backdrop-blur flex items-center justify-between gap-2 px-3 sm:px-5 pt-3 pb-2">
+                <button class="w-11 h-11 rounded-full flex items-center justify-center text-slate-700" onclick="App.ficha.cerrar()" aria-label="Cerrar la ficha"><span class="material-symbols-outlined">close</span></button>
+                <div class="flex items-center gap-2">
+                    <button class="hidden h-10 px-4 rounded-full bg-blue-700 text-white text-sm font-bold flex items-center gap-2" id="fichaEvaluar" onclick="App.ux.evaluar(this)"><span class="material-symbols-outlined text-[20px]">rate_review</span><span>Evaluar</span></button>
+                    <button class="h-10 px-4 rounded-full border border-slate-300 text-slate-700 text-sm font-bold flex items-center gap-2" onclick="App.ficha.pdf()" title="Descargar la ficha en PDF"><span class="material-symbols-outlined text-[20px]">picture_as_pdf</span><span class="hidden sm:inline">PDF</span></button>
+                </div>
+            </div>
+            <div class="px-4 sm:px-7 pb-4">
+                <div id="fichaEncabezado"></div>
+                <div id="fichaIndicadores" class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4"></div>
+            </div>
+            <div class="sticky top-[60px] z-[9] bg-white border-b border-slate-200">
+                <div id="fichaPestanas" class="ficha-pestanas flex gap-1 overflow-x-auto px-3 sm:px-6" role="tablist">
+                    <button data-pestana="resumen" role="tab" onclick="App.ficha.mostrar('resumen')"><span class="material-symbols-outlined">dashboard</span>Resumen</button>
+                    <button data-pestana="mercados" role="tab" onclick="App.ficha.mostrar('mercados')"><span class="material-symbols-outlined">grid_view</span>Mercados</button>
+                    <button data-pestana="productos" role="tab" onclick="App.ficha.mostrar('productos')"><span class="material-symbols-outlined">pill</span>Productos</button>
+                    <button data-pestana="historial" role="tab" onclick="App.ficha.mostrar('historial')"><span class="material-symbols-outlined">history</span>Historial</button>
+                    <button data-pestana="datos" role="tab" onclick="App.ficha.mostrar('datos')"><span class="material-symbols-outlined">contact_page</span>Datos</button>
+                </div>
+            </div>
+            <div id="fichaContenido" class="px-4 sm:px-7 py-5" role="tabpanel"></div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Gestión de Accesos de Visitadores -->
-<div class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="accessModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="accessModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <div>
                 <h3 class="text-xl font-display font-bold text-slate-800 flex items-center gap-2">
@@ -859,7 +1088,7 @@
                 </h3>
                 <p class="text-xs font-medium text-slate-500 mt-1">Visitadores del fichero y si ya tienen usuario. Las claves ya no se ven aquí: cada persona la recupera desde "¿Olvidaste tu clave?".</p>
             </div>
-            <button class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('accessModal').classList.add('hidden')">
+            <button class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition" onclick="document.getElementById('accessModal').classList.add('hidden')">
                 <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
         </div>
@@ -873,16 +1102,16 @@
             <div id="accessListContainer" class="space-y-2"></div>
         </div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-            <button class="text-slate-600 hover:bg-slate-200 px-6 py-2.5 rounded-full text-sm font-bold transition" onclick="document.getElementById('accessModal').classList.add('hidden')">Cerrar</button>
+            <button class="text-slate-600 px-6 py-2.5 rounded-full text-sm font-bold transition" onclick="document.getElementById('accessModal').classList.add('hidden')">Cerrar</button>
         </div>
     </div>
 </div>
 
 <!-- Login Modal M3 -->
-<div class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 transition-opacity" id="loginModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in relative">
+<div class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 transition-opacity" id="loginModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-fade-in relative">
         <div class="p-8 text-center bg-indigo-600 relative overflow-hidden">
-            <button onclick="document.getElementById('loginModal').classList.add('hidden')" class="absolute top-4 right-4 text-white/70 hover:text-white transition z-20 bg-black/10 hover:bg-black/20 p-1.5 rounded-full flex items-center justify-center">
+            <button onclick="document.getElementById('loginModal').classList.add('hidden')" class="absolute top-4 right-4 text-white/70 transition z-20 bg-black/10 p-1.5 rounded-full flex items-center justify-center">
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
             <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
@@ -905,14 +1134,14 @@
                 <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">2. Contraseña</label>
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400">lock</span>
-                    <input type="password" id="visitadorPwd" autocomplete="current-password" class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-mono transition shadow-sm" placeholder="Tu clave de acceso..." onkeypress="if(event.key==='Enter') attemptLogin()">
+                    <input type="password" id="visitadorPwd" autocomplete="current-password" class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition shadow-sm" placeholder="Tu clave de acceso..." onkeypress="if(event.key==='Enter') attemptLogin()">
                 </div>
             </div>
-            <button onclick="attemptLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2 mb-6" id="btnLoginBtn">
+            <button onclick="attemptLogin()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-full transition shadow-md flex items-center justify-center gap-2 mb-6" id="btnLoginBtn">
                 <span class="material-symbols-outlined">login</span> Entrar al Panel
             </button>
             <div class="text-center pt-4 border-t border-slate-200">
-                <button onclick="sendPasswordReset()" id="btnForgotPwd" class="text-xs font-bold text-slate-500 hover:text-indigo-600 transition flex items-center justify-center gap-1 mx-auto py-2">
+                <button onclick="sendPasswordReset()" id="btnForgotPwd" class="text-xs font-bold text-slate-500 transition flex items-center justify-center gap-1 mx-auto py-2">
                     <span class="material-symbols-outlined text-[14px]">help</span> ¿Olvidaste tu clave? Te enviamos un correo
                 </button>
             </div>
@@ -921,57 +1150,55 @@
 </div>
 
 <!-- Modal de Evaluación -->
-<div class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 transition-opacity" id="evalModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fade-in">
-        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start shrink-0">
-            <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="material-symbols-outlined text-indigo-500 bg-indigo-100 p-1.5 rounded-lg text-sm">fact_check</span>
-                    <span class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Evaluación y Encuesta</span>
-                </div>
-                <h3 class="text-xl font-display font-bold text-slate-800 mt-2" id="evalModalDocName">Nombre del Médico</h3>
+<div class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-stretch sm:items-center justify-center p-0 sm:p-4" id="evalModal">
+    <div class="bg-white sm:rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col h-full sm:h-auto sm:max-h-[92vh] overflow-hidden">
+        <div class="px-4 sm:px-6 pt-4 pb-3 border-b border-slate-200 flex justify-between items-start gap-3 shrink-0">
+            <div class="min-w-0">
+                <div class="text-[11px] font-bold text-blue-700 uppercase tracking-widest">Evaluación</div>
+                <h3 class="text-lg sm:text-xl font-display font-bold text-slate-800 truncate" id="evalModalDocName">Nombre del Médico</h3>
+                <div class="text-xs text-slate-500 mt-0.5" id="evalProgresoMedico"></div>
             </div>
-            <button class="text-slate-400 hover:text-rose-500 bg-slate-200 hover:bg-rose-100 p-2 rounded-full transition" onclick="closeEvalModal()"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            <button class="w-10 h-10 rounded-full flex items-center justify-center text-slate-700 shrink-0" onclick="closeEvalModal()" title="Cerrar"><span class="material-symbols-outlined">close</span></button>
         </div>
-     <div class="p-6 overflow-y-auto bg-white flex-1 space-y-6">
+        <div class="px-4 sm:px-6 py-4 overflow-y-auto flex-1 space-y-6">
             <input type="hidden" id="evalDocId">
             <input type="hidden" id="evalFirebaseId">
             <input type="hidden" id="evalRepName">
-            <!-- Pedido 2: Banner Cruce Errado (oculto por defecto) -->
-            <div id="cruceErradoBanner" class="hidden bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl">
+            <!-- Cruce errado (oculto por defecto) -->
+            <div id="cruceErradoBanner" class="hidden bg-amber-50 border border-amber-200 p-4 rounded-2xl">
                 <div class="flex items-start gap-3">
-                    <span class="material-symbols-outlined text-amber-600 text-[24px] shrink-0">warning</span>
+                    <span class="material-symbols-outlined text-amber-700 shrink-0">warning</span>
                     <div class="flex-1">
-                        <div class="font-bold text-amber-900 text-sm mb-1">Modo: Cruce Errado activo</div>
-                        <div class="text-xs text-amber-800 leading-relaxed">
-                            Esta evaluación (y las siguientes de este médico) se guardarán marcadas como <strong>cruce errado</strong>.<br>
-                            <span class="text-slate-600">Nombre en tu fichero:</span> <span id="cruceErradoFicheroName" class="font-bold text-amber-900">—</span>
+                        <div class="font-bold text-amber-900 text-sm mb-1">Cruce errado activo</div>
+                        <div class="text-xs text-amber-900 leading-relaxed">
+                            Esta evaluación (y las siguientes de este médico) se guardarán como <strong>cruce errado</strong>.<br>
+                            <span class="opacity-80">Nombre en tu fichero:</span> <span id="cruceErradoFicheroName" class="font-bold">—</span>
                         </div>
-                        <button type="button" onclick="window.App.evaluation.toggleCruceErradoMode(false)" class="mt-2 text-xs text-amber-700 hover:text-amber-900 underline font-bold">
-                            ← Cancelar y volver a evaluar normal
-                        </button>
+                        <button type="button" onclick="window.App.evaluation.toggleCruceErradoMode(false)" class="mt-2 text-xs text-amber-800 underline font-bold">Cancelar y evaluar normal</button>
                     </div>
                 </div>
             </div>
-            <div>
-                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Mercado a Evaluar</label>
-                <select id="evalMarketSelect" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 font-bold transition shadow-sm" onchange="loadEvalForMarket()">
+
+            <section>
+                <h4 class="text-sm font-bold text-slate-800 mb-2">Mercado</h4>
+                <select id="evalMarketSelect" class="sr-only" onchange="loadEvalForMarket()" aria-label="Mercado a evaluar">
                     <option value="">Seleccione un mercado...</option>
                 </select>
-            </div>
-            <div class="w-full h-px bg-slate-100"></div>
-            <div>
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">assignment</span> 1. Encuesta de Prescripción</h4>
-                    <span class="bg-amber-100 text-amber-800 text-[10px] px-3 py-1 rounded-full font-bold flex items-center gap-1 border border-amber-200"><span class="material-symbols-outlined text-[14px]">calendar_month</span> Temporalidad: SEMANAL</span>
+                <div id="evalMarketSelect_chips" class="chips-fila" role="group" aria-label="Mercado a evaluar"></div>
+            </section>
+
+            <!-- Preguntas sobre el médico: valen para todos sus mercados -->
+            <section id="bloqueMedico" class="rounded-3xl bg-slate-50 p-4">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <h4 class="text-sm font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-blue-700">person</span> Sobre el médico</h4>
+                    <button type="button" id="btnCambiarMedico" class="hidden text-xs font-bold text-blue-700 px-3 py-1.5 rounded-full" onclick="App.ux.editarDatosMedico(true)">Cambiar</button>
                 </div>
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-6">
-                    <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm relative">
-                        <span class="absolute -top-3 left-4 bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-bold border border-indigo-100 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">public</span> Datos Globales (Del Médico)</span>
-                        <div class="mt-2 space-y-4">
-                            <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">1) ¿Cuántos pacientes atiende usted por semana en total?</label>
-                                <select id="surveyQ1" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm">
+                <p class="text-xs text-slate-500 mb-3">Se responde una sola vez y vale para todos sus mercados.</p>
+                <div id="resumenMedico" class="hidden text-sm text-slate-700 flex flex-wrap gap-2"></div>
+                <div id="preguntasMedico" class="space-y-4">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700 mb-2 block">¿Cuántos pacientes atiende por semana en total?</label>
+                        <select id="surveyQ1" class="sr-only survey-select">
                                     <option value="">Seleccione un rango...</option>
                                     <option value="Menos de 10">Menos de 10</option>
                                     <option value="10 a 20">10 a 20</option>
@@ -981,10 +1208,11 @@
                                     <option value="51 a 70">51 a 70</option>
                                     <option value="Más de 70">Más de 70</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">2) ¿Cuál es el costo estimado de la consulta?</label>
-                                <select id="surveyQ5" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium transition shadow-sm">
+                        <div id="surveyQ1_chips" class="chips-respuesta" role="group"></div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700 mb-2 block">¿Cuál es el costo estimado de la consulta?</label>
+                        <select id="surveyQ5" class="sr-only survey-select">
                                     <option value="">Seleccione un rango estimado...</option>
                                     <option value="Gratuita / Institucional">Gratuita / Institucional</option>
                                     <option value="Menos de $30">Menos de $30</option>
@@ -994,15 +1222,25 @@
                                     <option value="$121 a $150">$121 a $150</option>
                                     <option value="Más de $150">Más de $150</option>
                                 </select>
-                            </div>
-                        </div>
+                        <div id="surveyQ5_chips" class="chips-respuesta" role="group"></div>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-emerald-100 shadow-sm relative">
-                        <span class="absolute -top-3 left-4 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-100 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">analytics</span> Datos Específicos (Del Mercado Actual)</span>
-                        <div class="mt-2 space-y-4">
-                            <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">3) De los pacientes semanales, ¿a cuántos les prescribe esta clase terapéutica?</label>
-                                <select id="surveyQ2" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium transition shadow-sm border-l-4 border-l-emerald-400">
+                </div>
+            </section>
+
+            <!-- Evaluación anterior de este mercado e historial -->
+            <section id="evalAnterior" class="hidden rounded-3xl border border-slate-200 p-4"></section>
+
+            <!-- Preguntas del mercado elegido -->
+            <section class="space-y-4">
+                <div class="flex items-center justify-between gap-2">
+                    <h4 class="text-sm font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-blue-700">analytics</span> En este mercado <span class="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">por semana</span></h4>
+                    <button type="button" id="btnCambiarMercado" class="hidden text-xs font-bold text-blue-700 px-3 py-1.5 rounded-full" onclick="App.ux.editarDatosMercado(true)">Cambiar</button>
+                </div>
+                <div id="resumenMercado" class="hidden flex-wrap gap-2"></div>
+                <div id="preguntasMercado" class="space-y-4">
+                <div>
+                    <label class="text-sm font-semibold text-slate-700 mb-2 block">De esos pacientes, ¿a cuántos les receta esta clase terapéutica?</label>
+                    <select id="surveyQ2" class="sr-only survey-select">
                                     <option value="">Seleccione un rango...</option>
                                     <option value="0">0 (Ninguno)</option>
                                     <option value="1 a 5">1 a 5</option>
@@ -1013,10 +1251,11 @@
                                     <option value="31 a 40">31 a 40</option>
                                     <option value="Más de 40">Más de 40</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">4) De esos pacientes, ¿a cuántos les prescribe nuestro producto?</label>
-                                <select id="surveyQ3" class="survey-select w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium transition shadow-sm border-l-4 border-l-emerald-600">
+                    <div id="surveyQ2_chips" class="chips-respuesta" role="group"></div>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700 mb-2 block">¿Y a cuántos les receta nuestro producto?</label>
+                    <select id="surveyQ3" class="sr-only survey-select">
                                     <option value="">Seleccione un rango...</option>
                                     <option value="0">0 (Ninguno)</option>
                                     <option value="1 a 5">1 a 5</option>
@@ -1026,55 +1265,56 @@
                                     <option value="21 a 30">21 a 30</option>
                                     <option value="Más de 30">Más de 30</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label class="text-sm font-bold text-slate-700 mb-1.5 block">5) Además de nuestro producto, ¿cuáles otros productos usa para esta patología?</label>
-                                <input type="text" id="surveyQ4" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium transition shadow-sm" placeholder="Indique otros productos, o N/A">
-                            </div>
-                        </div>
-                    </div>
+                    <div id="surveyQ3_chips" class="chips-respuesta" role="group"></div>
                 </div>
-            </div>
-            <div class="w-full h-px bg-slate-100"></div>
-            <div>
-                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">grid_view</span> 2. Clasificación en Matriz (Subjetiva)</h4>
-                <div class="grid grid-cols-3 gap-3" id="evalGrid">
-                    <button class="eval-btn relative bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-transparent hover:border-rose-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display mb-1">A-</span><span class="text-[9px] uppercase tracking-wider text-rose-500">Conquistar</span></button>
-                    <button class="eval-btn relative bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-transparent hover:border-blue-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display mb-1">A</span><span class="text-[9px] uppercase tracking-wider text-blue-500">Desarrollar</span></button>
-                    <button class="eval-btn relative bg-purple-50 hover:bg-purple-100 text-purple-700 border-2 border-transparent hover:border-purple-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display mb-1">A+</span><span class="text-[9px] uppercase tracking-wider text-purple-500">Defender</span></button>
-                    <button class="eval-btn relative bg-orange-50 hover:bg-orange-100 text-orange-700 border-2 border-transparent hover:border-orange-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display mb-1">B-</span><span class="text-[9px] uppercase tracking-wider text-orange-500">Conquistar</span></button>
-                    <button class="eval-btn relative bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-transparent hover:border-slate-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display mb-1">B</span><span class="text-[9px] uppercase tracking-wider text-slate-500">Desarrollar</span></button>
-                    <button class="eval-btn relative bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-2 border-transparent hover:border-indigo-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display mb-1">B+</span><span class="text-[9px] uppercase tracking-wider text-indigo-500">Defender</span></button>
-                    <button class="eval-btn relative bg-red-50 hover:bg-red-100 text-red-700 border-2 border-transparent hover:border-red-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display mb-1">C-</span><span class="text-[9px] uppercase tracking-wider text-red-500">Revisar</span></button>
-                    <button class="eval-btn relative bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-2 border-transparent hover:border-yellow-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display mb-1">C</span><span class="text-[9px] uppercase tracking-wider text-yellow-600">Desarrollar</span></button>
-                    <button class="eval-btn relative bg-teal-50 hover:bg-teal-100 text-teal-700 border-2 border-transparent hover:border-teal-300 p-3 rounded-2xl font-bold flex flex-col items-center justify-center transition focus:outline-none" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display mb-1">C+</span><span class="text-[9px] uppercase tracking-wider text-teal-500">Defender</span></button>
+                <div>
+                    <label for="surveyQ4" class="text-sm font-semibold text-slate-700 mb-2 block">¿Qué otros productos usa para esta patología?</label>
+                    <input type="text" id="surveyQ4" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:border-blue-600 outline-none bg-white transition" placeholder="Ej.: Producto X, o N/A">
+                </div>
+                </div>
+            </section>
+
+            <section>
+                <h4 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-blue-700">grid_view</span> Tu clasificación</h4>
+                <div class="grid grid-cols-3 gap-2" id="evalGrid">
+                    <button type="button" class="eval-btn cell-A_C rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'A-')"><span class="text-2xl font-display font-extrabold leading-none">A-</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Conquistar</span></button>
+                    <button type="button" class="eval-btn cell-A_B rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'A')"><span class="text-2xl font-display font-extrabold leading-none">A</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Desarrollar</span></button>
+                    <button type="button" class="eval-btn cell-A_A rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'A+')"><span class="text-2xl font-display font-extrabold leading-none">A+</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Defender</span></button>
+                    <button type="button" class="eval-btn cell-B_C rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'B-')"><span class="text-2xl font-display font-extrabold leading-none">B-</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Conquistar</span></button>
+                    <button type="button" class="eval-btn cell-B_B rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'B')"><span class="text-2xl font-display font-extrabold leading-none">B</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Desarrollar</span></button>
+                    <button type="button" class="eval-btn cell-B_A rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'B+')"><span class="text-2xl font-display font-extrabold leading-none">B+</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Defender</span></button>
+                    <button type="button" class="eval-btn cell-C_C rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'C-')"><span class="text-2xl font-display font-extrabold leading-none">C-</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Revisar</span></button>
+                    <button type="button" class="eval-btn cell-C_B rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'C')"><span class="text-2xl font-display font-extrabold leading-none">C</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Desarrollar</span></button>
+                    <button type="button" class="eval-btn cell-C_A rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center min-h-[64px]" onclick="selectEvalQuadrant(this, 'C+')"><span class="text-2xl font-display font-extrabold leading-none">C+</span><span class="text-[10px] uppercase tracking-wider font-semibold opacity-80 mt-1">Defender</span></button>
                 </div>
                 <input type="hidden" id="evalSelectedQuadrant" value="">
-            </div>
-            <div class="w-full h-px bg-slate-100"></div>
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">edit_note</span> 3. Justificación de la selección (Obligatorio)</label>
-                <textarea id="evalNotas" rows="2" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50 hover:bg-white transition" placeholder="Añade contexto adicional aquí..."></textarea>
-            </div>
-        </div>
-<div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3 shrink-0 flex-wrap">
-            <button id="btnCruceErrado" type="button" class="px-5 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-rose-300 rounded-xl text-sm font-bold transition flex items-center gap-2" onclick="window.App.evaluation.toggleCruceErradoMode(true)">
-                <span class="material-symbols-outlined text-[18px]">block</span> Marcar como Cruce Errado
+            </section>
+
+            <section>
+                <label for="evalNotas" class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-blue-700">edit_note</span> ¿Por qué? <span class="text-xs font-normal text-slate-500">(obligatorio)</span></label>
+                <textarea id="evalNotas" rows="2" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:border-blue-600 outline-none resize-none bg-white transition" placeholder="Cuéntanos brevemente el motivo"></textarea>
+            </section>
+
+            <button id="btnCruceErrado" type="button" class="text-xs font-bold text-rose-700 px-3 py-2 rounded-full flex items-center gap-1" onclick="window.App.evaluation.toggleCruceErradoMode(true)">
+                <span class="material-symbols-outlined text-[16px]">block</span> El médico no coincide con mi fichero (cruce errado)
             </button>
-            <div class="flex gap-3 ml-auto">
-                <button class="px-6 py-3 text-slate-600 hover:bg-slate-200 rounded-xl text-sm font-bold transition" onclick="closeEvalModal()">Cancelar</button>
-                <button class="px-8 py-3 bg-indigo-600 text-white rounded-full text-sm font-bold shadow-md hover:bg-indigo-700 transition flex items-center gap-2" onclick="saveEvaluation()" id="btnSaveEval">
-                    <span class="material-symbols-outlined text-[18px]">save</span> Guardar Evaluación
-                </button>
-            </div>
+        </div>
+        <div class="px-4 sm:px-6 py-3 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0" style="padding-bottom: max(12px, env(safe-area-inset-bottom));">
+            <button class="px-4 py-3 text-blue-700 rounded-full text-sm font-bold hidden sm:block" onclick="closeEvalModal()">Cancelar</button>
+            <button class="px-5 py-3 bg-blue-50 text-blue-800 rounded-full text-sm font-bold flex items-center gap-2" onclick="saveEvaluation()" id="btnSaveEval">
+                <span class="material-symbols-outlined text-[18px]">save</span> Guardar
+            </button>
+            <button class="px-5 py-3 bg-blue-600 text-white rounded-full text-sm font-bold flex items-center gap-2" onclick="App.ux.guardarYSiguiente()" id="btnGuardarSiguiente">
+                Guardar y siguiente <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </button>
         </div>
     </div>
 </div>
 <!-- ==========================================================
      MODAL DE REPORTES AVANZADOS
      ========================================================== -->
-<div class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-opacity" id="reportsModal">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col overflow-hidden animate-fade-in">
+<div class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-opacity" id="reportsModal">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col overflow-hidden animate-fade-in">
 
         <!-- HEADER -->
         <div class="p-5 md:p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
@@ -1088,11 +1328,11 @@
                 </div>
             </div>
             <div class="flex gap-2 items-center">
-                <button onclick="exportReportsExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                <button onclick="exportReportsExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-sm transition flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">download</span>
                     <span class="hidden sm:inline">Descargar Excel</span>
                 </button>
-                <button onclick="closeReportsModal()" class="text-slate-600 hover:text-rose-600 bg-slate-200 hover:bg-rose-100 p-2 rounded-full shadow-sm transition">
+                <button onclick="closeReportsModal()" class="text-slate-600 bg-slate-200 p-2 rounded-full shadow-sm transition">
                     <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
@@ -1136,7 +1376,7 @@
                         <span class="material-symbols-outlined text-purple-400 text-[18px]">assignment_turned_in</span>
                     </div>
                     <div class="text-3xl font-display font-black text-purple-700" id="rpt_kpi_encuestas">0</div>
-                    <div class="text-[10px] text-purple-400 mt-1">Registradas en Firebase</div>
+                    <div class="text-[10px] text-purple-400 mt-1">Registradas en el sistema</div>
                 </div>
             </div>
 
@@ -1149,10 +1389,10 @@
                         <span class="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full" id="rpt_reps_count">0 de 0</span>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="reportsSelectAllReps()" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-lg transition border border-emerald-200">
+                        <button onclick="reportsSelectAllReps()" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full transition border border-emerald-200">
                             ✓ Todos
                         </button>
-                        <button onclick="reportsDeselectAllReps()" class="text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-lg transition border border-rose-200">
+                        <button onclick="reportsDeselectAllReps()" class="text-[10px] font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-full transition border border-rose-200">
                             ✗ Ninguno
                         </button>
                     </div>
@@ -1172,13 +1412,13 @@
                         <span class="text-xs font-bold text-slate-700 uppercase tracking-widest">Vista del Gráfico</span>
                     </div>
                     <div class="flex gap-1 bg-slate-200 p-1 rounded-xl">
-                        <button id="rpt_btn_view_manager" onclick="reportsSwitchView('manager')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition bg-indigo-600 text-white">
+                        <button id="rpt_btn_view_manager" onclick="reportsSwitchView('manager')" class="px-3 py-1.5 text-xs font-bold rounded-full transition bg-indigo-600 text-white">
                             Por Gerente
                         </button>
-                 <button id="rpt_btn_view_linea" onclick="reportsSwitchView('linea')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition bg-slate-100 text-slate-600">
+                 <button id="rpt_btn_view_linea" onclick="reportsSwitchView('linea')" class="px-3 py-1.5 text-xs font-bold rounded-full transition bg-slate-100 text-slate-600">
                             Por Línea
                         </button>
-                        <button id="rpt_btn_view_rep" onclick="reportsSwitchView('rep')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition bg-slate-100 text-slate-600">
+                        <button id="rpt_btn_view_rep" onclick="reportsSwitchView('rep')" class="px-3 py-1.5 text-xs font-bold rounded-full transition bg-slate-100 text-slate-600">
                             Por Representante
                         </button>
                     </div>
@@ -1202,8 +1442,6 @@
      CARGA DE SCRIPTS MODULARES — EL ORDEN IMPORTA
      ========================================================== -->
 
-<!-- 1. Firebase (ES Module, carga en paralelo) -->
-<script type="module" src="js/firebase-init.js"></script>
 
 <!-- 2. Config y State (no dependen de nada) -->
 <script src="js/config.js"></script>
@@ -1225,6 +1463,16 @@
 <script src="js/exports.js"></script>
 <script src="js/offline.js"></script>
 <script src="js/reports.js"></script>
+<script src="js/supabase-api.js"></script>
+<script src="js/carga-datos.js"></script>
+<script src="js/versiones.js"></script>
+<script src="js/comparar.js"></script>
+<script src="js/ficha.js"></script>
+<script src="js/ajustes.js"></script>
+<script src="js/equipo.js"></script>
+<script src="js/tableros.js"></script>
+<script src="js/avisos.js"></script>
+<script src="js/ux.js"></script>
 
 <!-- 6. Entry point — orquestador (debe ir al final) -->
 <script src="js/main.js"></script>
