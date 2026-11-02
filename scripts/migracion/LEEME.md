@@ -233,7 +233,8 @@ node 3-usuarios.mjs
 Claves:
 - Los **VM conservan su clave actual** si tiene 6 caracteres o más.
 - El **admin** usa la clave de admin que pusiste en Firebase.
-- Los demás entran la primera vez con **"¿Olvidaste tu clave?"**.
+- Los demás reciben una **clave temporal** (en `accesos.csv`, con el mensaje
+  listo para enviar). Al entrar, la app les pide crear la suya.
 
 > ⚠️ **Correos de recuperación:** el servicio de correo que trae Supabase de
 > fábrica envía muy pocos correos por hora, y **solo a los miembros de tu
@@ -276,8 +277,8 @@ script pedirá escribir `MIGRAR PRODUCCION`):
 | 2 | `node 2-importar.mjs` | Distritos, visitadores, fichero, recetas y evaluaciones. |
 | 4 | `node 4-validar.mjs` | Debe decir ✅ TODO COINCIDE. |
 | 5 | `node 5-subir-archivos.mjs` | Archivos al almacén privado **y prepara la versión para los visitadores**. |
-| 3 | `node 3-usuarios.mjs` | Crea los usuarios del `usuarios.csv`. |
-| ✉️ | `node 3-usuarios.mjs --enviar-enlaces` | Correo "Crea tu clave" a quien no tiene una clave que se conserve (`--todos`, o `--solo correo@…` para una persona). Necesita `APP_URL` y el correo propio (`docs/CORREO.md`). |
+| 3 | `node 3-usuarios.mjs` | Crea los usuarios del `usuarios.csv` y deja `accesos.csv` (clave temporal + mensaje para cada persona; tú los envías). |
+| 🔑 | `node 3-usuarios.mjs --nueva-clave correo@…` | Clave temporal nueva para quien olvidó la suya. Deja `accesos.csv` con el mensaje para enviarle. |
 | 6 | `node 6-preparar-versiones.mjs` | Solo si hace falta repetir la preparación de versiones. |
 
 Todos aceptan `--simulacro` y se pueden repetir sin duplicar nada.

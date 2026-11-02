@@ -11,9 +11,11 @@
    Filas sin correo se omiten (ej. distrito vacante).
 
    Claves: el VM conserva su clave actual si tiene 6 caracteres o
-   más; el admin, la de admin_settings. El resto entra la primera vez
-   con "¿Olvidaste tu clave?".
+   más; el admin, la de admin_settings. El resto recibe una CLAVE
+   TEMPORAL (la app le pide crear la suya al entrar). No se envían
+   correos: el script deja accesos.csv para que el dueño los envíe.
 ============================================================ */
+import crypto from 'node:crypto';
 import { normalizarVisitador } from './transformar.mjs';
 
 export const ROLES = ['vm', 'gd', 'gte_nacional', 'admin'];
@@ -70,33 +72,28 @@ export function leerCsvUsuarios(texto) {
     return { filas, errores };
 }
 
-/* ---------- Enlaces de bienvenida ("Crea tu clave nueva") ---------- */
-// A quién le llega: a quien no tiene una clave que se pueda conservar (o a todos con "todos").
-export function quienesNecesitanEnlace({ filas, claves = new Map(), claveAdmin = '', todos = false, solo = '' }) {
-    return filas.filter(f => {
-        if (solo) return f.correo === solo.toLowerCase();
-        if (todos) return true;
-        const clave = f.rol === 'vm' ? (claves.get(f.visitador) || '') : (f.rol === 'admin' ? (claveAdmin || '') : '');
-        return clave.length < CLAVE_MINIMA;
-    });
+/* ---------- Claves temporales (sin correo automático) ---------- */
+// Fácil de dictar o escribir en el teléfono: "maro-kebi-4821". Sin letras que se confundan.
+const SILABAS = ['ba', 'be', 'bi', 'bo', 'bu', 'ca', 'co', 'cu', 'da', 'de', 'do', 'fa', 'fe', 'fi', 'fo', 'ga', 'go', 'gu',
+    'ka', 'ke', 'ki', 'ko', 'ku', 'ma', 'me', 'mi', 'mo', 'mu', 'na', 'ne', 'ni', 'no', 'nu', 'pa', 'pe', 'pi', 'po', 'pu',
+    'ra', 're', 'ri', 'ro', 'ru', 'sa', 'se', 'si', 'so', 'su', 'ta', 'te', 'ti', 'to', 'tu', 'va', 've', 'vi', 'za', 'zo'];
+export function generarClaveTemporal(azar = (n) => crypto.randomInt(n)) {
+    const palabra = () => SILABAS[azar(SILABAS.length)] + SILABAS[azar(SILABAS.length)];
+    return `${palabra()}-${palabra()}-${String(1000 + azar(9000))}`;
 }
 
-export async function enviarEnlaces({ authAdmin, destinatarios, appUrl, simulacro = false, esperaMs = 2500, log = console.log }) {
-    const r = { enviados: [], fallidos: [] };
-    for (const [k, f] of destinatarios.entries()) {
-        if (simulacro) { log(`  [simulacro] enviaría a ${f.correo} (${f.nombre})`); continue; }
-        try {
-            await authAdmin.enviarEnlace(f.correo, appUrl);
-            r.enviados.push(f.correo);
-            log(`  ✉️  ${f.correo} (${f.nombre})`);
-        } catch (e) {
-            r.fallidos.push(`${f.correo}: ${e.message}`);
-            log(`  ⚠️  ${f.correo}: ${e.message}`);
-        }
-        // Pausa entre correos para no chocar con el límite por hora del servicio de correo
-        if (k < destinatarios.length - 1 && esperaMs) await new Promise(res => setTimeout(res, esperaMs));
-    }
-    return r;
+// Mensaje listo para enviar por Gmail o WhatsApp
+export function mensajeAcceso({ nombre, correo, clave, tipo }, appUrl = '') {
+    const dir = appUrl || '(dirección de la app)';
+    const saludo = `Hola ${String(nombre || '').trim()}. Ya puedes entrar a la nueva SegmentApp: ${dir}`;
+    if (tipo === 'temporal') return `${saludo} · Correo: ${correo} · Clave temporal: ${clave} · Al entrar, la app te pedirá crear tu propia clave. En el teléfono usa el menú ⋮ → "Instalar la app".`;
+    return `${saludo} · Correo: ${correo} · Usa la misma clave de siempre. En el teléfono usa el menú ⋮ → "Instalar la app".`;
+}
+
+export function accesosCsv(accesos, appUrl = '') {
+    const celda = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const filas = accesos.map(a => [a.correo, a.nombre, a.rol, a.tipo === 'temporal' ? a.clave : '(la de siempre)', mensajeAcceso(a, appUrl)].map(celda).join(','));
+    return '\ufeff' + ['correo,nombre,rol,clave,mensaje', ...filas].join('\n') + '\n';
 }
 
 /* ---------- Aplicar ---------- */
@@ -109,20 +106,20 @@ export async function aplicarUsuarios({ db, authAdmin, filas, claves, claveAdmin
         if (f.rol === 'vm' && !vis.has(f.visitador)) errores.push(`Fila ${f.linea}: el visitador "${f.visitador}" no existe en Supabase`);
         if (f.rol === 'gd') f.distritos.filter(d => !dis.has(d)).forEach(d => errores.push(`Fila ${f.linea}: el distrito ${d} no existe`));
     }
-    if (errores.length) return { errores, creados: 0, actualizados: 0, conRecuperacion: [] };
+    if (errores.length) return { errores, creados: 0, actualizados: 0, conClaveTemporal: [], accesos: [] };
 
-    const resumen = { errores: [], creados: 0, actualizados: 0, conRecuperacion: [] };
+    const resumen = { errores: [], creados: 0, actualizados: 0, conClaveTemporal: [], accesos: [] };
     for (const f of filas) {
         let clave = '';
         if (f.rol === 'vm') clave = claves.get(f.visitador) || '';
         if (f.rol === 'admin') clave = claveAdmin || '';
         const usaClave = clave.length >= CLAVE_MINIMA;
-        if (!usaClave) resumen.conRecuperacion.push(f.correo);
         const app_metadata = { rol: f.rol, nombre: f.nombre };
         const etiqueta = `${f.rol.padEnd(12)} ${f.correo.padEnd(36)} ${f.visitador || f.distritos.join('|') || ''}`;
 
         if (simulacro) {
-            log(`  [simulacro] ${etiqueta} ${usaClave ? '(clave actual)' : '(entrará con "¿Olvidaste tu clave?")'}`);
+            log(`  [simulacro] ${etiqueta} ${usaClave ? '(clave actual)' : '(clave temporal)'}`);
+            if (!usaClave) resumen.conClaveTemporal.push(f.correo);
             continue;
         }
         let id = await authAdmin.buscarPorCorreo(f.correo);
@@ -131,9 +128,13 @@ export async function aplicarUsuarios({ db, authAdmin, filas, claves, claveAdmin
             resumen.actualizados++;
             log(`  ↻ ya existía (rol actualizado, clave sin cambios) ${etiqueta}`);
         } else {
-            id = await authAdmin.crear({ email: f.correo, password: usaClave ? clave : undefined, app_metadata });
+            const temporal = usaClave ? null : generarClaveTemporal();
+            id = await authAdmin.crear({ email: f.correo, password: usaClave ? clave : temporal, app_metadata,
+                user_metadata: temporal ? { clave_temporal: true } : {} });
             resumen.creados++;
-            log(`  + creado ${usaClave ? '(clave actual)' : '(usará "¿Olvidaste tu clave?")'} ${etiqueta}`);
+            if (temporal) resumen.conClaveTemporal.push(f.correo);
+            resumen.accesos.push({ correo: f.correo, nombre: f.nombre, rol: f.rol, clave: temporal, tipo: temporal ? 'temporal' : 'actual' });
+            log(`  + creado ${usaClave ? '(clave actual)' : '(clave temporal)'} ${etiqueta}`);
         }
         // Perfil (el trigger lo crea al dar de alta; aquí se asegura y se activa)
         await db.query(

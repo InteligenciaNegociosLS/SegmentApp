@@ -14,7 +14,7 @@ import { crearBase, como } from './supabase-simulado.js';
 import { leerCsvGz, leerExportacion, normalizarVisitador } from '../../scripts/migracion/transformar.mjs';
 import { importar } from '../../scripts/migracion/importar.mjs';
 import { validar, informeMarkdown } from '../../scripts/migracion/validar.mjs';
-import { plantillaCsv, leerCsvUsuarios, aplicarUsuarios } from '../../scripts/migracion/usuarios.mjs';
+import { plantillaCsv, leerCsvUsuarios, aplicarUsuarios, accesosCsv } from '../../scripts/migracion/usuarios.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const silencio = () => {};
@@ -156,16 +156,18 @@ describe('Paso 3 · Usuarios', () => {
         async buscarPorCorreo(email) {
             return (await db.query('select id from auth.users where email = $1', [email])).rows[0]?.id || null;
         },
-        async crear({ email, password, app_metadata }) {
+        async crear({ email, password, app_metadata, user_metadata }) {
             const id = crypto.randomUUID();
             await db.query('insert into auth.users (id, email, raw_app_meta_data) values ($1, $2, $3)', [id, email, app_metadata]);
             authFalso.claves[email] = password;
+            authFalso.metadatos[email] = user_metadata;
             return id;
         },
         async actualizar(id, { app_metadata }) {
             await db.query('update auth.users set raw_app_meta_data = $2 where id = $1', [id, app_metadata]);
         },
-        claves: {}
+        claves: {},
+        metadatos: {}
     };
 
     it('la plantilla trae los 51 visitadores, los 7 distritos y las filas de admin y Gte. Nacional', async () => {
@@ -197,7 +199,7 @@ describe('Paso 3 · Usuarios', () => {
         expect(errores.join(' | ')).toContain('al menos un usuario con rol admin');
     });
 
-    it('crea admin, Gte. Nacional, un GD y dos VM con su clave actual (o recuperación si es corta)', async () => {
+    it('crea admin, Gte. Nacional, un GD y dos VM con su clave actual (o una clave temporal si es corta)', async () => {
         const csv = ['correo,nombre,rol,visitador,distritos',
             'Admin@LaSante.com,ADMIN,admin,,',
             'gte@lasante.com,GERENTE NACIONAL,gte_nacional,,',
@@ -211,7 +213,19 @@ describe('Paso 3 · Usuarios', () => {
         const r = await aplicarUsuarios({ db, authAdmin: authFalso, filas, claves: exportacion.claves, claveAdmin: exportacion.claveAdmin, log: silencio });
         expect(r.errores).toEqual([]);
         expect(r.creados).toBe(5);
-        expect(r.conRecuperacion).toEqual(['gte@lasante.com', 'gd@lasante.com', 'vm1@lasante.com']);
+        expect(r.conClaveTemporal).toEqual(['gte@lasante.com', 'gd@lasante.com', 'vm1@lasante.com']);
+        // Clave temporal fácil de escribir y marcada para que la app pida cambiarla
+        expect(authFalso.claves['gd@lasante.com']).toMatch(/^[a-z]{4}-[a-z]{4}-\d{4}$/);
+        expect(authFalso.metadatos['gd@lasante.com']).toEqual({ clave_temporal: true });
+        expect(authFalso.metadatos['vm0@lasante.com']).toEqual({});
+        // La lista para enviar: la clave temporal solo a quien la tiene; los demás, "la de siempre"
+        const temporal = r.accesos.find(a => a.correo === 'gd@lasante.com');
+        expect(temporal).toMatchObject({ tipo: 'temporal', clave: authFalso.claves['gd@lasante.com'] });
+        expect(r.accesos.find(a => a.correo === 'vm0@lasante.com')).toMatchObject({ tipo: 'actual', clave: null });
+        const lista = accesosCsv(r.accesos, 'https://app.x');
+        expect(lista).toContain(authFalso.claves['gd@lasante.com']);
+        expect(lista).toContain('Usa la misma clave de siempre');
+        expect(lista).not.toContain('clave-0-segura');
         expect(authFalso.claves['vm0@lasante.com']).toBe('clave-0-segura');
         expect(authFalso.claves['admin@lasante.com']).toBe('clave-admin-larga');
         // Repetir no crea usuarios nuevos
