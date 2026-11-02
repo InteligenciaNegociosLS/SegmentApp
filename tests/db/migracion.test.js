@@ -166,6 +166,20 @@ describe('Paso 3 · Usuarios', () => {
         async actualizar(id, { app_metadata }) {
             await db.query('update auth.users set raw_app_meta_data = $2 where id = $1', [id, app_metadata]);
         },
+        async cambiarCorreo(id, email) {
+            const antes = (await db.query('update auth.users u set email = $2 from auth.users v where u.id = $1 and v.id = u.id returning v.email', [id, email])).rows[0].email;
+            authFalso.claves[email] = authFalso.claves[antes];
+            authFalso.metadatos[email] = authFalso.metadatos[antes];
+        },
+        async tieneClaveTemporal(id) {
+            const email = (await db.query('select email from auth.users where id = $1', [id])).rows[0].email;
+            return !!(authFalso.metadatos[email] && authFalso.metadatos[email].clave_temporal);
+        },
+        async cambiarClave(id, password) {
+            const email = (await db.query('select email from auth.users where id = $1', [id])).rows[0].email;
+            authFalso.claves[email] = password;
+            authFalso.metadatos[email] = { clave_temporal: true };
+        },
         claves: {},
         metadatos: {}
     };
@@ -232,6 +246,46 @@ describe('Paso 3 · Usuarios', () => {
         const r2 = await aplicarUsuarios({ db, authAdmin: authFalso, filas, claves: exportacion.claves, claveAdmin: exportacion.claveAdmin, log: silencio });
         expect(r2.creados).toBe(0);
         expect(r2.actualizados).toBe(5);
+    });
+
+    it('si ya tenían usuario con el correo interno de la app vieja, les CAMBIA el correo y conservan su clave', async () => {
+        // Así quedaron en producción: usuarios con nombre@segmentapp.internal
+        const csvViejo = ['correo,nombre,rol,visitador,distritos',
+            `vm2@segmentapp.internal,VM DOS,vm,${visitadores[2]},`,
+            `vm3@segmentapp.internal,VM TRES,vm,${visitadores[3]},`].join('\n');
+        const viejo = leerCsvUsuarios(csvViejo).filas;
+        await aplicarUsuarios({ db, authAdmin: authFalso, filas: viejo, claves: exportacion.claves, claveAdmin: '', log: silencio });
+        authFalso.metadatos['vm3@segmentapp.internal'] = { clave_temporal: true };   // nunca cambió su clave temporal
+        const idVm2 = (await db.query(`select id from auth.users where email = 'vm2@segmentapp.internal'`)).rows[0].id;
+
+        const csvNuevo = ['correo,nombre,rol,visitador,distritos',
+            'admin@lasante.com,ADMIN,admin,,',
+            `Vm2@LaSante.com.ve,VM DOS,vm,${visitadores[2]},`,
+            `vm3@lasante.com.ve,VM TRES,vm,${visitadores[3]},`].join('\n');
+        const nuevo = leerCsvUsuarios(csvNuevo).filas;
+        const lineas = [];
+        const ensayo = await aplicarUsuarios({ db, authAdmin: null, filas: nuevo, claves: exportacion.claves, claveAdmin: '', simulacro: true, log: (t) => lineas.push(t) });
+        expect(ensayo.correosCambiados).toBe(2);
+        expect(lineas.join('\n')).toContain('cambia correo vm2@segmentapp.internal');
+
+        const r = await aplicarUsuarios({ db, authAdmin: authFalso, filas: nuevo, claves: exportacion.claves, claveAdmin: '', log: silencio });
+        expect(r.errores).toEqual([]);
+        expect(r.creados).toBe(0);
+        expect(r.correosCambiados).toBe(2);
+        expect(r.actualizados).toBe(1);   // el admin ya tenía ese correo
+        // Mismo usuario (misma clave), con el correo nuevo en Auth y en su perfil
+        expect((await db.query('select email from auth.users where id = $1', [idVm2])).rows[0].email).toBe('vm2@lasante.com.ve');
+        expect((await db.query('select correo from public.perfiles where id = $1', [idVm2])).rows[0].correo).toBe('vm2@lasante.com.ve');
+        expect((await db.query('select perfil_id from public.visitadores where nombre_sector = $1', [visitadores[2]])).rows[0].perfil_id).toBe(idVm2);
+        // El mensaje: "la de siempre" para quien la conserva; clave temporal NUEVA para quien tenía una pendiente
+        expect(r.accesos.find(a => a.correo === 'vm2@lasante.com.ve')).toMatchObject({ tipo: 'actual', clave: null });
+        const vm3 = r.accesos.find(a => a.correo === 'vm3@lasante.com.ve');
+        expect(vm3.tipo).toBe('temporal');
+        expect(vm3.clave).toMatch(/^[a-z]{4}-[a-z]{4}-\d{4}$/);
+        // Repetir ya no cambia nada
+        const r2 = await aplicarUsuarios({ db, authAdmin: authFalso, filas: nuevo, claves: exportacion.claves, claveAdmin: '', log: silencio });
+        expect(r2.correosCambiados).toBe(0);
+        expect(r2.actualizados).toBe(3);
     });
 
     it('después de migrar, cada rol ve lo que le toca', async () => {
