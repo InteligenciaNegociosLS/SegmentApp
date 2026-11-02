@@ -356,3 +356,35 @@ describe('Usuarios desde la app, solo admin (migración 14)', () => {
         expect(await falla(U.gd1, 'select public.admin_activar_usuario($1, false)', [OTRO])).toBe(true);
     });
 });
+
+describe('Claves temporales para varios a la vez (migración 15)', () => {
+    const marca = async (id) => (await db.query('select raw_user_meta_data, encrypted_password from auth.users where id = $1', [id])).rows[0];
+
+    it('el admin da claves temporales a varios en una sola llamada', async () => {
+        const n = (await filas(U.admin, 'select public.admin_claves_temporales($1) as n',
+            [JSON.stringify([{ id: U.vm1, clave: 'bago-tefi-1234' }, { id: U.gd1, clave: 'mira-sole-5678' }])]))[0].n;
+        expect(n).toBe(2);
+        for (const id of [U.vm1, U.gd1]) {
+            const u = await marca(id);
+            expect(u.raw_user_meta_data.clave_temporal).toBe(true);
+            expect(u.encrypted_password).toMatch(/^\$2a\$/);
+        }
+        expect((await marca(U.vm1)).encrypted_password).not.toContain('bago-tefi-1234');
+    });
+
+    it('todo o nada: si una falla (clave corta, el propio admin, alguien que no existe) no cambia ninguna', async () => {
+        const antes = (await marca(U.vm2)).encrypted_password;
+        const lote = (extra) => JSON.stringify([{ id: U.vm2, clave: 'nueva-clave-9999' }, extra]);
+        expect(await falla(U.admin, 'select public.admin_claves_temporales($1)', [lote({ id: U.gte, clave: 'corta' })])).toBe(true);
+        expect(await falla(U.admin, 'select public.admin_claves_temporales($1)', [lote({ id: U.admin, clave: 'larga-larga-1234' })])).toBe(true);
+        expect(await falla(U.admin, 'select public.admin_claves_temporales($1)', [lote({ id: '00000000-0000-0000-0000-0000000000ff', clave: 'larga-larga-1234' })])).toBe(true);
+        expect((await marca(U.vm2)).encrypted_password).toBe(antes);
+    });
+
+    it('nadie más que el admin puede usarla', async () => {
+        const lote = JSON.stringify([{ id: U.vm2, clave: 'larga-larga-1234' }]);
+        for (const quien of [U.gte, U.gd1, U.vm1, U.nuevo, null]) {
+            expect(await falla(quien, 'select public.admin_claves_temporales($1)', [lote])).toBe(true);
+        }
+    });
+});
