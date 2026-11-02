@@ -206,6 +206,7 @@ window.App.data.parseFicheroData = function(fichJson) {
         }
         const mgrKey = keys.find(k => k.toUpperCase().trim() === 'NOME_GER_DIS');
         const repKey = window.App.data.getFicheroRepKey(row);
+        if (window.App.data.esOculto(repKey && row[repKey])) return;
 
         if (repKey && row[repKey] && mgrKey && row[mgrKey]) {
             st.REP_MANAGER_MAP[String(row[repKey]).trim().toUpperCase()] = String(row[mgrKey]).trim();
@@ -219,11 +220,31 @@ window.App.data.parseFicheroData = function(fichJson) {
 };
 
 /* ============================================================
+   VISITADORES DESACTIVADOS (Fase 11)
+   Sus filas del fichero y sus evaluaciones no se muestran a GD,
+   Gerente Nacional ni admin. En la base siguen guardadas.
+============================================================ */
+window.App.data.esOculto = function(nombre) {
+    const ocultos = window.App.state.REPS_OCULTOS;
+    return !!(ocultos && nombre && ocultos.has(String(nombre).trim().toUpperCase()));
+};
+window.App.data.sinOcultos = function(evaluaciones) {
+    if (!window.App.state.REPS_OCULTOS) return evaluaciones;
+    return (evaluaciones || []).filter(e => !window.App.data.esOculto(e.visitador));
+};
+
+/* ============================================================
    RESTAURAR FICHERO MÉDICO (desde IndexedDB)
 ============================================================ */
 window.App.data.parseStoredFicheroData = function(savedArray) {
     const st = window.App.state;
     st.FICHERO_MAP = new Map(savedArray);
+    if (st.REPS_OCULTOS) {
+        st.FICHERO_MAP.forEach((rows, clave) => {
+            const quedan = rows.filter(r => { const k = window.App.data.getFicheroRepKey(r); return !window.App.data.esOculto(k && r[k]); });
+            if (quedan.length) st.FICHERO_MAP.set(clave, quedan); else st.FICHERO_MAP.delete(clave);
+        });
+    }
     st.REP_MANAGER_MAP = {};
     st.FICHERO_MAP.forEach(rows => {
         rows.forEach(row => {

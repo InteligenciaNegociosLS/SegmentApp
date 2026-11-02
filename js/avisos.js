@@ -216,7 +216,7 @@ window.App = window.App || {};
             const cambios = await window.App.sb.evaluacionesDesde(desde);
             if (!cambios.length) return 0;
             const lista = st.ALL_EVALUATIONS.slice();
-            cambios.forEach(c => {
+            window.App.data.sinOcultos(cambios).forEach(c => {
                 const i = lista.findIndex(e => e.id === c.id || e.firebaseId === c.firebaseId);
                 if (c.eliminado) { if (i >= 0) lista.splice(i, 1); return; }
                 const { eliminado, ...ev } = c;

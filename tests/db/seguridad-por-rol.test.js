@@ -388,3 +388,16 @@ describe('Claves temporales para varios a la vez (migración 15)', () => {
         }
     });
 });
+
+describe('Desactivar a un VM oculta su visitador sin borrar nada (migración 16)', () => {
+    it('al desactivar su acceso, su visitador queda inactivo; al reactivarlo vuelve', async () => {
+        const activo = async () => (await db.query('select activo from public.visitadores where id = $1', [ids.v2])).rows[0].activo;
+        const evalsAntes = Number((await db.query('select count(*) as n from public.evaluaciones')).rows[0].n);
+        await filas(U.admin, 'select public.admin_activar_usuario($1, false)', [U.vm2]);
+        expect(await activo()).toBe(false);
+        // El GD de ese distrito todavía lee la lista (para ocultarlo en la app), y nada se borró
+        expect(Number((await db.query('select count(*) as n from public.evaluaciones')).rows[0].n)).toBe(evalsAntes);
+        await filas(U.admin, 'select public.admin_activar_usuario($1, true)', [U.vm2]);
+        expect(await activo()).toBe(true);
+    });
+});

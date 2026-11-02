@@ -112,12 +112,13 @@ window.App.evaluation.fetchAllEvaluacionesAdmin = async function() {
     const CACHE_KEY = 'EQUIPO_EVALS_CACHE';
     try {
         const enCache = window.localforage ? (await localforage.getItem(CACHE_KEY)) || [] : [];
-        if (enCache.length) { st.ALL_EVALUATIONS = enCache; refrescar(); }
+        if (enCache.length) { st.ALL_EVALUATIONS = window.App.data.sinOcultos(enCache); refrescar(); }
 
-        st.ALL_EVALUATIONS = await window.App.sb.evaluaciones();
+        const delServidor = await window.App.sb.evaluaciones();
+        st.ALL_EVALUATIONS = window.App.data.sinOcultos(delServidor);
         window.App.evaluation.marcarCambio();
         st._lastUniverseSignature = null;
-        if (window.localforage) await localforage.setItem(CACHE_KEY, st.ALL_EVALUATIONS);
+        if (window.localforage) await localforage.setItem(CACHE_KEY, delServidor);
         console.log(`[SegmentApp] ${st.ALL_EVALUATIONS.length} evaluaciones del equipo.`);
         refrescar();
         window.App.matrix.aggregateAndCalculate();

@@ -284,6 +284,7 @@ export function createClient(url, clave, opciones = {}) {
         admin_activar_usuario({ p_id, p_activo }) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
             bd.perfiles.find(x => x.id === p_id).activo = p_activo;
+            bd.visitadores.filter(v => v.perfil_id === p_id).forEach(v => { v.activo = p_activo; });
             registrar(`rpc:admin_activar_usuario:${p_activo}`);
             return { data: { ok: true, activo: p_activo }, error: null };
         },
