@@ -357,3 +357,30 @@ por rol** (todas las ideas propuestas). Nuevo orden:
   lo mismo en el teléfono y en la computadora.
 - Avisos al teléfono con la app cerrada: quedan para después (requieren un
   servicio de avisos aparte).
+
+## 02/11/2026 (Fase 9C aprobada · Fase 10: accesos y cierre)
+
+Preparado para el pase a producción (lo ejecuta el dueño, guía en
+`docs/SALIDA.md`):
+- `scripts/migracion/0-preparar-base.mjs`: crea todas las tablas en el
+  Supabase NUEVO (aplica las 12 migraciones en orden, cada una completa o
+  nada, y registra cuáles se aplicaron). En una base con tablas aplicadas a
+  mano (como pruebas) se detiene sin tocar nada.
+- `5-subir-archivos.mjs` ahora también **prepara la versión de recetas para
+  los visitadores** (orden por mercado). Sin esto, en producción el VM vería
+  "la versión aún no está preparada". `6-preparar-versiones.mjs` lo repite si
+  hace falta.
+- `3-usuarios.mjs --enviar-enlaces`: correo "Crea tu clave" a quien no
+  conserva su clave anterior (`--todos`, `--solo correo`).
+- Correo propio (Brevo) con plantillas en español: `docs/CORREO.md` y
+  `supabase/plantillas-correo/`.
+- Título de la pestaña: "SegmentApp · La Santé".
+- Prueba nueva: todas las tablas tienen reglas de seguridad por fila (RLS).
+
+Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
+- **El repositorio de GitHub es público y contiene el fichero médico**
+  (datos personales). Recomendado: Vercel Pro y repositorio privado (Vercel
+  gratis no publica desde un repositorio privado de una organización).
+- Plan del Supabase de producción: recomendado **Pro** (el gratis se pausa
+  tras 7 días sin uso y se llena en ~8 meses).
+- Fecha y hora del pase.
