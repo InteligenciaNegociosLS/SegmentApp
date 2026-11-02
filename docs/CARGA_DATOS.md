@@ -12,7 +12,8 @@ Desde la Fase 5, los datos de recetas (CloseUp) y el fichero médico se cargan
 
 ## Paso a paso
 1. Entra a la app con tu usuario de administrador.
-2. Pulsa **Cargar Datos** (arriba a la derecha).
+2. Pulsa **Cargar datos**: en la computadora, arriba a la derecha; en el
+   teléfono, en el menú **⋮**. También está en **Ajustes → Datos y equipo**.
 3. En **Cargar nueva**:
    1. Elige si es **Recetas (CloseUp)** o **Fichero médico**.
    2. Elige el archivo: Excel (`.xlsx`) o CSV (separado por `;`).
@@ -59,3 +60,11 @@ Si alguien está viendo una versión anterior, el botón lo indica en color ámb
 - Los archivos están en un almacén **privado**: sin iniciar sesión no se
   pueden descargar (antes estaban públicos en la web).
 - Solo el administrador puede subir, publicar o archivar versiones.
+
+## Después de publicar: validar los números (Fase 11b)
+1. **Ajustes → Salud de los datos → Fichero** muestra los **médicos únicos**,
+   visitadores y distritos del fichero publicado: compáralos con el CRM.
+2. **Inicio → Cobertura** ("Médicos en el fichero") y **Equipo → Médicos en
+   fichero** deben dar ese mismo número de médicos únicos.
+3. **Composición del mercado**: La Santé + principal competidor + resto
+   suman 100 %.

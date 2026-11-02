@@ -470,3 +470,21 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
    (el código queda por si se quiere volver).
 9. **Desactivar a un VM** (migración 16) oculta sus médicos y números para
    GD, Gte. Nacional y admin. No se borra nada; al reactivarlo vuelve todo.
+
+## Fase 11b (02/11/2026, noche)
+- **Médicos en el fichero = médicos únicos del CRM** (una matrícula, un
+  médico), con y sin recetas, igual que Equipo. Antes, en la vista nacional,
+  contaba solo los que tenían recetas.
+- **Arreglo de cálculo:** "Principal competidor" y "Composición del mercado"
+  usaban las recetas de todo el país aunque la persona viera solo su distrito
+  (salía 354 % y −258 %). Ahora usan solo los médicos de su alcance.
+- **"PHQ" pasa a "La Santé" / "LS"** en verde (color corporativo).
+- **Guía rápida:** muestra el paso 1 (antes lo saltaba) y la tarjeta no
+  tapa ni se corta cuando lo resaltado es más alto que la pantalla.
+- Se quita **"Resumen en PDF"** del inicio.
+- **Teléfono:** la barra superior deja solo avisos y ⋮. "Cargar datos" (admin)
+  y "Versión de datos" quedan en el menú ⋮.
+- **Permisos revisados:** VM, GD y Gerente Nacional no cargan, publican ni
+  borran (la base lo impide); el VM solo crea o edita sus evaluaciones.
+- **Salud de los datos** muestra médicos únicos, visitadores y distritos del
+  fichero para compararlos con el CRM.
