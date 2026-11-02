@@ -841,7 +841,14 @@ window.App.ux.iniciarGuia = function(forzar = false) {
 };
 
 // El primero de la lista de selectores que esté visible en pantalla
-const primeroVisible = (lista) => lista.split(',').map(x => document.querySelector(x.trim())).find(e => e && e.offsetParent !== null) || null;
+// (offsetParent es null en elementos "fijos" como el riel o la barra inferior: por eso se usan sus medidas)
+const seVeEnPantalla = (e) => {
+    if (!e) return false;
+    if (typeof e.checkVisibility === 'function') return e.checkVisibility();
+    const r = e.getBoundingClientRect();
+    return e.offsetParent !== null || (r.width > 0 && r.height > 0 && getComputedStyle(e).display !== 'none');
+};
+const primeroVisible = (lista) => lista.split(',').map(x => document.querySelector(x.trim())).find(seVeEnPantalla) || null;
 
 window.App.ux.pasoGuia = function(delta) {
     const pasos = pasosGuia();
@@ -852,7 +859,13 @@ window.App.ux.pasoGuia = function(delta) {
     const el = primeroVisible(selector);
     if (!el && delta === 0 && pasoActual < pasos.length - 1) return window.App.ux.pasoGuia(1);
     const foco = document.getElementById('guiaFoco'), tarjeta = document.getElementById('guiaTarjeta');
-    const ARRIBA = 76, TARJETA = 210, m = 8;   // barra superior, alto de la tarjeta, margen
+    // Textos primero: así se mide el alto real de la tarjeta antes de ubicarla
+    window.App.ui.safeSetText('guiaPaso', `Paso ${pasoActual + 1} de ${pasos.length}`);
+    window.App.ui.safeSetText('guiaTitulo', titulo);
+    window.App.ui.safeSetText('guiaTexto', texto);
+    window.App.ui.safeSetText('guiaSiguiente', pasoActual === pasos.length - 1 ? '¡Listo!' : 'Siguiente');
+    const ARRIBA = 76, m = 8;   // barra superior, margen
+    const TARJETA = Math.max(180, (tarjeta && tarjeta.offsetHeight) || 210);
     // Lo que está en la barra superior (ej. el botón ⋮) siempre se ve: no se desplaza ni se recorta
     const enBarra = !!(el && el.closest && el.closest('header, #navRiel, #navInferior'));
     // Llevar lo que se explica justo debajo de la barra superior
@@ -861,16 +874,14 @@ window.App.ux.pasoGuia = function(delta) {
         window.scrollTo({ top: Math.max(0, window.scrollY + r0.top - ARRIBA - m), behavior: 'auto' });
     }
     const r = el ? el.getBoundingClientRect() : { top: ARRIBA + 10, left: 16, width: Math.min(360, window.innerWidth - 32), height: 60, bottom: ARRIBA + 70 };
-    // Si es más alto que la pantalla, se resalta la parte visible y la tarjeta va abajo
+    // Si es más alto que la pantalla (ej. la matriz), se resalta la parte que se ve y la tarjeta
+    // queda completa abajo, sin tapar el resaltado
     const top = enBarra ? Math.max(4, r.top - m) : Math.max(r.top, ARRIBA) - m;
-    const cabeDebajo = r.bottom + m + TARJETA + 12 <= window.innerHeight;
-    const bottom = cabeDebajo ? r.bottom + m : Math.min(r.bottom + m, window.innerHeight - TARJETA - 24);
+    const abajoDelTodo = window.innerHeight - TARJETA - 16;           // donde empieza la tarjeta si va abajo
+    const cabeDebajo = r.bottom + m + 12 + TARJETA + 16 <= window.innerHeight;
+    const bottom = cabeDebajo ? r.bottom + m : Math.max(top + 48, Math.min(r.bottom + m, abajoDelTodo - 12));
     Object.assign(foco.style, { top: `${top}px`, left: `${Math.max(4, r.left - m)}px`, width: `${Math.min(window.innerWidth - 8, r.width + m * 2)}px`, height: `${Math.max(48, bottom - top)}px` });
-    tarjeta.style.top = `${Math.min(bottom + 12, window.innerHeight - TARJETA - 12)}px`;
-    window.App.ui.safeSetText('guiaPaso', `Paso ${pasoActual + 1} de ${pasos.length}`);
-    window.App.ui.safeSetText('guiaTitulo', titulo);
-    window.App.ui.safeSetText('guiaTexto', texto);
-    window.App.ui.safeSetText('guiaSiguiente', pasoActual === pasos.length - 1 ? '¡Listo!' : 'Siguiente');
+    tarjeta.style.top = `${Math.max(8, Math.min(bottom + 12, abajoDelTodo))}px`;
 };
 
 window.App.ux.terminarGuia = function() {
