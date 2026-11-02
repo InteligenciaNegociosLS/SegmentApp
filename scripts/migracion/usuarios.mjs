@@ -70,6 +70,35 @@ export function leerCsvUsuarios(texto) {
     return { filas, errores };
 }
 
+/* ---------- Enlaces de bienvenida ("Crea tu clave nueva") ---------- */
+// A quién le llega: a quien no tiene una clave que se pueda conservar (o a todos con "todos").
+export function quienesNecesitanEnlace({ filas, claves = new Map(), claveAdmin = '', todos = false, solo = '' }) {
+    return filas.filter(f => {
+        if (solo) return f.correo === solo.toLowerCase();
+        if (todos) return true;
+        const clave = f.rol === 'vm' ? (claves.get(f.visitador) || '') : (f.rol === 'admin' ? (claveAdmin || '') : '');
+        return clave.length < CLAVE_MINIMA;
+    });
+}
+
+export async function enviarEnlaces({ authAdmin, destinatarios, appUrl, simulacro = false, esperaMs = 2500, log = console.log }) {
+    const r = { enviados: [], fallidos: [] };
+    for (const [k, f] of destinatarios.entries()) {
+        if (simulacro) { log(`  [simulacro] enviaría a ${f.correo} (${f.nombre})`); continue; }
+        try {
+            await authAdmin.enviarEnlace(f.correo, appUrl);
+            r.enviados.push(f.correo);
+            log(`  ✉️  ${f.correo} (${f.nombre})`);
+        } catch (e) {
+            r.fallidos.push(`${f.correo}: ${e.message}`);
+            log(`  ⚠️  ${f.correo}: ${e.message}`);
+        }
+        // Pausa entre correos para no chocar con el límite por hora del servicio de correo
+        if (k < destinatarios.length - 1 && esperaMs) await new Promise(res => setTimeout(res, esperaMs));
+    }
+    return r;
+}
+
 /* ---------- Aplicar ---------- */
 // authAdmin: { crear({email, password, app_metadata}) → id, buscarPorCorreo(email) → id|null, actualizar(id, {app_metadata}) }
 export async function aplicarUsuarios({ db, authAdmin, filas, claves, claveAdmin, simulacro = false, log = console.log }) {

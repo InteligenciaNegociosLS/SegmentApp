@@ -121,6 +121,11 @@ export async function authAdminSupabase(url) {
         async actualizar(id, { app_metadata }) {
             const { error } = await sb.auth.admin.updateUserById(id, { app_metadata });
             if (error) throw new Error(`No se pudo actualizar el usuario: ${error.message}`);
+        },
+        // Correo "Crea tu clave nueva" (sale por el correo propio configurado en Supabase)
+        async enviarEnlace(email, redirectTo) {
+            const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+            if (error) throw new Error(error.message);
         }
     };
 }
