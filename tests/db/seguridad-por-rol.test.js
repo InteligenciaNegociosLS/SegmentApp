@@ -274,3 +274,15 @@ describe('Avisos vistos (migración 12)', () => {
         expect(await falla(U.gd1, 'delete from public.avisos_vistos')).toBe(true);
     });
 });
+
+describe('Latido para que Supabase no se pause (migración 13)', () => {
+    it('cualquiera puede dar el latido (solo cuenta); nadie lee ni cambia la tabla', async () => {
+        const uno = (await filas(null, 'select public.latido() as r'))[0].r;
+        const dos = (await filas(null, 'select public.latido() as r'))[0].r;
+        expect(uno.ok).toBe(true);
+        expect(Number(dos.veces)).toBe(Number(uno.veces) + 1);
+        expect(await falla(null, 'select * from public.latidos')).toBe(true);
+        expect(await falla(U.vm1, 'update public.latidos set veces = 0')).toBe(true);
+        expect((await filas(U.admin, 'select * from public.latidos').catch(() => []))).toHaveLength(0);
+    });
+});

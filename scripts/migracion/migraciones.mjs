@@ -2,7 +2,7 @@
    SegmentApp · Migración · Crear las tablas en una base NUEVA
    Aplica, en orden, los archivos de supabase/migrations/ que falten
    y anota cada uno en public.migraciones_aplicadas. Pensado para el
-   Supabase de PRODUCCIÓN (vacío): evita pegar 12 archivos a mano.
+   Supabase de PRODUCCIÓN (vacío): evita pegar uno por uno los archivos a mano.
    - Cada archivo se aplica completo o nada (si uno falla, ese no
      queda a medias y los siguientes no se tocan).
    - Se puede repetir: solo aplica lo que falte.

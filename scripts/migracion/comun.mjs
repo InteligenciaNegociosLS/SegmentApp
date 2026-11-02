@@ -112,8 +112,8 @@ export async function authAdminSupabase(url) {
             if (!cache) await cargarTodos();
             return cache.get(email.toLowerCase()) || null;
         },
-        async crear({ email, password, app_metadata }) {
-            const { data, error } = await sb.auth.admin.createUser({ email, password, email_confirm: true, app_metadata });
+        async crear({ email, password, app_metadata, user_metadata = {} }) {
+            const { data, error } = await sb.auth.admin.createUser({ email, password, email_confirm: true, app_metadata, user_metadata });
             if (error) throw new Error(`No se pudo crear ${email}: ${error.message}`);
             if (cache) cache.set(email.toLowerCase(), data.user.id);
             return data.user.id;
@@ -122,10 +122,10 @@ export async function authAdminSupabase(url) {
             const { error } = await sb.auth.admin.updateUserById(id, { app_metadata });
             if (error) throw new Error(`No se pudo actualizar el usuario: ${error.message}`);
         },
-        // Correo "Crea tu clave nueva" (sale por el correo propio configurado en Supabase)
-        async enviarEnlace(email, redirectTo) {
-            const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
-            if (error) throw new Error(error.message);
+        // Clave temporal nueva (para quien la olvidó): al entrar, la app le pide crear la suya
+        async cambiarClave(id, password) {
+            const { error } = await sb.auth.admin.updateUserById(id, { password, user_metadata: { clave_temporal: true } });
+            if (error) throw new Error(`No se pudo cambiar la clave: ${error.message}`);
         }
     };
 }
