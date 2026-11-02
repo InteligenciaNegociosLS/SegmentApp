@@ -1,125 +1,98 @@
 # Pase a producción: guía paso a paso
 
 **Para quién:** el dueño del proyecto (con mi ayuda en el chat).
-**Idea:** primero se prepara y se **ensaya** todo, sin que el equipo note nada.
-El día del pase solo se traen las evaluaciones más recientes, se crean los
-accesos y se cambia la app: **alrededor de 1 hora**, fuera del horario de
-trabajo.
+**Tiempo:** ~1 hora. **Cuándo:** 02/11/2026 (la app no se está usando).
+
+## Decisiones (02/11/2026)
+- **Supabase gratis.** El latido automático cada 2 días evita que se pause
+  (`docs/ACTIVO.md`).
+- **Sin correo automático.** El script crea los usuarios y deja un archivo
+  `accesos.csv` con un **mensaje listo** para cada persona (correo + clave
+  temporal). Tú los envías desde tu Gmail o WhatsApp. La primera vez que
+  entran, la app les pide **crear su propia clave**. Quien tenía una clave de
+  6 caracteres o más en la app vieja la conserva.
+- **Repositorio:** sigue público. Los datos del repositorio son de prueba,
+  así que no hace falta sacarlos.
 
 ## Garantías
 - **Firebase no se toca:** los scripts solo lo **leen**. Queda como respaldo.
-- **Se puede volver atrás en 1 minuto** (ver la parte 4).
+- **Se puede volver atrás en 1 minuto** (parte 9).
 - **Nada se borra.** La rama `respaldo-2026-10-27` no se toca.
 - Las claves solo van en el `.env` de Cloud Shell y en los paneles de
-  Supabase, Brevo y Vercel. **Nunca en el chat ni en GitHub.**
+  Supabase y Vercel. **Nunca en el chat ni en GitHub.**
 
 ---
 
-## 0. Decisiones tomadas (02/11/2026)
-- **Supabase gratis** → el latido automático lo mantiene activo (`docs/ACTIVO.md`).
-- **Correo:** tu Gmail (Brevo no permite Venezuela) → `docs/CORREO.md`.
-- **Pase:** el mismo 02/11/2026 (la app no se está usando). Como no hay
-  nada que ensayar sin afectar al equipo, el ensayo y el pase son uno solo.
-- **Repositorio:** se eligió la opción (c) (sacar el fichero del historial),
-  pero choca con dos reglas del proyecto (no tocar `main` ni la rama de
-  respaldo) y no borra copias ya descargadas. Queda pendiente; ver
-  alternativa (d) en DECISIONES.
+## Parte 1 · Crear el Supabase de producción (10 min)
+1. https://supabase.com/dashboard → **New project**.
+   - Name: `segmentapp` · Database Password: **Generate** (guárdala).
+   - Region: **East US (North Virginia)** · Plan: **Free**.
+2. Copia a tu bloc de notas (no al chat):
+   - **Project Settings → Data API → Project URL**
+   - **Project Settings → API Keys →** clave **anon / publishable** y la
+     **secret / service_role**
+   - **Connect → Session pooler → URI** (cambia `[YOUR-PASSWORD]` por la clave
+     de la base)
+3. **Authentication → URL Configuration → Site URL:** la dirección de
+   producción de la app (Vercel → proyecto → **Settings → Domains**).
 
-## 1. Decisiones antes de empezar (las tomas tú)
+## Parte 2 · Vercel: variables de producción (5 min)
+Vercel → proyecto → **Settings → Environment Variables**, marcando **solo
+Production**:
+- `SUPABASE_URL` = la Project URL de producción
+- `SUPABASE_ANON_KEY` = la clave anon/publishable de producción
+- `ERROR_LOG_REMOTE` = `true`
 
-| # | Decisión | Recomendación | Por qué |
-|---|---|---|---|
-| 1 | **Plan del Supabase de producción** | **Pro** (25 US$/mes) | El plan gratis **se pausa** tras 7 días sin uso y se llena en unos 8 meses (cada mes de datos ocupa ~55 MB de 500 MB). Pro tiene respaldo diario. |
-| 2 | **Repositorio de GitHub privado** | **Sí, ya** | Hoy es **público** y contiene el fichero médico (nombres, cédulas, teléfonos, correos, direcciones). Ver la nota abajo. |
-| 3 | **Correo propio** | Brevo (gratis) | Para que lleguen los enlaces "Crea tu clave". Guía: `docs/CORREO.md`. |
-| 4 | **Fecha y hora del pase** | Fin de semana o noche | Ese rato nadie debe evaluar en la app vieja. |
-
-> **Nota sobre el repositorio privado:** Vercel, en su plan gratis, **no
-> publica** desde un repositorio **privado de una organización** de GitHub.
-> Hay que elegir:
-> - **(a, recomendada)** Pasar Vercel a **Pro** (20 US$/mes; el plan gratis
->   de Vercel además es solo para uso no comercial) y luego hacer el
->   repositorio privado (**GitHub → Settings → General → Danger Zone →
->   Change visibility → Private**). No se pierde nada.
-> - (b) Mover el repositorio a una cuenta personal de GitHub y hacerlo privado.
-> - (c) Dejarlo público y sacar los archivos del fichero del repositorio y de
->   su historial (es delicado: reescribe el historial; lo haríamos juntos).
->
-> Lo que ya se descargó mientras fue público no se puede recuperar; por eso
-> conviene hacerlo cuanto antes.
-
----
-
-## 2. Preparación (una semana antes; el equipo no nota nada)
-
-### 2.1 Crear el Supabase de PRODUCCIÓN (10 min)
-Igual que el de pruebas (`docs/ENTORNOS.md`, paso 1), con nombre
-`segmentapp` (sin "pruebas"), región **East US (North Virginia)**. Guarda la
-clave de la base en tu gestor de contraseñas.
-
-### 2.2 Correo propio en producción (15 min)
-Sigue `docs/CORREO.md` (pasos 2 a 4) **en el proyecto de producción**. En
-**URL Configuration**, la *Site URL* es la dirección de producción de la app.
-
-### 2.3 Cloud Shell con los valores de PRODUCCIÓN (10 min)
-Como en `scripts/migracion/LEEME.md` (secciones A y B), pero en una carpeta
-nueva para no mezclar con pruebas:
+## Parte 3 · Cloud Shell (10 min)
+1. GitHub → rama **rediseno** → **Code → Download ZIP**.
+2. https://shell.cloud.google.com → menú ⋮ → **Subir** → el ZIP.
+3. Comandos (uno por uno):
 
 ```bash
-mkdir -p ~/produccion && cd ~/produccion
+mkdir -p ~/produccion && mv ~/SegmentApp-rediseno*.zip ~/produccion/ && cd ~/produccion
 ```
-
-Sube el ZIP de la rama `rediseno`, descomprímelo y entra a
-`SegmentApp-rediseno/scripts/migracion`. En el `.env` pon:
-- `DESTINO=produccion`
-- `SUPABASE_DB_URL`, `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` **del
-  proyecto de producción**
-- `APP_URL=` la dirección de producción de la app
-
-Cada script te pedirá escribir `MIGRAR PRODUCCION` antes de cambiar algo.
-
-### 2.4 Crear las tablas (2 min)
 
 ```bash
-node 0-preparar-base.mjs --simulacro
+unzip -qo SegmentApp-rediseno*.zip && cd SegmentApp-rediseno/scripts/migracion
 ```
+
+```bash
+npm install
+```
+
+```bash
+cp .env.example .env && nano .env
+```
+
+4. En el `.env`: `DESTINO=produccion`, `SUPABASE_DB_URL`, `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY` (de **producción**) y `APP_URL` (la dirección
+   de la app). Guardar: **Ctrl+O**, **Enter**, **Ctrl+X**.
+5. Permiso para leer Firebase:
+
+```bash
+gcloud config set project segmentapp-1b237
+```
+
+```bash
+gcloud auth application-default login
+```
+
+```bash
+gcloud auth application-default set-quota-project segmentapp-1b237
+```
+
+## Parte 4 · Crear la base y pasar los datos (20 min)
+Cada script pide escribir **`MIGRAR PRODUCCION`**.
 
 ```bash
 node 0-preparar-base.mjs
 ```
 
-Debe terminar en **✅ Base lista: se aplicaron 13 archivo(s).**
-
-### 2.5 Ensayo general con datos reales (20 min)
-Los mismos pasos del día del pase (parte 3, pasos 3 a 7), **sin** enviar los
-correos de bienvenida. Así, si algo falla, se corrige con calma. Todos los
-pasos se pueden repetir sin duplicar nada.
-
-### 2.6 Vercel: variables de PRODUCCIÓN (5 min)
-Vercel → proyecto → **Settings → Environment Variables**. Agrega
-`SUPABASE_URL` y `SUPABASE_ANON_KEY` **del Supabase de producción**,
-marcando **solo Production**, y `ERROR_LOG_REMOTE=true` (Production). La app
-vieja no las usa: no cambia nada hasta el pase.
-
----
-
-## 3. El día del pase (~1 hora)
-
-1. **Aviso al equipo** (un día antes): "El sábado de 8 a 9 p.m. no evalúen
-   en SegmentApp: estamos actualizando la app".
-2. A la hora acordada, abre Cloud Shell en la carpeta de producción:
-
-```bash
-cd ~/produccion/SegmentApp-rediseno/scripts/migracion
-```
-
-3. Traer las evaluaciones más recientes de Firebase (solo lectura):
+Debe decir: ✅ Base lista: se aplicaron 13 archivo(s).
 
 ```bash
 node 1-exportar-firebase.mjs
 ```
-
-4. Importar (simulacro y luego de verdad):
 
 ```bash
 node 2-importar.mjs --simulacro
@@ -129,63 +102,83 @@ node 2-importar.mjs --simulacro
 node 2-importar.mjs
 ```
 
-5. Validar. Debe decir **✅ TODO COINCIDE**:
-
 ```bash
 node 4-validar.mjs
 ```
 
-6. Subir los archivos de datos y preparar la versión para los visitadores:
+Debe decir: ✅ TODO COINCIDE.
 
 ```bash
 node 5-subir-archivos.mjs
 ```
 
-7. Usuarios (con el `usuarios.csv` que llenaste en el ensayo):
+(Al final prepara la versión para los visitadores.)
+
+## Parte 5 · Usuarios (15 min)
+
+```bash
+node 3-usuarios.mjs --plantilla
+```
+
+```bash
+cloudshell download usuarios.csv
+```
+
+Ábrelo en Excel, completa los correos que falten, **Guardar como → CSV UTF-8**
+y súbelo (⋮ → Subir):
+
+```bash
+mv ~/usuarios.csv .
+```
+
+```bash
+node 3-usuarios.mjs --simulacro
+```
 
 ```bash
 node 3-usuarios.mjs
 ```
 
-8. Correos de bienvenida ("Crea tu clave"). Primero mira a quién le llegaría:
+Al terminar crea **`accesos.csv`**: correo, clave temporal y el mensaje para
+cada persona. Descárgalo (no lo envíes todavía):
 
 ```bash
-node 3-usuarios.mjs --enviar-enlaces --simulacro
+cloudshell download accesos.csv
 ```
+
+## Parte 6 · Publicar la app nueva (10 min)
+1. GitHub → **Pull requests → New pull request** → base **main**, compare
+   **rediseno** → **Create** → acéptalo **tú** (yo nunca toco `main`).
+2. En 2 minutos, abre la dirección de producción y entra con tu correo.
+   Abajo **no** debe aparecer "PRUEBAS". Entra también como un VM de prueba.
+
+## Parte 7 · Enviar los accesos (20 min)
+Abre `accesos.csv` en Excel. La columna **mensaje** trae el texto listo:
+cópialo y envíaselo a cada persona por Gmail o WhatsApp. Cuando termines,
+**borra** el archivo de tu computadora y de Cloud Shell:
 
 ```bash
-node 3-usuarios.mjs --enviar-enlaces
+rm accesos.csv
 ```
 
-9. **Cambiar la app:** en GitHub, crea un Pull Request de `rediseno` hacia
-   `main` y **acéptalo tú** (yo nunca toco `main`). Vercel publica la app
-   nueva en producción en 1 o 2 minutos.
-10. **Probar** en la dirección de producción: entra como administrador, como
-    un VM y como un GD. Abajo **no** debe aparecer la etiqueta "PRUEBAS".
-11. **Avisar al equipo** (mensaje listo para WhatsApp):
+## Parte 8 · Activar el latido (5 min)
+GitHub → **Settings → Secrets and variables → Actions → New repository
+secret**: `SUPABASE_URL_PRODUCCION` y `SUPABASE_ANON_KEY_PRODUCCION`. Luego
+**Actions → Mantener Supabase activo → Run workflow** → debe quedar en verde.
 
-> 📲 *¡SegmentApp se renovó!* Entra en <dirección de la app> con tu correo
-> de la empresa. Te llegó un correo **"SegmentApp · Crea tu clave"**: toca el
-> botón y elige tu clave (si no lo ves, revisa Spam). En el teléfono, usa el
-> menú ⋮ → **"Instalar la app"** para tenerla en tu pantalla de inicio. Si tu
-> clave anterior tenía 6 caracteres o más, sigue sirviendo.
+## Parte 9 · Si algo sale mal: volver atrás (1 minuto)
+Vercel → **Deployments** → la publicación de **Production** anterior al
+pase → ⋯ → **Instant Rollback**. Vuelve la app vieja con Firebase, tal como
+estaba. Cópiame el error y lo resolvemos.
 
 ---
 
-## 4. Si algo sale mal: volver atrás (1 minuto)
-
-1. Vercel → **Deployments** → busca la publicación de **Production**
-   anterior al pase → menú **⋯** → **Instant Rollback**.
-2. Vuelve la app vieja con Firebase, tal como estaba. Firebase no se tocó.
-3. Lo que se haya evaluado en la app nueva queda guardado en Supabase.
-4. Cópiame el error y lo resolvemos antes de intentarlo otra vez.
-
----
-
-## 5. La primera semana
-- Revisa **Ajustes → Salud de los datos** (visitadores sin usuario) y
-  **Registro de fallas**.
-- A quien no le llegó el correo: `node 3-usuarios.mjs --enviar-enlaces --solo correo@empresa.com`.
+## Después del pase
+- **Alguien olvidó su clave:** en Cloud Shell, `node 3-usuarios.mjs --nueva-clave su@correo`
+  → descarga `accesos.csv` → envíale el mensaje → `rm accesos.csv`.
+- **Persona nueva:** agrégala a `usuarios.csv` y vuelve a ejecutar
+  `node 3-usuarios.mjs` (los demás no cambian).
+- **Cargar datos nuevos** (CloseUp o fichero): desde la app, **Ajustes →
+  Cargar datos** (`docs/CARGA_DATOS.md`).
 - **No borres Firebase** por al menos 3 meses: es el respaldo.
-- Cuando todo esté bien, decidimos qué hacer con los archivos del fichero en
-  el repositorio (punto 2 de la parte 1).
+- Correo automático (opcional, más adelante): `docs/CORREO.md`.

@@ -1,4 +1,8 @@
-# Correo propio para SegmentApp (recuperar clave y bienvenida)
+# Correo propio para SegmentApp (OPCIONAL, para más adelante)
+
+> **Decisión del 02/11/2026: por ahora NO se usa.** Los accesos se entregan
+> con claves temporales (`docs/SALIDA.md`). Esta guía queda por si más
+> adelante quieres que la app envíe sola los correos de "¿Olvidaste tu clave?".
 
 **Para quién:** el dueño del proyecto. **Tiempo:** unos 30 minutos.
 **Por qué:** el correo que trae Supabase de fábrica envía muy pocos correos

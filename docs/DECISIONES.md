@@ -402,3 +402,16 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 3. **Correo con el Gmail del dueño** (clave de aplicación de Google; Brevo no
    permite cuentas de Venezuela). Guía actualizada: `docs/CORREO.md`.
 4. **Pase a producción hoy** (la app no se está usando).
+
+### Ajuste del mismo día (antes de fusionar el PR 25)
+- **Sin correo automático** (el dueño lo prefiere más simple): se quita la
+  opción de correo del pase. El script de usuarios da **claves temporales**
+  (fáciles de escribir: `maro-kebi-4821`) y deja `accesos.csv` con un mensaje
+  listo por persona; el dueño los envía por Gmail o WhatsApp. Al entrar con
+  la clave temporal, la app pide **crear la propia**. Nuevo en el menú "Más":
+  **Cambiar mi clave**. Para quien la olvide:
+  `node 3-usuarios.mjs --nueva-clave correo`. `docs/CORREO.md` queda como
+  opción para más adelante.
+- **Repositorio:** ni (c) ni (d). Los datos públicos del repositorio son de
+  prueba (aclaración del dueño), así que no hace falta.
+- El latido para que Supabase gratis no se pause **se mantiene**.
