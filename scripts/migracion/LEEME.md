@@ -238,8 +238,7 @@ Claves:
 > ⚠️ **Correos de recuperación:** el servicio de correo que trae Supabase de
 > fábrica envía muy pocos correos por hora, y **solo a los miembros de tu
 > equipo de Supabase**. Antes de dar acceso a todo el equipo hay que conectar
-> un servicio de correo propio (SMTP). Lo configuramos en la Fase 9 (te daré
-> los pasos).
+> un correo propio: guía en `docs/CORREO.md` (Fase 10).
 
 ---
 
@@ -265,9 +264,23 @@ Debe terminar con **✅ Archivos subidos y asociados: recetas y fichero.**
 
 ---
 
-## Producción (más adelante, el día del pase)
-Se repiten los pasos C a G con un `.env` que diga `DESTINO=produccion` y los
-valores del Supabase **real**. El script pedirá escribir `MIGRAR PRODUCCION`.
+## Producción (Fase 10): ver `docs/SALIDA.md`
+La guía completa del pase está en **`docs/SALIDA.md`**. En resumen, con un
+`.env` que diga `DESTINO=produccion` y los valores del Supabase **real** (cada
+script pedirá escribir `MIGRAR PRODUCCION`):
+
+| Paso | Comando | Qué hace |
+|---|---|---|
+| 0 | `node 0-preparar-base.mjs` | Crea todas las tablas en la base nueva (aplica los 12 archivos en orden). Solo para una base vacía. |
+| 1 | `node 1-exportar-firebase.mjs` | Copia de Firebase (solo lectura). |
+| 2 | `node 2-importar.mjs` | Distritos, visitadores, fichero, recetas y evaluaciones. |
+| 4 | `node 4-validar.mjs` | Debe decir ✅ TODO COINCIDE. |
+| 5 | `node 5-subir-archivos.mjs` | Archivos al almacén privado **y prepara la versión para los visitadores**. |
+| 3 | `node 3-usuarios.mjs` | Crea los usuarios del `usuarios.csv`. |
+| ✉️ | `node 3-usuarios.mjs --enviar-enlaces` | Correo "Crea tu clave" a quien no tiene una clave que se conserve (`--todos`, o `--solo correo@…` para una persona). Necesita `APP_URL` y el correo propio (`docs/CORREO.md`). |
+| 6 | `node 6-preparar-versiones.mjs` | Solo si hace falta repetir la preparación de versiones. |
+
+Todos aceptan `--simulacro` y se pueden repetir sin duplicar nada.
 
 ## Si algo falla
 - Cada paso de la importación se hace **completo o nada**: puedes corregir y

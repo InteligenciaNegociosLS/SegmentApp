@@ -8,6 +8,7 @@
 ============================================================ */
 import { destinoSeguro, conectarBase, tieneOpcion, RAIZ, salir } from './comun.mjs';
 import { subirArchivosVersion, almacenSupabase } from './archivos.mjs';
+import { prepararVersiones } from './orden.mjs';
 
 const simulacro = tieneOpcion('--simulacro');
 const { dbUrl, url } = await destinoSeguro({ necesitaAuth: !simulacro });
@@ -19,6 +20,9 @@ try {
     console.log(simulacro ? '🔎 SIMULACRO (no se sube nada)\n' : '✍️  MODO REAL\n');
     const hechos = await subirArchivosVersion({ db, storage, raiz: RAIZ, simulacro });
     console.log(`\n✅ ${simulacro ? 'Todo listo para subir' : 'Archivos subidos y asociados'}: ${hechos.map(h => h.tipo).join(' y ')}.`);
+    // Lo que necesitan los visitadores para entrar (orden nacional por mercado)
+    console.log('\nPreparando las versiones de recetas para los visitadores…');
+    await prepararVersiones({ db, simulacro });
 } catch (e) {
     salir(e.message);
 } finally {
