@@ -385,6 +385,13 @@ window.App.sb.nombresVisitadoresVisibles = async function() {
     return filas.map(f => f.nombre_sector);
 };
 
+// Visitadores desactivados (su VM fue desactivado o ya no está): la app no muestra sus médicos ni sus números
+window.App.sb.visitadoresOcultos = async function() {
+    const sb = await window.App.sb.cliente();
+    const filas = await leerTodo(() => sb.from('visitadores').select('nombre_sector').eq('activo', false).order('nombre_sector'), 'Visitadores desactivados');
+    return filas.map(f => String(f.nombre_sector || '').trim().toUpperCase()).filter(Boolean);
+};
+
 window.App.sb.visitadoresConUsuario = async function() {
     const sb = await window.App.sb.cliente();
     const filas = await leerTodo(() => sb.from('visitadores')

@@ -811,15 +811,16 @@ const PASOS_GUIA = {
     // [qué se resalta, título, texto, pantalla donde está]
     vm: [
         ['#navInferior, #navRiel', 'Tus secciones', 'Inicio, Matriz y Médicos están en la misma página: estos botones te llevan directo a cada parte.', 'inicio'],
-        ['#chipsRapidos', 'Tus filtros rápidos', 'Toca "Pendientes" para ver los médicos que te faltan por evaluar. El número te dice cuántos son.', 'inicio'],
+        ['#chipsRapidos', 'Tus filtros rápidos', 'Están junto a la lista de médicos. Toca "Pendientes" para ver los que te faltan por evaluar. El número te dice cuántos son.', 'medicos'],
         ['#visitadorDashboard', 'Tu avance', 'Aquí ves cuántos médicos llevas evaluados. "Evaluar pendientes" te lleva directo al trabajo.', 'inicio'],
         ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. El botón "?" explica qué significa cada uno.', 'matriz'],
         ['#dataTable tr:first-child .eval-estado, #dataCards article:first-child .eval-estado, #seccionMedicos', 'Evaluar', 'Toca "Evaluar" en un médico. Las respuestas son de un toque y "Guardar y siguiente" te lleva al próximo.', 'medicos']
     ],
     equipo: [
         ['#navInferior, #navRiel', 'Las secciones', 'Inicio, Matriz y Médicos están en la misma página; Equipo tiene el avance de tus visitadores. Cambia desde aquí.', 'inicio'],
-        ['#filterBar', 'Buscar y filtrar', 'Busca un médico o usa los filtros rápidos. En "Filtros" están todos los demás.', 'inicio'],
+        ['#filterBar', 'Buscar y filtrar', 'Busca un médico por nombre o matrícula. En "Filtros" eliges mercados, productos y más: cambian todo lo que ves.', 'inicio'],
         ['#matrixCaptureTarget', 'La matriz', 'Toca un cuadrante para ver sus médicos. Usa pantalla completa para presentarla.', 'matriz'],
+        ['#chipsRapidos', 'Filtros de la lista', 'Todos, Pendientes, Evaluados… Solo cambian la lista de médicos que está debajo.', 'medicos'],
         ['#dataTable tr:first-child, #dataCards article:first-child, #seccionMedicos', 'La lista', 'Cada médico con su cuadrante, recetas, participación y estado de evaluación.', 'medicos'],
         ['#btnMas', 'Más opciones', 'Versiones de datos, exportar, la guía y cerrar sesión están aquí.', 'inicio']
     ]
@@ -830,6 +831,10 @@ const claveGuia = () => `SEGMENTAPP_GUIA_${window.App.state.usuarioId || 'x'}`;
 
 window.App.ux.iniciarGuia = function(forzar = false) {
     try { if (!forzar && localStorage.getItem(claveGuia())) return; } catch (e) { /* sin almacenamiento */ }
+    // Primero la clave: si la app está pidiendo crear la clave propia, la guía espera
+    const pideClave = document.getElementById('nuevaClaveModal');
+    if (pideClave && !pideClave.classList.contains('hidden')) { window.App.ux.guiaEnEspera = true; return; }
+    window.App.ux.guiaEnEspera = false;
     pasoActual = 0;
     document.getElementById('guia')?.classList.remove('hidden');
     window.App.ux.pasoGuia(0);
@@ -848,14 +853,16 @@ window.App.ux.pasoGuia = function(delta) {
     if (!el && delta === 0 && pasoActual < pasos.length - 1) return window.App.ux.pasoGuia(1);
     const foco = document.getElementById('guiaFoco'), tarjeta = document.getElementById('guiaTarjeta');
     const ARRIBA = 76, TARJETA = 210, m = 8;   // barra superior, alto de la tarjeta, margen
+    // Lo que está en la barra superior (ej. el botón ⋮) siempre se ve: no se desplaza ni se recorta
+    const enBarra = !!(el && el.closest && el.closest('header, #navRiel, #navInferior'));
     // Llevar lo que se explica justo debajo de la barra superior
-    if (el && window.scrollTo) {
+    if (el && !enBarra && window.scrollTo) {
         const r0 = el.getBoundingClientRect();
         window.scrollTo({ top: Math.max(0, window.scrollY + r0.top - ARRIBA - m), behavior: 'auto' });
     }
     const r = el ? el.getBoundingClientRect() : { top: ARRIBA + 10, left: 16, width: Math.min(360, window.innerWidth - 32), height: 60, bottom: ARRIBA + 70 };
     // Si es más alto que la pantalla, se resalta la parte visible y la tarjeta va abajo
-    const top = Math.max(r.top, ARRIBA) - m;
+    const top = enBarra ? Math.max(4, r.top - m) : Math.max(r.top, ARRIBA) - m;
     const cabeDebajo = r.bottom + m + TARJETA + 12 <= window.innerHeight;
     const bottom = cabeDebajo ? r.bottom + m : Math.min(r.bottom + m, window.innerHeight - TARJETA - 24);
     Object.assign(foco.style, { top: `${top}px`, left: `${Math.max(4, r.left - m)}px`, width: `${Math.min(window.innerWidth - 8, r.width + m * 2)}px`, height: `${Math.max(48, bottom - top)}px` });

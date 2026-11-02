@@ -73,6 +73,16 @@ describe('Tableros del inicio', () => {
         const c = App.tableros.calcular();
         expect(c.embudo.fichados).toBe(2);
         expect(c.embudo.conRx).toBe(2);
+        // Fase 11: "Médicos en el fichero" y "Evaluados" son los mismos números que los filtros rápidos
+        App.ux.renderChipsRapidos();
+        const chip = (t) => Number([...document.querySelectorAll('#chipsRapidos .chip')].find(b => b.textContent.includes(t)).querySelector('.cuenta').textContent.replace(/\D/g, ''));
+        const conFichero = App.state.PROCESSED_DATA.filter(x => x.isZeroRx || (x.ficheroData && x.ficheroData.length));
+        expect(c.embudo.fichados).toBe(conFichero.length);
+        expect(c.embudo.evaluadosFichero).toBe(conFichero.filter(x => App.ux.estaEvaluado(x)).length);
+        if (conFichero.length === App.state.PROCESSED_DATA.length) {
+            expect(chip('Todos')).toBe(c.embudo.fichados);
+            expect(chip('Evaluados')).toBe(c.embudo.evaluadosFichero);
+        }
         expect(c.mercados[0].mercado).toBe('DESLER MERCADO');
         expect(c.mercados[0].gap).toBeGreaterThan(0);
         App.tableros.render();
@@ -118,5 +128,57 @@ describe('Herramientas del administrador', () => {
         expect(t).toMatch(/Adopción baja hasta: 33 → 30/);
         expect(t).toMatch(/Publicó la versión de recetas Datos enero/);
         expect(document.getElementById('ajSaludLista').textContent).toMatch(/Recetas: Datos enero/);
+    });
+});
+
+describe('Fase 11: Equipo más claro', () => {
+    it('ordena por cobertura (y luego por nombre); totales absolutos de médicos, evaluados y evaluaciones', async () => {
+        await admin();
+        App.ux.irA('equipo');
+        App.equipo.verVista('visitadores');
+        expect([...document.querySelectorAll('#equipoContenido [onclick^="App.equipo.ordenar"]')].map(b => b.textContent.trim())).toEqual(['Cobertura', 'Nombre']);
+        const resumen = document.getElementById('equipoResumen').textContent;
+        expect(resumen).toContain('Médicos en fichero');
+        expect(resumen).toContain('Médicos evaluados');
+        expect(resumen).toContain('Evaluaciones');
+    });
+
+    it('filtra por línea (OTC o Pharmetique) según el "Equipo" del fichero', async () => {
+        await admin();
+        expect(App.equipo.estadisticas().vms.length).toBe(2);
+        App.equipo.elegirLinea('OTC');
+        expect(App.equipo.estadisticas().vms.map(v => v.linea)).toEqual(['OTC', 'OTC']);
+        App.equipo.elegirLinea('Pharmetique');
+        expect(App.equipo.estadisticas().vms).toHaveLength(0);
+        App.equipo.elegirLinea('todas');
+    });
+
+    it('al desactivar a un VM, sus médicos y sus números dejan de verse (sin borrar nada)', async () => {
+        const bd = baseSimulada(App);
+        bd.evaluaciones.push({ id: 'e-neivis', visitador_id: 'v-1', mercado: 'DESLER MERCADO', matricula: '123', medico_nombre: 'PEREZ ANA',
+            cuadrante: 'A+', notas: '', encuesta: {}, cruce_errado: false, eliminado_en: null, creado_en: '2026-02-01T00:00:00Z', actualizado_en: '2026-02-01T00:00:00Z' });
+        await admin();
+        expect(App.equipo.estadisticas().vms.map(v => v.nombre)).toContain('NEIVIS PARRA');
+        // El admin lo desactiva y la app se actualiza
+        await App.sb.activarUsuario('u-vm', false);
+        localStorage.removeItem('sbFalsoSesion');
+        App = cargarApp({ datos: bd });
+        await admin();
+        expect(App.state.REPS_OCULTOS.has('NEIVIS PARRA')).toBe(true);
+        expect(App.equipo.estadisticas().vms.map(v => v.nombre)).not.toContain('NEIVIS PARRA');
+        expect(App.state.ALL_EVALUATIONS.some(e => e.visitador === 'NEIVIS PARRA')).toBe(false);
+        expect([...App.state.FICHERO_MAP.values()].flat().some(r => r['Nombre del sector'] === 'NEIVIS PARRA')).toBe(false);
+        // Nada se borró
+        expect(bd.evaluaciones.some(e => e.id === 'e-neivis')).toBe(true);
+    });
+});
+
+describe('Fase 11: resumen en Excel en vez de "Reportes avanzados"', () => {
+    it('Equipo descarga el resumen por visitador; Ajustes ya no muestra "Reportes avanzados"', async () => {
+        await admin();
+        const csv = App.equipo.resumenCsv();
+        expect(csv.split('\n')[0]).toContain('visitador;distrito;linea;medicos_fichero;medicos_evaluados');
+        expect(csv).toContain('"NEIVIS PARRA"'.replace('NEIVIS PARRA', App.ui.nombreVisible('NEIVIS PARRA')));
+        expect(document.getElementById('ajDatos').textContent).not.toContain('Reportes avanzados');
     });
 });

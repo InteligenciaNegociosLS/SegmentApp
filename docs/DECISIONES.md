@@ -443,3 +443,30 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   lista** (sin claves). Migración 15 `admin_claves_temporales`, todo o nada.
 - GD y Gerente Nacional todavía no tenían usuario: se crean con
   `3-usuarios.mjs` (filas gd y gte_nacional de `usuarios.csv`).
+
+## Fase 11 (02/11/2026) · Ajustes tras las primeras pruebas en producción
+1. **Clave visible:** botón ojo en el ingreso y en "crear clave".
+2. **Primero la clave, después la guía:** la guía rápida espera a que la
+   persona cree su clave.
+3. **Mensajes dentro de la ventana:** los errores del ingreso y de "crear
+   clave" se ven dentro de la ventana; los avisos inferiores quedan por
+   encima de todo. "¿Olvidaste tu clave?" indica pedir una clave temporal al
+   administrador (la app no envía correos).
+4. **Guía:** el paso "Más opciones" resalta el botón ⋮.
+5. **Números coherentes:** "Cobertura" usa los mismos médicos que los
+   filtros rápidos (Todos, Evaluados) y separa "Evaluados" (todo el fichero)
+   de "Evaluados con recetas". Los **filtros rápidos** pasan junto a la lista
+   de médicos, porque solo cambian esa lista. Buscar y "Filtros" siguen arriba
+   porque cambian todo.
+6. **Equipo:** se ordena por **Cobertura** (médicos evaluados ÷ fichero) o
+   por **Nombre**; los demás órdenes se quitaron. Totales absolutos: médicos en
+   fichero, médicos evaluados y evaluaciones. Filtro por **línea** (OTC o
+   Pharmetique, según la columna "Equipo" del fichero y la configuración
+   `equipos_otc`). Botón **Resumen** (Excel por visitador).
+7. **Detalle del visitador:** la mini matriz muestra **su evaluación** (cuenta
+   todas sus evaluaciones, igual que la lista de al lado) o **CloseUp** (sus
+   médicos con recetas). Los datos que llenaban la tarjeta pasan al detalle.
+8. **"Reportes avanzados"** sale de Ajustes: lo cubren Equipo y su Resumen
+   (el código queda por si se quiere volver).
+9. **Desactivar a un VM** (migración 16) oculta sus médicos y números para
+   GD, Gte. Nacional y admin. No se borra nada; al reactivarlo vuelve todo.

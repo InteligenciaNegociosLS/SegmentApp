@@ -89,8 +89,10 @@ window.App.auth.attemptLogin = async function() {
     const pwd   = document.getElementById('visitadorPwd').value;
     const btn   = document.getElementById('btnLoginBtn');
 
-    if (!email) { ui.showToast("Escribe tu correo corporativo."); return; }
-    if (!pwd)   { ui.showToast("Ingresa tu contraseña.");          return; }
+    const aviso = (t) => ui.mensajeEn('loginMensaje', t);
+    aviso('');
+    if (!email) { aviso("Escribe tu correo corporativo."); return; }
+    if (!pwd)   { aviso("Escribe tu clave.");                return; }
 
     btn.disabled = true;
     btn.innerHTML = '<span class="material-symbols-outlined animate-spin-reverse">sync</span> Validando...';
@@ -103,7 +105,7 @@ window.App.auth.attemptLogin = async function() {
         await window.App.auth.entrar(user, { avisar: true });
     } catch (e) {
         console.error("Error validando login", e);
-        ui.showToast(window.App.auth.authErrorMessage(e));
+        aviso(window.App.auth.authErrorMessage(e));
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<span class="material-symbols-outlined">login</span> Entrar al Panel';
@@ -115,23 +117,8 @@ window.App.auth.attemptLogin = async function() {
 ============================================================ */
 window.App.auth.sendPasswordReset = async function() {
     const ui    = window.App.ui;
-    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-    if (!email) {
-        ui.showToast("Escribe primero tu correo corporativo arriba.");
-        document.getElementById('loginEmail').focus();
-        return;
-    }
-    const btn = document.getElementById('btnForgotPwd');
-    if (btn) btn.disabled = true;
-    try {
-        await window.App.sb.enviarRecuperacion(email);
-        ui.showToast("Si tu correo puede recibir mensajes de la app, te llegará un enlace (revisa también spam). Si no te llega en unos minutos, pídele una clave nueva al administrador.", { duracion: 9000 });
-    } catch (e) {
-        console.error("Error enviando correo de recuperación", e);
-        ui.showToast(window.App.auth.authErrorMessage(e));
-    } finally {
-        if (btn) btn.disabled = false;
-    }
+    // La app no envía correos (decisión del 02/11/2026): el administrador da una clave temporal
+    ui.mensajeEn('loginMensaje', 'Pídele al administrador una clave temporal. Te la envía por WhatsApp o correo y, al entrar con ella, la app te pide crear la tuya.', 'info');
 };
 
 /* ============================================================
@@ -151,7 +138,13 @@ window.App.auth.mostrarNuevaClave = function(motivo = 'recuperar') {
     // La clave temporal se debe cambiar: sin botón "Ahora no"
     document.getElementById('btnCancelarNuevaClave')?.classList.toggle('hidden', motivo !== 'cambiar');
     document.getElementById('loginModal').classList.add('hidden');
+    window.App.ui.mensajeEn('nuevaClaveMensaje', '');
     document.getElementById('nuevaClaveModal').classList.remove('hidden');
+    // Si la guía rápida ya estaba abierta, se pausa hasta que guarde su clave
+    if (window.App.ux && document.getElementById('guia') && !document.getElementById('guia').classList.contains('hidden')) {
+        document.getElementById('guia').classList.add('hidden');
+        window.App.ux.guiaEnEspera = true;
+    }
     setTimeout(() => document.getElementById('nuevaClave1').focus(), 50);
 };
 
@@ -159,8 +152,10 @@ window.App.auth.guardarNuevaClave = async function() {
     const ui = window.App.ui;
     const c1 = document.getElementById('nuevaClave1').value;
     const c2 = document.getElementById('nuevaClave2').value;
-    if (c1.length < 8) { ui.showToast("La clave debe tener al menos 8 caracteres."); return; }
-    if (c1 !== c2)     { ui.showToast("Las dos claves no coinciden."); return; }
+    const aviso = (t) => ui.mensajeEn('nuevaClaveMensaje', t);
+    aviso('');
+    if (c1.length < 8) { aviso("La clave debe tener al menos 8 caracteres."); return; }
+    if (c1 !== c2)     { aviso("Las dos claves no coinciden."); return; }
     const btn = document.getElementById('btnGuardarNuevaClave');
     btn.disabled = true;
     try {
@@ -171,9 +166,11 @@ window.App.auth.guardarNuevaClave = async function() {
         ui.showToast("¡Listo! Tu clave nueva quedó guardada.");
         const user = await window.App.sb.usuarioActual();
         if (user && window.App.state.currentUserRole === 'guest') await window.App.auth.entrar(user, { avisar: true });
+        // La guía rápida espera a que la persona cree su clave
+        if (window.App.ux && window.App.ux.guiaEnEspera) window.App.ux.iniciarGuia();
     } catch (e) {
         console.error('Error guardando la clave nueva', e);
-        ui.showToast(window.App.auth.authErrorMessage(e));
+        aviso(window.App.auth.authErrorMessage(e));
     } finally {
         btn.disabled = false;
     }
@@ -249,6 +246,19 @@ window.App.auth.entrar = async function(user, { avisar = false } = {}) {
         }
     } else {
         st.REPS_PERMITIDOS = null;
+    }
+    // GD, Gerente Nacional y admin: los visitadores desactivados no se muestran (sus datos siguen guardados)
+    st.REPS_OCULTOS = null;
+    if (perfil.rol !== 'vm') {
+        const claveOcultos = 'SEGMENTAPP_OCULTOS_' + perfil.uid;
+        let ocultos = [];
+        try {
+            ocultos = await window.App.sb.visitadoresOcultos();
+            try { localStorage.setItem(claveOcultos, JSON.stringify(ocultos)); } catch (e) { /* sin almacenamiento */ }
+        } catch (e) {
+            try { ocultos = JSON.parse(localStorage.getItem(claveOcultos) || '[]'); } catch (e2) { ocultos = []; }
+        }
+        st.REPS_OCULTOS = ocultos.length ? new Set(ocultos) : null;
     }
 
     const req = document.getElementById('loginRequiredState');

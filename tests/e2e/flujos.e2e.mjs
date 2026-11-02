@@ -79,9 +79,10 @@ try {
   await page.evaluate(() => openLoginModal());
   await page.fill('#loginEmail', 'vm@lasante.com'); await page.fill('#visitadorPwd', 'malaclave');
   await page.evaluate(() => attemptLogin()); await page.waitForTimeout(300);
-  ok('clave mala: mensaje', (await toast()).includes('Correo o clave incorrectos'));
+  ok('clave mala: mensaje visible dentro de la ventana', await page.evaluate(() => { const m = document.getElementById('loginMensaje'); return !m.classList.contains('hidden') && m.textContent.includes('Correo o clave incorrectos'); }));
+  ok('el ojo muestra la clave', await page.evaluate(() => { App.ui.verClave(document.querySelector('#loginModal .ver-clave'), 'visitadorPwd'); const t = document.getElementById('visitadorPwd').type; App.ui.verClave(document.querySelector('#loginModal .ver-clave'), 'visitadorPwd'); return t === 'text'; }));
   await page.evaluate(() => sendPasswordReset()); await page.waitForTimeout(200);
-  ok('recuperar clave: envía correo', (await page.evaluate(() => window.__calls)).includes('reset:vm@lasante.com'));
+  ok('recuperar clave: indica pedir clave temporal (sin correo)', await page.evaluate(() => document.getElementById('loginMensaje').textContent.includes('clave temporal') && !window.__calls.some(c => c.startsWith('reset:'))));
 
   await page.fill('#visitadorPwd', '123456');
   const tVm = Date.now();
@@ -194,7 +195,7 @@ try {
   ok('equipo: el panel se dibuja al abrir la pantalla', await page.evaluate(() => document.querySelectorAll('#equipoContenido article').length > 3));
   ok('equipo (9B): 7 distritos y 51 visitadores con los datos reales', await page.evaluate(() => App.equipo.estadisticas().distritos.length === 7 && App.equipo.estadisticas().vms.length === 51));
   await page.evaluate(() => { App.equipo.verVista('visitadores'); App.equipo.abrirVm(0, App.equipo.estadisticas().vms.slice().sort((a, b) => b.pct - a.pct)[0].nombre); });
-  ok('equipo: detalle de un visitador con su mini matriz', await page.evaluate(() => /Sus médicos por cuadrante/.test(document.getElementById('equipoContenido').innerText)));
+  ok('equipo: detalle de un visitador con su mini matriz', await page.evaluate(() => /Su evaluación/.test(document.getElementById('equipoContenido').innerText) && /evaluaciones, según el cuadrante/.test(document.getElementById('equipoContenido').innerText)));
   await page.evaluate(() => App.ux.irA('inicio'));
   ok('inicio: cobertura, mercados con oportunidad y distritos (sin mapa ni gráfica mes a mes)', await page.evaluate(() => ['Cobertura', 'Mercados con más oportunidad', 'Distritos'].every(t => document.getElementById('tablerosInicio').innerText.includes(t))
     && !/Mapa por estado|mes a mes/.test(document.getElementById('tablerosInicio').innerText)));
