@@ -15,6 +15,16 @@ trabajo.
 
 ---
 
+## 0. Decisiones tomadas (02/11/2026)
+- **Supabase gratis** → el latido automático lo mantiene activo (`docs/ACTIVO.md`).
+- **Correo:** tu Gmail (Brevo no permite Venezuela) → `docs/CORREO.md`.
+- **Pase:** el mismo 02/11/2026 (la app no se está usando). Como no hay
+  nada que ensayar sin afectar al equipo, el ensayo y el pase son uno solo.
+- **Repositorio:** se eligió la opción (c) (sacar el fichero del historial),
+  pero choca con dos reglas del proyecto (no tocar `main` ni la rama de
+  respaldo) y no borra copias ya descargadas. Queda pendiente; ver
+  alternativa (d) en DECISIONES.
+
 ## 1. Decisiones antes de empezar (las tomas tú)
 
 | # | Decisión | Recomendación | Por qué |
@@ -78,7 +88,7 @@ node 0-preparar-base.mjs --simulacro
 node 0-preparar-base.mjs
 ```
 
-Debe terminar en **✅ Base lista: se aplicaron 12 archivo(s).**
+Debe terminar en **✅ Base lista: se aplicaron 13 archivo(s).**
 
 ### 2.5 Ensayo general con datos reales (20 min)
 Los mismos pasos del día del pase (parte 3, pasos 3 a 7), **sin** enviar los

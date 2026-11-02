@@ -384,3 +384,21 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 - Plan del Supabase de producción: recomendado **Pro** (el gratis se pausa
   tras 7 días sin uso y se llena en ~8 meses).
 - Fecha y hora del pase.
+
+## 02/11/2026 (Fase 10 aprobada · decisiones del pase)
+
+1. **Repositorio público con el fichero médico:** el dueño eligió la opción
+   (c) (sacarlo del historial) y que el proyecto sea gratis. La opción (c)
+   exige reescribir el historial de **todas** las ramas, incluidas `main` y
+   `respaldo-2026-10-27`, que las reglas del proyecto prohíben tocar, y no
+   borra las copias ya descargadas. **Pendiente** de confirmación. Alternativa
+   gratis propuesta, **(d)**: repositorio **privado** y publicar en Vercel con
+   GitHub Actions (CLI de Vercel con un token guardado en los secretos de
+   GitHub), que no depende del plan Pro y no borra ni reescribe nada.
+2. **Supabase de producción gratis.** Para que no se pause tras 7 días sin
+   uso: latido automático cada 2 días con GitHub Actions
+   (`.github/workflows/latido.yml`, migración 13 `latido()`). Guía:
+   `docs/ACTIVO.md`.
+3. **Correo con el Gmail del dueño** (clave de aplicación de Google; Brevo no
+   permite cuentas de Venezuela). Guía actualizada: `docs/CORREO.md`.
+4. **Pase a producción hoy** (la app no se está usando).

@@ -271,7 +271,7 @@ script pedirá escribir `MIGRAR PRODUCCION`):
 
 | Paso | Comando | Qué hace |
 |---|---|---|
-| 0 | `node 0-preparar-base.mjs` | Crea todas las tablas en la base nueva (aplica los 12 archivos en orden). Solo para una base vacía. |
+| 0 | `node 0-preparar-base.mjs` | Crea todas las tablas en la base nueva (aplica todos los archivos en orden). Solo para una base vacía. |
 | 1 | `node 1-exportar-firebase.mjs` | Copia de Firebase (solo lectura). |
 | 2 | `node 2-importar.mjs` | Distritos, visitadores, fichero, recetas y evaluaciones. |
 | 4 | `node 4-validar.mjs` | Debe decir ✅ TODO COINCIDE. |

@@ -2,7 +2,7 @@
    PASO 0 · Crear las tablas en el Supabase NUEVO (producción)
    Uso:  node 0-preparar-base.mjs --simulacro   (muestra qué aplicaría)
          node 0-preparar-base.mjs               (aplica lo que falte)
-   Aplica los 12 archivos de supabase/migrations/ en orden. En PRUEBAS
+   Aplica todos los archivos de supabase/migrations/ en orden. En PRUEBAS
    no hace falta (ya se aplicaron a mano) y el script se detiene solo.
 ============================================================ */
 import path from 'node:path';
