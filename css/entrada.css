@@ -379,6 +379,34 @@
     .ajuste-item small { display: block; font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
     .ajuste-icono { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
+    /* Ajustes → Usuarios (Fase 10C) */
+    .usuario-fila { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
+    .usuario-fila.inactivo { opacity: 0.6; }
+    .usuario-avatar { width: 40px; height: 40px; border-radius: 9999px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+        background: var(--md-primary-container); color: var(--md-on-primary-container); font-size: 14px; font-weight: 700; }
+    .usuario-etiqueta { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 8px; font-size: 11px; font-weight: 600;
+        background: var(--md-surface-container); color: var(--md-on-surface-variant); }
+    .usuario-etiqueta.aviso { background: rgb(var(--c-warning-100)); color: rgb(var(--c-warning-800)); }
+    .usuario-acciones { display: flex; gap: 2px; flex-shrink: 0; }
+    .boton-icono { width: 40px; height: 40px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; color: var(--md-on-surface-variant);
+        transition: background-color var(--md-motion-short) var(--md-ease-standard); }
+    .boton-icono .material-symbols-outlined { font-size: 20px; }
+    .boton-lleno, .boton-tonal, .boton-texto { height: 40px; padding: 0 20px; border-radius: 9999px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;
+        transition: background-color var(--md-motion-short) var(--md-ease-standard); }
+    .boton-lleno { background: var(--md-primary); color: var(--md-on-primary); }
+    .boton-tonal { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+    .boton-texto { color: var(--md-primary); padding: 0 12px; }
+    .boton-lleno:disabled, .boton-tonal:disabled, .boton-texto:disabled { opacity: 0.5; }
+    .campo { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--md-on-surface-variant); }
+    .campo input, .campo textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--md-outline-variant); border-radius: 14px; font-size: 15px; font-weight: 400;
+        color: var(--md-on-surface); background: rgb(var(--c-white)); outline: none; }
+    .campo textarea { font-size: 13px; line-height: 1.45; resize: none; }
+    .campo input:focus, .campo textarea:focus { border-color: var(--md-primary); box-shadow: 0 0 0 1px var(--md-primary); }
+    @media (max-width: 479px) {
+        .usuario-fila { flex-wrap: wrap; }
+        .usuario-acciones { width: 100%; justify-content: flex-end; margin-top: -4px; }
+    }
+
     /* Ficha del médico: pestañas M3 y anillo de participación */
     .ficha-pestanas button {
         display: inline-flex; align-items: center; gap: 6px; height: 48px; padding: 0 14px; white-space: nowrap; flex-shrink: 0;

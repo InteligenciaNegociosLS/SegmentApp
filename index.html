@@ -568,6 +568,7 @@
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajUmbrales')"><span class="material-symbols-outlined text-[18px]">tune</span> Umbrales</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajEncuesta')"><span class="material-symbols-outlined text-[18px]">balance</span> Encuesta</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajDatos')"><span class="material-symbols-outlined text-[18px]">database</span> Datos y equipo</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajUsuarios')"><span class="material-symbols-outlined text-[18px]">manage_accounts</span> Usuarios</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajSalud')"><span class="material-symbols-outlined text-[18px]">health_and_safety</span> Salud de los datos</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajVerComo')"><span class="material-symbols-outlined text-[18px]">visibility</span> Ver como…</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajBitacora')"><span class="material-symbols-outlined text-[18px]">history_edu</span> Bitácora</button>
@@ -636,10 +637,30 @@
                     <button type="button" class="ajuste-item" onclick="abrirCargaDatos()"><span class="ajuste-icono bg-blue-50 text-blue-700"><span class="material-symbols-outlined">upload</span></span><span><b>Cargar datos</b><small>Subir un mes nuevo de recetas o el fichero</small></span></button>
                     <button type="button" class="ajuste-item" onclick="abrirVersiones()"><span class="ajuste-icono bg-blue-50 text-blue-700"><span class="material-symbols-outlined">history</span></span><span><b>Versiones de datos</b><small>Ver o volver a una versión anterior</small></span></button>
                     <button type="button" class="ajuste-item" onclick="openProductModal()"><span class="ajuste-icono bg-green-50 text-green-700"><span class="material-symbols-outlined">medication</span></span><span><b>Productos del laboratorio</b><small>Qué productos cuentan como La Santé</small></span></button>
-                    <button type="button" class="ajuste-item" onclick="openAccessManager()"><span class="ajuste-icono bg-green-50 text-green-700"><span class="material-symbols-outlined">group</span></span><span><b>Usuarios y accesos</b><small>Visitadores del fichero y si ya tienen usuario</small></span></button>
+                    <button type="button" class="ajuste-item" onclick="App.ajustes.irA('ajUsuarios')"><span class="ajuste-icono bg-green-50 text-green-700"><span class="material-symbols-outlined">group</span></span><span><b>Usuarios y accesos</b><small>Nombre, correo, clave temporal y acceso de cada persona</small></span></button>
                     <button type="button" class="ajuste-item" onclick="descargarRegistroFallas()"><span class="ajuste-icono bg-rose-50 text-rose-700"><span class="material-symbols-outlined">bug_report</span></span><span><b>Registro de fallas</b><small>Descargar los errores que ha tenido la app</small></span></button>
                     <button type="button" class="ajuste-item" onclick="App.reports.openModal()"><span class="ajuste-icono bg-purple-50 text-purple-700"><span class="material-symbols-outlined">monitoring</span></span><span><b>Reportes avanzados</b><small>Reportes por mercado, visitador y producto</small></span></button>
                 </div>
+            </article>
+
+            <!-- Usuarios (Fase 10C, migración 14) -->
+            <article id="ajUsuarios" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-4">
+                    <span class="w-11 h-11 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">manage_accounts</span></span>
+                    <div><h3 class="text-lg font-display font-bold text-slate-800">Usuarios</h3>
+                        <p class="text-sm text-slate-500">Cambia el nombre o el correo con el que entra cada persona, dale una clave temporal si olvidó la suya, o desactiva su acceso. No se borra nada.</p></div>
+                </header>
+                <div class="flex flex-col sm:flex-row gap-2 mb-2">
+                    <label class="relative flex-1"><span class="sr-only">Buscar usuario</span>
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[20px] pointer-events-none">search</span>
+                        <input id="ajUsuariosBuscar" type="search" placeholder="Buscar por nombre o correo" autocomplete="off" class="filter-select !rounded-2xl !pl-10 !bg-none w-full" oninput="App.usuarios.pintar()"></label>
+                    <label class="sm:w-56"><span class="sr-only">Rol</span>
+                        <select id="ajUsuariosRol" class="filter-select !rounded-2xl w-full" onchange="App.usuarios.pintar()">
+                            <option value="">Todos los roles</option><option value="vm">Visitadores</option><option value="gd">Gerentes de distrito</option>
+                            <option value="gte_nacional">Gerente nacional</option><option value="admin">Administradores</option></select></label>
+                </div>
+                <p id="ajUsuariosResumen" class="text-xs text-slate-500 mb-1" aria-live="polite"></p>
+                <ul id="ajUsuariosLista" class="divide-y divide-slate-100"></ul>
             </article>
 
             <!-- Salud de los datos (Fase 9B) -->
@@ -1080,6 +1101,17 @@
     </div>
 </div>
 
+<!-- Usuarios: cambiar nombre o correo, clave temporal, activar (Fase 10C) -->
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[96] flex items-end sm:items-center justify-center p-0 sm:p-4" id="usuarioModal" onclick="if (event.target === this) App.usuarios.cerrar()">
+    <div class="bg-white w-full sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="usuarioModalTitulo">
+        <div class="flex items-center justify-between px-5 pt-5">
+            <h3 id="usuarioModalTitulo" class="text-xl font-display font-bold text-slate-800">Usuario</h3>
+            <button type="button" class="boton-icono" aria-label="Cerrar" onclick="App.usuarios.cerrar()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div id="usuarioModalCuerpo" class="px-5 pb-5 pt-3"></div>
+    </div>
+</div>
+
 <!-- Modal de Gestión de Accesos de Visitadores -->
 <div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[95] flex items-center justify-center p-4 transition-opacity" id="accessModal">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
@@ -1471,6 +1503,7 @@
 <script src="js/comparar.js"></script>
 <script src="js/ficha.js"></script>
 <script src="js/ajustes.js"></script>
+<script src="js/usuarios.js"></script>
 <script src="js/equipo.js"></script>
 <script src="js/tableros.js"></script>
 <script src="js/avisos.js"></script>
