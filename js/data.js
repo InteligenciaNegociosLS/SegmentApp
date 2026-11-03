@@ -85,7 +85,7 @@ window.App.data.getFicheroRepKey = function(row) {
 window.App.data.loadLibrary = async function(name) {
     const LIBS = window.App.config.LIBRARIES;
     // Si ya está cargada, salir
-    if (window[name] || (name === 'jspdf' && window.jspdf) || (name === 'xlsx' && window.XLSX)) {
+    if (window[name] || (name === 'jspdf' && window.jspdf) || (name === 'xlsx' && window.XLSX) || (name === 'jszip' && window.JSZip)) {
         return true;
     }
     return new Promise((resolve, reject) => {

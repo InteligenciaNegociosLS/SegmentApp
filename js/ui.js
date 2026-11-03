@@ -157,7 +157,7 @@ window.App.ui.updateFileLabel = function(inputId, msgId) {
     const msg = document.getElementById(msgId);
     if (!input || !msg) return;
     if (input.files && input.files.length > 0) {
-        msg.innerText = input.files[0].name;
+        msg.innerText = input.files.length > 1 ? `${input.files.length} archivos elegidos` : input.files[0].name;
         msg.style.color = "#0b57d0";
         msg.style.fontWeight = "bold";
     } else {

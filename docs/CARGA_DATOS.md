@@ -123,3 +123,35 @@ DE CUIDADOS INTENS) y matrícula en cero. Puedes agregar o quitar.
 Menú **⋮ → Descargar datos (crudos)**: recetas (CloseUp), fichero y
 evaluaciones en CSV para Excel. Cada quien descarga solo lo que ve: el VM lo
 suyo, el GD su equipo, el Gerente Nacional y el admin todo.
+
+## CloseUp en un solo paso (Fase 12D) · sin Excel ni Power Query
+Antes: descargar los mercados → Power Query (cruce con las tablas) → exportar
+→ subir el consolidado. Ahora:
+1. Descarga del portal los archivos de **cada mercado** (CSV, tal como salen).
+   **Guarda cada archivo con el nombre del mercado**: ese nombre usa la app.
+   Puedes ponerlos todos en un **.zip**.
+2. **Cargar datos → Recetas (CloseUp)** → elige **todos los archivos** (o el
+   .zip) → **Revisar archivo**.
+3. La app hace lo mismo que Power Query, en tu navegador (a Supabase no llega
+   nada todavía):
+   - salta los títulos del portal, lee Windows-1252 (Ñ y tildes);
+   - quita matrícula en cero, DCR/INS/OTR y "UNIDAD DE CUIDADOS INTENS"
+     (Ajustes → Catálogos → Filtros);
+   - cruza especialidad, producto (molécula, clase real, genérico) y
+     laboratorio con los catálogos;
+   - matrícula a 10 dígitos y sin filas repetidas.
+   El **nombre** de la versión y la **fecha de corte** se llenan solos con la
+   edición del archivo ("Edicion: 09/2026" → 30/09/2026).
+4. **Informe**: recetas y participación de La Santé contra lo que se usa hoy;
+   alertas de mercados con muchas menos filas, mercados que faltan, productos
+   de La Santé que ya no aparecen y productos o especialidades que no están en
+   los catálogos (con la lista).
+5. Opcional: **Descargar consolidado** (las 15 columnas de siempre) y, la
+   primera vez, **Comparar con mi archivo de Power Query** para confirmar que
+   dan lo mismo.
+6. **Subir como borrador** → comparación → **Publicar**, como siempre. Los
+   archivos originales del portal quedan guardados (comprimidos) junto a la
+   versión.
+
+Si eliges un solo archivo ya consolidado (con la columna Px_Product), la app
+lo carga como antes.
