@@ -286,7 +286,7 @@ window.App.ajustes.renderSalud = async function() {
         const sin = activos.filter(x => !x.perfiles || !x.perfiles.activo);
         const li = document.getElementById('ajSaludUsuarios');
         if (li) li.outerHTML = fila(sin.length ? 'aviso' : 'ok', `${fmtA(sin.length)} de ${fmtA(activos.length)} visitadores todavía no tienen usuario`,
-            sin.length ? escA(sin.slice(0, 6).map(x => x.nombre_sector).join(', ') + (sin.length > 6 ? '…' : '')) : 'Todos pueden entrar.');
+            sin.length ? escA(sin.slice(0, 6).map(x => x.nombre_sector).join(', ') + (sin.length > 6 ? '…' : '')) + ' · <button type="button" class="font-bold text-blue-700 underline" onclick="App.ajustes.irA(\'ajUsuarios\')">Crear sus accesos</button>' : 'Todos pueden entrar.');
     } catch (err) {
         const li = document.getElementById('ajSaludUsuarios');
         if (li) li.textContent = 'No se pudo revisar los usuarios (¿sin conexión?).';

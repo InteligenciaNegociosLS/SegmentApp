@@ -254,6 +254,7 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261105120000_claves_temporales_masivas.sql` | Fase 10D: `admin_claves_temporales` da claves temporales a varios usuarios en una sola llamada (todo o nada; nunca al propio admin) |
 | `supabase/migrations/20261106120000_desactivar_oculta_visitador.sql` | Fase 11: al desactivar a un VM, `admin_activar_usuario` también marca su visitador como inactivo; la app no muestra sus médicos ni sus números (nada se borra) |
 | `supabase/migrations/20261107120000_catalogos_closeup.sql` | Fase 12B: catálogos de CloseUp (`catalogo_especialidades`, `catalogo_laboratorios`, `catalogo_productos` con una fila por producto y `editado_a_mano`, `catalogo_clases`), `admin_guardar_catalogo` (agrega o actualiza, nunca borra) y `configuracion.filtros_closeup`. Solo admin |
+| `supabase/migrations/20261108120000_accesos_y_catalogos.sql` | Fase 12C: clases terapéuticas con `nivel` y `padre` (`admin_guardar_clases`), `catalogo_versiones` (historial con el archivo original en el almacén), `admin_crear_usuario` (crea el acceso desde la app: usuario, identidad, perfil y vínculo; clave temporal cifrada), `admin_pendientes_acceso`, y configuración `laboratorios_propios`, `productos_phq_excluidos`, `instructivos_descarga` |
 | `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 

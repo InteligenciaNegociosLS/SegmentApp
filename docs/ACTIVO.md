@@ -40,6 +40,6 @@ nadie puede entrar a la app hasta que se reactive a mano.
 | Límite | Cuánto | Qué hacer |
 |---|---|---|
 | Espacio de la base | 500 MB | Cada mes de datos ocupa ~55 MB: alcanza para unos 8 meses. Antes de llegar, archivamos versiones viejas o pasamos a Pro. **Ajustes → Salud de los datos** te ayudará a vigilarlo. |
-| Archivos | 1 GB | Cada versión guarda su archivo comprimido (~10 MB). Sobra. |
+| Archivos | 1 GB | Cada versión de recetas o fichero guarda su archivo comprimido (~10 MB). Los catálogos guardados pesan muy poco (~1-2 MB al año). Los originales de CloseUp comprimidos (desde la Fase 12D) rondan 20-40 MB por carga trimestral: unos 160 MB al año. Sobra para varios años; la Fase 12E muestra el uso y permite archivar los viejos. |
 | Respaldos | **No hay** respaldos automáticos | Firebase queda como respaldo de las evaluaciones. Más adelante: un respaldo mensual desde Cloud Shell. |
 | Proyectos | 2 gratis | Pruebas + producción: justo los dos. |

@@ -166,3 +166,41 @@ describe('Ajustes → Usuarios: varios a la vez', () => {
         expect(lista).not.toContain('adminadmin');
     });
 });
+
+describe('Fase 12C: crear el acceso de personas nuevas desde la app', () => {
+    it('lista quién no tiene acceso y crea el usuario de un visitador nuevo con clave temporal', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.usuarios.cargar();
+        await App.usuarios.cargarPendientes();
+        const p = App.usuarios.pendientes();
+        const i = p.visitadores.findIndex(v => v.nombre === 'OTRO VISITADOR');
+        expect(i).toBeGreaterThanOrEqual(0);
+        expect(document.getElementById('ajUsuariosPendientes').textContent).toContain('OTRO VISITADOR');
+        App.usuarios.nuevo('vm', i);
+        document.getElementById('nuevoCorreo').value = 'Otro.Vm@LaSante.com.ve';
+        await App.usuarios.crearNuevo();
+        expect(window.__calls).toContain('rpc:admin_crear_usuario:vm:otro.vm@lasante.com.ve');
+        const clave = document.getElementById('usuarioClave').textContent;
+        expect(clave).toMatch(/^[a-z]{4}-[a-z]{4}-\d{4}$/);
+        expect(document.getElementById('usuarioMensaje').value).toContain('otro.vm@lasante.com.ve');
+        const bd = baseSimulada(App);
+        expect(bd.visitadores.find(v => v.nombre_sector === 'OTRO VISITADOR').perfil_id).toBe('u-otro.vm@lasante.com.ve');
+        // Ya no aparece como pendiente
+        expect(App.usuarios.pendientes().visitadores.some(v => v.nombre === 'OTRO VISITADOR')).toBe(false);
+    });
+
+    it('"Nuevo usuario" crea un Gerente Nacional; un correo repetido se avisa', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.usuarios.cargar();
+        App.usuarios.nuevo(null);
+        document.getElementById('nuevoNombre').value = 'Isabel Medina';
+        document.getElementById('nuevoCorreo').value = 'isabel@lasante.com.ve';
+        await App.usuarios.crearNuevo();
+        expect(window.__calls).toContain('rpc:admin_crear_usuario:gte_nacional:isabel@lasante.com.ve');
+        App.usuarios.nuevo(null);
+        document.getElementById('nuevoNombre').value = 'Otra';
+        document.getElementById('nuevoCorreo').value = 'vm@lasante.com';
+        await App.usuarios.crearNuevo();
+        expect(document.getElementById('usuarioError').innerText).toContain('ya lo usa otra persona');
+    });
+});

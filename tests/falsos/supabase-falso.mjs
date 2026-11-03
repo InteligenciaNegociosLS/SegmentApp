@@ -41,10 +41,13 @@ export function datosDePrueba() {
         ],
         configuracion: [
             { clave: 'umbrales_matriz', valor: { TH_LOY_LOW: 33, TH_LOY_HIGH: 66, TH_POT_LOW: 33, TH_POT_HIGH: 66 } },
-            { clave: 'filtros_closeup', valor: { especialidades_excluir: ['DCR', 'INS', 'OTR'], nombres_especialidad_excluir: ['UNIDAD DE CUIDADOS INTENS'], excluir_matricula_cero: true } }
+            { clave: 'filtros_closeup', valor: { especialidades_excluir: ['DCR', 'INS', 'OTR'], nombres_especialidad_excluir: ['UNIDAD DE CUIDADOS INTENS'], excluir_matricula_cero: true } },
+            { clave: 'laboratorios_propios', valor: ['PHQ', 'LST'] },
+            { clave: 'productos_phq_excluidos', valor: [] },
+            { clave: 'instructivos_descarga', valor: {} }
         ],
         // Catálogos de CloseUp (migración 17)
-        catalogo_especialidades: [], catalogo_laboratorios: [], catalogo_productos: [], catalogo_clases: [],
+        catalogo_especialidades: [], catalogo_laboratorios: [], catalogo_productos: [], catalogo_clases: [], catalogo_versiones: [],
         // Contenido de cada versión (para datos_equipo): { id: { encabezados, filas } }
         fuentes: {},
         // O el resultado ya calculado: { 'recetas|fichero|usuario': {...} }
@@ -299,6 +302,26 @@ export function createClient(url, clave, opciones = {}) {
             });
             registrar(`rpc:admin_guardar_catalogo:${p_tipo}:${p_filas.length}`);
             return { data: { ok: true, total: p_filas.length, nuevas, cambiadas, iguales: p_filas.length - nuevas - cambiadas }, error: null };
+        },
+        admin_guardar_clases({ p_filas }) { return rpcs.admin_guardar_catalogo({ p_tipo: 'clases', p_filas }); },
+        admin_pendientes_acceso() {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const conAcceso = (id) => { const p = bd.perfiles.find(x => x.id === id); return !!(p && p.activo); };
+            return { data: {
+                visitadores: bd.visitadores.filter(v => v.activo && !conAcceso(v.perfil_id)).map(v => ({ nombre: v.nombre_sector, distrito: v.distrito, codigo_distrito: v.distrito })),
+                distritos: (bd.distritos || []).filter(d => !bd.perfiles.some(p => p.activo && (p.distritos || []).includes(d.codigo)))
+            }, error: null };
+        },
+        admin_crear_usuario({ p_correo, p_nombre, p_rol, p_clave, p_visitador, p_distritos }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const correo = String(p_correo).trim().toLowerCase();
+            if (bd.usuarios.some(u => u.email === correo)) return { data: null, error: { message: 'Ese correo ya lo usa otra persona.' } };
+            const id = 'u-' + correo;
+            bd.usuarios.push({ id, email: correo, clave: p_clave, metadata: { clave_temporal: true } });
+            bd.perfiles.push({ id, correo, nombre: p_nombre, rol: p_rol, activo: true, distritos: p_distritos || [] });
+            if (p_rol === 'vm') bd.visitadores.filter(v => v.nombre_sector === String(p_visitador).toUpperCase()).forEach(v => { v.perfil_id = id; v.activo = true; });
+            registrar(`rpc:admin_crear_usuario:${p_rol}:${correo}`);
+            return { data: { ok: true, id, correo, nombre: p_nombre, rol: p_rol }, error: null };
         },
         admin_activar_usuario({ p_id, p_activo }) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };

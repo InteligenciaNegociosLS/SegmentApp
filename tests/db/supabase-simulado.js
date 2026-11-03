@@ -23,7 +23,10 @@ export const BASE_SUPABASE = `
         raw_user_meta_data jsonb not null default '{}',
         encrypted_password text,
         last_sign_in_at timestamptz,
-        updated_at timestamptz
+        updated_at timestamptz,
+        -- Columnas que llena Supabase al crear un usuario (para admin_crear_usuario, migración 18)
+        instance_id uuid, aud text, role text, email_confirmed_at timestamptz, created_at timestamptz,
+        confirmation_token text, recovery_token text, email_change_token_new text, email_change text
     );
     create table auth.identities (
         id uuid primary key default gen_random_uuid(),
@@ -31,6 +34,8 @@ export const BASE_SUPABASE = `
         provider text not null default 'email',
         provider_id text,
         identity_data jsonb not null default '{}',
+        last_sign_in_at timestamptz,
+        created_at timestamptz,
         updated_at timestamptz
     );
     -- pgcrypto no existe en PGlite: imitación mínima con la misma firma que en Supabase

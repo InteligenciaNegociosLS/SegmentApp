@@ -198,7 +198,7 @@ window.App.carga.validarFichero = function(leido, visitadoresExistentes = []) {
     if (existentes.size) {
         const nuevos = [...visitadores].filter(v => !existentes.has(v));
         const ausentes = [...existentes].filter(v => !visitadores.has(v));
-        if (nuevos.length) avisos.push(`Visitadores NUEVOS que se crearán (${nuevos.length}): ${nuevos.join(', ')}`);
+        if (nuevos.length) avisos.push(`Visitadores NUEVOS que se crearán (${nuevos.length}): ${nuevos.join(', ')}. Después de publicar, créales el acceso en Ajustes → Usuarios → "Sin acceso".`);
         if (ausentes.length) avisos.push(`Visitadores que NO aparecen en este fichero (${ausentes.length}); no se borran, pero no tendrán médicos en esta versión: ${ausentes.join(', ')}`);
     }
     return {

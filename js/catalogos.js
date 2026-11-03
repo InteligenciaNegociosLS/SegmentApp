@@ -112,17 +112,38 @@
         return { filas, resumen: { leidas, registros: filas.length, conVariasClases } };
     };
 
-    // Clases terapéuticas: código + nombre (con o sin encabezados)
+    // Clases terapéuticas del portal: "A02A1-ANTIACIDOS SIMPLES" en una sola celda, con niveles
+    // (A → A01 → A01A → A02A1). También acepta código y nombre en dos columnas.
+    const nivelDeClase = (c) => ({ 1: 1, 3: 2, 4: 3, 5: 4 })[c.length] || null;
+    const padreDeClase = (c) => ({ 3: c.slice(0, 1), 4: c.slice(0, 3), 5: c.slice(0, 4) })[c.length] || null;
     C.leerClases = function(matriz) {
         const vistos = new Map();
         matriz.map(fila).forEach(r => {
-            const [codigo, nombre] = primerasNoVacias(r);
-            if (!codigo || !nombre || /^(codigo|clase)/i.test(norm(codigo))) return;
-            if (!/^[A-Z0-9]{3,8}$/.test(codigo.toUpperCase())) return;
-            vistos.set(codigo.toUpperCase(), { codigo: codigo.toUpperCase(), nombre: nombre.toUpperCase() });
+            const celdas = primerasNoVacias(r);
+            if (!celdas.length) return;
+            let codigo = '', nombre = '';
+            const m = celdas[0].match(/^([A-Z][0-9A-Z]{0,4})\s*-\s*(.+)$/i);
+            if (m) { codigo = m[1]; nombre = m[2]; }
+            else if (celdas.length >= 2 && /^[A-Z][0-9A-Z]{0,4}$/i.test(celdas[0])) { codigo = celdas[0]; nombre = celdas[1]; }
+            codigo = codigo.toUpperCase();
+            if (!codigo || !nombre || !nivelDeClase(codigo)) return;
+            vistos.set(codigo, { codigo, nombre: limpio(nombre).toUpperCase(), nivel: nivelDeClase(codigo), padre: padreDeClase(codigo) });
         });
         const filas = [...vistos.values()];
         return { filas, resumen: { registros: filas.length } };
+    };
+
+    // Nombre de la clase de un producto: "R06A0" → la clase "R06A" (el 0 final = sin subnivel)
+    C.claseDe = function(codigo) {
+        const c = limpio(codigo).toUpperCase();
+        if (!c) return null;
+        const mapa = C._mapaClases || new Map();
+        return mapa.get(c) || mapa.get(c.replace(/0$/, '')) || mapa.get(c.slice(0, 4)) || mapa.get(c.slice(0, 3)) || null;
+    };
+    // Grupo anatómico (primer nivel): "R06A0" → "R" y su nombre
+    C.grupoDe = function(codigo) {
+        const c = limpio(codigo).toUpperCase();
+        return c ? ((C._mapaClases || new Map()).get(c[0]) || { codigo: c[0], nombre: c[0] }) : null;
     };
 
     C.leer = function(tipo, matriz) {
@@ -130,9 +151,15 @@
     };
 
     // Todas las hojas del archivo, una debajo de otra (el portal reparte catálogos grandes en varias hojas)
+    // Bytes de un archivo (con respaldo para navegadores sin File.arrayBuffer)
+    const bytesDe = (archivo) => (typeof archivo.arrayBuffer === 'function')
+        ? archivo.arrayBuffer().then(b => new Uint8Array(b))
+        : new Promise((ok, mal) => { const r = new FileReader(); r.onload = () => ok(new Uint8Array(r.result)); r.onerror = () => mal(r.error); r.readAsArrayBuffer(archivo); });
+    C.bytesDe = bytesDe;
+
     C.leerMatriz = async function(archivo) {
         const nombre = archivo.name.toLowerCase();
-        const bytes = new Uint8Array(await archivo.arrayBuffer());
+        const bytes = await bytesDe(archivo);
         if (/\.(xlsx|xls|xlsm)$/.test(nombre)) {
             await window.App.data.loadLibrary('xlsx');
             const libro = XLSX.read(bytes, { type: 'array' });
@@ -149,7 +176,24 @@
     ============================================================ */
     let datos = { especialidades: [], laboratorios: [], productos: [], clases: [] };
     let filtros = { ...C.FILTROS_INICIALES };
-    let pendiente = null;   // { tipo, filas, resumen, archivo }
+    let pendiente = null;   // { tipo, filas, archivo }
+    let config = { laboratorios_propios: ['PHQ', 'LST'], productos_phq_excluidos: [], instructivos_descarga: {}, productos_phq: [] };
+    let versiones = [];
+
+    /* ---------- "Cómo descargarlo" de cada fuente (lo edita el admin) ---------- */
+    C.FUENTES = {
+        fichero: 'Fichero médico (CRM)', closeup: 'Mercados de CloseUp',
+        especialidades: 'Especialidades', laboratorios: 'Laboratorios', productos: 'Productos', clases: 'Clases terapéuticas'
+    };
+    C.INSTRUCTIVOS_INICIALES = {
+        fichero: '1. Entra al CRM.\n2. Exporta el fichero médico completo (todas las columnas) a Excel o CSV.\n3. En la app: Cargar datos → Fichero médico → Revisar archivo → Subir como borrador → Publicar.\n(Borrador: corrige estos pasos con los de tu CRM.)',
+        closeup: '1. Entra al portal de CloseUp.\n2. Reporte "Médicos Prescriptores por Mercado".\n3. Filtros: Edición = la última · Línea = Todas · Periodos = TAM · Geografía = VENEZUELA · Especialidades = TOTAL ESPECIALIDADES.\n4. Descarga cada mercado en CSV y guarda el archivo con el nombre del mercado (la app usa el nombre del archivo).\n5. En la app: Cargar datos → CloseUp.\n(Borrador: corrige estos pasos con los del portal.)',
+        especialidades: 'Portal de CloseUp → Exportaciones / Tablas → Especialidades → Exportar a Excel (.xls).\nEn la app: Ajustes → Catálogos → Especialidades → Subir archivo.',
+        laboratorios: 'Portal de CloseUp → Exportaciones / Tablas → Laboratorios → Exportar a Excel (.xls).\nEn la app: Ajustes → Catálogos → Laboratorios → Subir archivo.',
+        productos: 'Portal de CloseUp → Buscador de Productos → Exportar a Excel (.xls), sin filtros.\nEn la app: Ajustes → Catálogos → Productos → Subir archivo.',
+        clases: 'Portal de CloseUp → Exportaciones / Tablas → Clases Terapéuticas → Exportar a Excel (.xls).\nEn la app: Ajustes → Catálogos → Clases terapéuticas → Subir archivo.'
+    };
+    C.instructivo = (fuente) => (config.instructivos_descarga || {})[fuente] || C.INSTRUCTIVOS_INICIALES[fuente] || '';
 
     C.datos = () => datos;
     C.filtros = () => filtros;
@@ -166,16 +210,27 @@
         if (!zona) return;
         zona.innerHTML = '<p class="text-sm text-slate-500">Cargando catálogos…</p>';
         try {
-            const [esp, lab, prod, cla, cfg] = await Promise.all(['especialidades', 'laboratorios', 'productos', 'clases']
-                .map(t => window.App.sb.catalogo(t)).concat([window.App.sb.configuracion()]));
+            const [esp, lab, prod, cla, cfg, ver] = await Promise.all(['especialidades', 'laboratorios', 'productos', 'clases']
+                .map(t => window.App.sb.catalogo(t)).concat([window.App.sb.configuracion(), window.App.sb.versionesCatalogo().catch(() => [])]));
             datos = { especialidades: esp, laboratorios: lab, productos: prod, clases: cla };
+            C._mapaClases = new Map(cla.map(c => [c.codigo, c]));
             filtros = { ...C.FILTROS_INICIALES, ...((cfg && cfg.filtros_closeup) || {}) };
+            config = { ...config, ...Object.fromEntries(['laboratorios_propios', 'productos_phq_excluidos', 'instructivos_descarga', 'productos_phq']
+                .filter(k => cfg && cfg[k] != null).map(k => [k, cfg[k]])) };
+            versiones = ver || [];
         } catch (e) {
             zona.innerHTML = `<p class="text-sm text-slate-500">${esc(textoError(e))}</p>`;
             return;
         }
         C.pintar();
     };
+
+    const bloqueInstructivo = (fuente) => `<details class="mt-2 rounded-xl bg-slate-50 px-3 py-2" data-instructivo="${fuente}">
+        <summary class="text-xs font-bold text-blue-800 cursor-pointer">Cómo descargarlo${['fichero', 'closeup'].includes(fuente) ? ': ' + esc(C.FUENTES[fuente]) : ''}</summary>
+        <p class="text-xs text-slate-700 whitespace-pre-line mt-2">${esc(C.instructivo(fuente))}</p>
+        <button type="button" class="boton-texto !h-8 !px-2 mt-1" onclick="App.catalogos.editarInstructivo('${fuente}')"><span class="material-symbols-outlined text-[16px]">edit</span> Editar</button>
+    </details>`;
+    C.bloqueInstructivo = bloqueInstructivo;
 
     C.pintar = function() {
         const zona = document.getElementById('ajCatalogosCuerpo');
@@ -196,7 +251,9 @@
                     <label class="boton-tonal cursor-pointer"><span class="material-symbols-outlined text-[18px]">upload</span> Subir archivo
                         <input type="file" class="sr-only" accept=".xls,.xlsx,.csv" onchange="App.catalogos.alElegirArchivo('${tipo}', this)"></label>
                     <button type="button" class="boton-texto" onclick="App.catalogos.ver('${tipo}')"><span class="material-symbols-outlined text-[18px]">search</span> Ver y editar</button>
+                    <button type="button" class="boton-texto" onclick="App.catalogos.historial('${tipo}')"><span class="material-symbols-outlined text-[18px]">history</span> Historial</button>
                 </div>
+                ${bloqueInstructivo(tipo)}
             </div>`;
         };
         const lista = (clave, titulo, ayuda) => `<div class="mb-4">
@@ -206,8 +263,27 @@
                 <span class="inline-flex gap-1"><input type="text" class="campo-mini" id="filtroNuevo_${clave}" placeholder="Agregar…" onkeypress="if(event.key==='Enter') App.catalogos.agregarFiltro('${clave}')">
                 <button type="button" class="boton-icono" aria-label="Agregar" onclick="App.catalogos.agregarFiltro('${clave}')"><span class="material-symbols-outlined">add</span></button></span>
             </div></div>`;
+        const propios = C.productosDeLabsPropios();
+        const nuevosPropios = propios.filter(p => !(config.productos_phq || []).includes(p)).length;
         zona.innerHTML = `
             <div class="grid sm:grid-cols-2 gap-3 mb-6">${Object.keys(C.TIPOS).map(tarjeta).join('')}</div>
+            <div class="rounded-2xl bg-green-50 p-4 mb-4">
+                <div class="flex items-center gap-2 mb-1"><span class="material-symbols-outlined text-green-800">verified</span>
+                    <h4 class="text-base font-bold text-slate-800">Mis laboratorios</h4></div>
+                <p class="text-xs text-slate-700 mb-3">Los productos de estos laboratorios del catálogo cuentan como <b>La Santé</b> automáticamente. Los que quites a mano en "Productos del laboratorio" no se vuelven a marcar solos.</p>
+                <div class="flex flex-wrap gap-2 mb-3">${(config.laboratorios_propios || []).map(v =>
+                    `<span class="chip !h-8"><span>${esc(v)}</span><button type="button" class="-mr-1 w-6 h-6 rounded-full inline-flex items-center justify-center" aria-label="Quitar ${esc(v)}" onclick="App.catalogos.quitarLabPropio(${argC(v)})"><span class="material-symbols-outlined text-[16px]">close</span></button></span>`).join('')}
+                    <span class="inline-flex gap-1"><input type="text" class="campo-mini" id="labPropioNuevo" placeholder="Ej. PHQ" onkeypress="if(event.key==='Enter') App.catalogos.agregarLabPropio()">
+                    <button type="button" class="boton-icono" aria-label="Agregar laboratorio" onclick="App.catalogos.agregarLabPropio()"><span class="material-symbols-outlined">add</span></button></span></div>
+                <p class="text-sm text-slate-700" data-propios>En el catálogo: <b>${fmt(propios.length)}</b> productos de mis laboratorios · marcados hoy como La Santé: <b>${fmt((config.productos_phq || []).length)}</b>${nuevosPropios ? ` · <b class="text-green-800">${fmt(nuevosPropios)} por marcar</b>` : ''}.</p>
+                ${nuevosPropios ? `<button type="button" class="boton-lleno mt-3" onclick="App.catalogos.marcarPropios()"><span class="material-symbols-outlined text-[18px]">done_all</span> Marcar ${fmt(nuevosPropios)} como La Santé</button>` : ''}
+            </div>
+            <div class="rounded-2xl border border-slate-200 p-4 mb-4">
+                <div class="flex items-center gap-2 mb-1"><span class="material-symbols-outlined text-blue-700">menu_book</span>
+                    <h4 class="text-base font-bold text-slate-800">Cómo descargar los datos de origen</h4></div>
+                <p class="text-xs text-slate-600 mb-2">Para no olvidar los pasos entre una carga y otra. Escríbelos a tu manera: se muestran también al cargar los datos.</p>
+                ${['fichero', 'closeup'].map(bloqueInstructivo).join('')}
+            </div>
             <div class="rounded-2xl bg-slate-50 p-4">
                 <div class="flex items-center gap-2 mb-3"><span class="material-symbols-outlined text-amber-700">filter_alt</span>
                     <h4 class="text-base font-bold text-slate-800">Filtros de la carga de CloseUp</h4></div>
@@ -263,6 +339,7 @@
         let matriz;
         try { matriz = await C.leerMatriz(archivo); } catch (e) { toast('No se pudo leer el archivo. ¿Es un Excel o CSV?'); return; }
         C.revisar(tipo, matriz, archivo.name);
+        if (pendiente) pendiente.archivo = archivo;
     };
 
     // Revisa lo leído y muestra qué se guardaría (no guarda nada todavía)
@@ -298,13 +375,21 @@
 
     C.guardarPendiente = async function() {
         if (!pendiente) return;
-        const { tipo, filas } = pendiente;
+        const { tipo, filas, archivo } = pendiente;
         ocupado(true);
         try {
-            const r = await window.App.sb.guardarCatalogo(tipo, filas);
-            toast(`${C.TIPOS[tipo].titulo}: ${fmt(r.nuevas)} nuevos, ${fmt(r.cambiadas)} actualizados, ${fmt(r.iguales)} sin cambios.`, { duracion: 6000 });
+            const r = tipo === 'clases' ? await window.App.sb.guardarClases(filas) : await window.App.sb.guardarCatalogo(tipo, filas);
+            // Historial: el archivo original queda guardado (comprimido) con su resumen
+            let avisoHistorial = '';
+            if (archivo) {
+                try { await C.guardarOriginal(tipo, archivo, r, filas.length); }
+                catch (e) { avisoHistorial = ' (no se pudo guardar la copia del archivo original)'; }
+            }
+            toast(`${C.TIPOS[tipo].titulo}: ${fmt(r.nuevas)} nuevos, ${fmt(r.cambiadas)} actualizados, ${fmt(r.iguales)} sin cambios.${avisoHistorial}`, { duracion: 6000 });
             C.cerrar();
             await C.cargar();
+            // Productos nuevos de mis laboratorios: se marcan solos como La Santé
+            if (tipo === 'productos') await C.marcarPropios({ silencioso: true });
         } catch (e) {
             ocupado(false);
             window.App.ui.safeSetText('catalogoError', textoError(e));
@@ -334,7 +419,7 @@
         const todos = datos[tipoVisto].filter(x => (!q || t.campos.some(([k]) => norm(x[k]).includes(q)))
             && (!soloVarias || ((x.clases_distintas || []).length > 1 && !x.editado_a_mano)));
         window.App.ui.safeSetText('catalogoCuenta', todos.length > 100 ? `${fmt(todos.length)} resultados: se muestran los primeros 100.` : `${fmt(todos.length)} resultados.`);
-        const nombreClase = new Map(datos.clases.map(c => [c.codigo, c.nombre]));
+        const nombreClase = { get: (c) => { const x = C.claseDe(c); return x ? x.nombre : null; } };
         document.getElementById('catalogoLista').innerHTML = todos.slice(0, 100).map(x => `
             <li><button type="button" class="w-full text-left py-2 flex items-center gap-2" onclick="App.catalogos.editar(${argC(x[t.clave])})">
                 <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-slate-800 truncate">${esc(x[t.clave])}</span>
@@ -369,11 +454,14 @@
             // Lo corregido a mano se respeta: subir el catálogo otra vez no lo pisa
             fila_.editado_a_mano = true;
         }
+        if (tipoVisto === 'clases') { fila_.nivel = nivelDeClase(fila_.codigo); fila_.padre = padreDeClase(fila_.codigo); }
         ocupado(true);
         try {
-            await window.App.sb.guardarCatalogo(tipoVisto, [fila_]);
+            if (tipoVisto === 'clases') await window.App.sb.guardarClases([fila_]);
+            else await window.App.sb.guardarCatalogo(tipoVisto, [fila_]);
             const lista = datos[tipoVisto].filter(y => y[t.clave] !== fila_[t.clave]);
             datos = { ...datos, [tipoVisto]: [...lista, fila_].sort((a, b) => String(a[t.clave]).localeCompare(String(b[t.clave]))) };
+            if (tipoVisto === 'clases') C._mapaClases = new Map(datos.clases.map(c => [c.codigo, c]));
             toast('Guardado.');
             C.pintar();
             C.ver(tipoVisto);
@@ -381,6 +469,126 @@
             ocupado(false);
             window.App.ui.safeSetText('catalogoError', textoError(e));
         }
+    };
+
+    /* ---------- Historial de cada catálogo ---------- */
+    // Comprimido con gzip (si el navegador no puede, se guarda tal cual)
+    const comprimir = async (archivo) => {
+        const bytes = await bytesDe(archivo);
+        if (typeof CompressionStream === 'undefined' || typeof Response === 'undefined') return new Blob([bytes]);
+        try { return await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).blob(); }
+        catch (e) { return new Blob([bytes]); }
+    };
+    C.guardarOriginal = async function(tipo, archivo, r, registros) {
+        const fecha = new Date().toISOString().replace(/[:.]/g, '-');
+        const ruta = `catalogos/${tipo}/${fecha}_${String(archivo.name || 'archivo').replace(/[^\w.-]+/g, '_')}.gz`;
+        const blob = await comprimir(archivo);
+        await window.App.sb.subirArchivo(ruta, blob);
+        await window.App.sb.registrarVersionCatalogo({ tipo, nombre_archivo: archivo.name || 'archivo', ruta, bytes: blob.size,
+            registros, nuevas: r.nuevas || 0, cambiadas: r.cambiadas || 0 });
+    };
+    C.historial = function(tipo) {
+        const t = C.TIPOS[tipo];
+        const lista = versiones.filter(v => v.tipo === tipo);
+        abrir(`Historial: ${t.titulo.toLowerCase()}`, `
+            <p class="text-xs text-slate-600 mb-3">Cada archivo que subiste queda guardado tal cual (comprimido), por si necesitas ver o volver a una versión anterior.</p>
+            <ul class="divide-y divide-slate-100">${lista.map(v => `<li class="py-2 flex items-center gap-2">
+                <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-slate-800 truncate">${esc(v.nombre_archivo)}</span>
+                <span class="block text-[11px] text-slate-500">${new Date(v.subido_en).toLocaleString('es-VE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                · ${fmt(v.registros)} registros · ${fmt(v.nuevas)} nuevos · ${fmt(v.cambiadas)} actualizados</span></span>
+                ${v.ruta ? `<button type="button" class="boton-icono" title="Descargar el original" aria-label="Descargar ${esc(v.nombre_archivo)}" onclick="App.catalogos.descargarOriginal(${argC(v.ruta)})"><span class="material-symbols-outlined">download</span></button>` : ''}
+            </li>`).join('') || '<li class="py-3 text-sm text-slate-500">Todavía no hay archivos guardados. Se guardan desde la próxima vez que subas este catálogo.</li>'}</ul>
+            <div class="flex justify-end mt-4"><button type="button" class="boton-lleno" onclick="App.catalogos.cerrar()">Listo</button></div>`);
+    };
+    C.descargarOriginal = async function(ruta) {
+        try { window.open(await window.App.sb.urlArchivo(ruta), '_blank', 'noopener'); }
+        catch (e) { toast(textoError(e)); }
+    };
+
+    // En "Cargar datos": los pasos para descargar el archivo elegido (fichero o CloseUp)
+    C.instructivoEnCarga = async function() {
+        const zona = document.getElementById('cargaInstructivo');
+        const tipo = (document.querySelector('input[name="cargaTipo"]:checked') || {}).value;
+        if (!zona || !tipo) return;
+        const fuente = tipo === 'recetas' ? 'closeup' : 'fichero';
+        try { const cfg = await window.App.sb.configuracion(); if (cfg && cfg.instructivos_descarga) config = { ...config, instructivos_descarga: cfg.instructivos_descarga }; }
+        catch (e) { /* sin conexión: se muestra lo que hay */ }
+        zona.innerHTML = `<details class="rounded-xl bg-blue-50 px-3 py-2"><summary class="text-xs font-bold text-blue-800 cursor-pointer">Cómo descargar este archivo</summary>
+            <p class="text-xs text-slate-700 whitespace-pre-line mt-2">${esc(C.instructivo(fuente))}</p>
+            <p class="text-[11px] text-slate-500 mt-1">Se edita en Ajustes → Catálogos → "Cómo descargar los datos de origen".</p></details>`;
+    };
+
+    /* ---------- "Cómo descargarlo": editar el texto ---------- */
+    C.editarInstructivo = function(fuente) {
+        abrir(`Cómo descargar: ${C.FUENTES[fuente]}`, `
+            <label class="campo">Pasos (escríbelos como te sirvan)<textarea id="instructivoTexto" rows="9">${esc(C.instructivo(fuente))}</textarea></label>
+            <p id="catalogoError" class="text-sm text-rose-700 mt-2 min-h-[20px]" role="alert"></p>
+            <div class="flex flex-wrap justify-end gap-2 mt-4">
+                <button type="button" class="boton-texto" onclick="App.catalogos.cerrar()">Cancelar</button>
+                <button type="button" class="boton-lleno" data-accion="confirmar" onclick="App.catalogos.guardarInstructivo('${fuente}')"><span class="material-symbols-outlined text-[18px]">save</span> Guardar</button>
+            </div>`);
+    };
+    C.guardarInstructivo = async function(fuente) {
+        const texto = String((document.getElementById('instructivoTexto') || {}).value || '').trim();
+        const nuevo = { ...(config.instructivos_descarga || {}), [fuente]: texto };
+        ocupado(true);
+        try {
+            await window.App.sb.guardarConfiguracion('instructivos_descarga', nuevo);
+            config = { ...config, instructivos_descarga: nuevo };
+            toast('Guardado.');
+            C.cerrar();
+            C.pintar();
+        } catch (e) { ocupado(false); window.App.ui.safeSetText('catalogoError', textoError(e)); }
+    };
+
+    /* ---------- Mis laboratorios: productos propios automáticos ---------- */
+    C.productosDeLabsPropios = function() {
+        const labs = new Set((config.laboratorios_propios || []).map(x => String(x).toUpperCase()));
+        const excluidos = new Set(config.productos_phq_excluidos || []);
+        return datos.productos.filter(p => labs.has(String(p.laboratorio || '').toUpperCase()) && !excluidos.has(p.producto)).map(p => p.producto);
+    };
+    C.marcarPropios = async function({ silencioso = false } = {}) {
+        const actuales = config.productos_phq || [];
+        const nuevos = C.productosDeLabsPropios().filter(p => !actuales.includes(p));
+        if (!nuevos.length) { if (!silencioso) toast('Todos los productos de tus laboratorios ya están marcados.'); return 0; }
+        const lista = [...actuales, ...nuevos].sort();
+        const ok = await window.App.admin.guardarConfig({ productos_phq: lista });
+        if (!ok) return 0;
+        config = { ...config, productos_phq: lista };
+        window.App.state.PHQ_PRODUCTS = lista;
+        window.App.state._lastUniverseSignature = null;
+        if ((window.App.state.RAW_DATA || []).length && window.App.main && window.App.main.processData) window.App.main.processData();
+        toast(`${fmt(nuevos.length)} productos de tus laboratorios quedaron marcados como La Santé.`, { duracion: 6000 });
+        C.pintar();
+        return nuevos.length;
+    };
+    const guardarLabs = async (lista) => {
+        try {
+            await window.App.sb.guardarConfiguracion('laboratorios_propios', lista);
+            config = { ...config, laboratorios_propios: lista };
+            C.pintar();
+        } catch (e) { toast(textoError(e)); }
+    };
+    C.agregarLabPropio = function() {
+        const v = limpio((document.getElementById('labPropioNuevo') || {}).value).toUpperCase();
+        if (!v || (config.laboratorios_propios || []).includes(v)) return;
+        if (datos.laboratorios.length && !datos.laboratorios.some(l => l.abreviatura === v)) toast(`Ojo: "${v}" no está en el catálogo de laboratorios.`);
+        return guardarLabs([...(config.laboratorios_propios || []), v]);
+    };
+    C.quitarLabPropio = function(v) { return guardarLabs((config.laboratorios_propios || []).filter(x => x !== v)); };
+    // Lo que el admin quita a mano en "Productos del laboratorio" no se vuelve a marcar solo
+    C.registrarCambioPropios = async function(antes, despues) {
+        const quitados = antes.filter(p => !despues.includes(p));
+        const agregados = despues.filter(p => !antes.includes(p));
+        if (!quitados.length && !agregados.length) return;
+        let cfgActual = config;
+        try { const cfg = await window.App.sb.configuracion(); cfgActual = { ...config, productos_phq_excluidos: cfg.productos_phq_excluidos || [] }; } catch (e) { /* se usa lo que hay */ }
+        const excl = new Set(cfgActual.productos_phq_excluidos || []);
+        quitados.forEach(p => excl.add(p));
+        agregados.forEach(p => excl.delete(p));
+        const lista = [...excl].sort();
+        try { await window.App.sb.guardarConfiguracion('productos_phq_excluidos', lista); config = { ...config, productos_phq_excluidos: lista, productos_phq: despues }; }
+        catch (e) { /* no impide guardar los productos */ }
     };
 
     console.log('[SegmentApp] catalogos.js cargado.');

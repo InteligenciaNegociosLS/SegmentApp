@@ -93,3 +93,33 @@ semestre o año.
 **Filtros de la carga de CloseUp** (en la misma sección): códigos de
 especialidad que se quitan (DCR, INS, OTR), especialidades por nombre (UNIDAD
 DE CUIDADOS INTENS) y matrícula en cero. Puedes agregar o quitar.
+
+## Fase 12C
+- **Clases terapéuticas:** el archivo del portal trae "CÓDIGO-NOMBRE" en una
+  celda y por niveles (A → A01 → A01A → A02A1). La app guarda todos los
+  niveles. El código de un producto ("R06A0") encuentra su clase ("R06A";
+  el 0 final = sin subnivel) y su grupo ("R").
+- **Historial:** cada archivo de catálogo que subes queda guardado tal cual
+  (comprimido) en el almacén privado. En cada tarjeta: **Historial** →
+  descargar el original.
+- **Cómo descargarlo:** cada fuente (fichero del CRM, mercados de CloseUp y
+  los catálogos) tiene sus pasos escritos por ti, en Ajustes → Catálogos. Se
+  muestran junto a lo que vas a subir.
+- **Mis laboratorios (PHQ, LST):** sus productos del catálogo se marcan solos
+  como La Santé (al subir el catálogo de productos o con "Marcar como La
+  Santé"). Puedes agregar otro laboratorio. Si quitas un producto a mano en
+  "Productos del laboratorio", no se vuelve a marcar solo.
+
+## Visitadores o GD nuevos (sin Cloud Shell)
+1. Carga el fichero nuevo y publícalo. Al revisarlo, la app avisa los
+   visitadores nuevos.
+2. **Ajustes → Usuarios → "Sin acceso"**: lista de visitadores del fichero
+   sin usuario y de distritos sin GD.
+3. **Crear acceso** → escribe su correo → la app crea el usuario con clave
+   temporal y te da el mensaje listo (WhatsApp o copiar).
+4. Para un Gerente Nacional o un administrador: **Nuevo usuario**.
+
+## Descargar datos crudos (todos los roles)
+Menú **⋮ → Descargar datos (crudos)**: recetas (CloseUp), fichero y
+evaluaciones en CSV para Excel. Cada quien descarga solo lo que ve: el VM lo
+suyo, el GD su equipo, el Gerente Nacional y el admin todo.

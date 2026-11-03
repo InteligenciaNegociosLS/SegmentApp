@@ -132,7 +132,7 @@ describe('Visitador (vm)', () => {
         expect(await falla(U.vm1, 'update public.evaluaciones set eliminado_en = now() where id = $1', [ids.e1])).toBe(true);
     });
     it('lee la configuración compartida pero no la cambia', async () => {
-        expect((await filas(U.vm1, 'select clave from public.configuracion')).length).toBe(6)   // incluye filtros_closeup (migración 17);
+        expect((await filas(U.vm1, 'select clave from public.configuracion')).length).toBe(9)   // + filtros_closeup (17), laboratorios_propios, productos_phq_excluidos, instructivos_descarga (18);
         await como(db, U.vm1, `update public.configuracion set valor = '{}' where clave = 'umbrales_matriz'`);
         const v = (await db.query(`select valor from public.configuracion where clave = 'umbrales_matriz'`)).rows[0].valor;
         expect(v.TH_LOY_HIGH).toBe(66);
@@ -456,5 +456,60 @@ describe('Catálogos: lo corregido a mano se respeta (migración 17)', () => {
         await g([{ producto: 'TRALIX PHQ', laboratorio: 'PHQ', molecula: 'X', clase_terapeutica: 'A01', generico: 'NO', clases_distintas: ['A01', 'B02'] }]);
         const p = (await db.query(`select clase_terapeutica, editado_a_mano from public.catalogo_productos where producto = 'TRALIX PHQ'`)).rows[0];
         expect(p).toEqual({ clase_terapeutica: 'B02', editado_a_mano: true });
+    });
+});
+
+describe('Accesos y catálogos (migración 18)', () => {
+    const crear = (quien, ...a) => como(db, quien, 'select public.admin_crear_usuario($1, $2, $3, $4, $5, $6) as r', a);
+
+    it('el admin crea el acceso de un VM: usuario, identidad, perfil y su visitador enlazados, con clave temporal cifrada', async () => {
+        await db.query(`insert into public.visitadores (nombre_sector, distrito_id) values ('VM NUEVO', $1)`, [ids.d1]);
+        const r = (await crear(U.admin, ' Nuevo.VM@LaSante.com.ve ', 'Vm Nuevo', 'vm', 'tati-roke-1234', 'vm nuevo', null)).rows[0].r;
+        expect(r).toMatchObject({ ok: true, correo: 'nuevo.vm@lasante.com.ve', rol: 'vm' });
+        const u = (await db.query('select email, aud, role, encrypted_password, raw_user_meta_data, raw_app_meta_data, email_confirmed_at, confirmation_token from auth.users where id = $1', [r.id])).rows[0];
+        expect(u).toMatchObject({ email: 'nuevo.vm@lasante.com.ve', aud: 'authenticated', role: 'authenticated', confirmation_token: '' });
+        expect(u.encrypted_password).toMatch(/^\$2a\$/);
+        expect(u.raw_user_meta_data).toEqual({ clave_temporal: true });
+        expect(u.raw_app_meta_data).toMatchObject({ provider: 'email', rol: 'vm', nombre: 'Vm Nuevo' });
+        expect(u.email_confirmed_at).not.toBeNull();
+        const ident = (await db.query('select provider, provider_id, identity_data from auth.identities where user_id = $1', [r.id])).rows[0];
+        expect(ident).toMatchObject({ provider: 'email', provider_id: r.id });
+        expect(ident.identity_data.email).toBe('nuevo.vm@lasante.com.ve');
+        expect((await db.query('select rol, activo from public.perfiles where id = $1', [r.id])).rows[0]).toEqual({ rol: 'vm', activo: true });
+        expect((await db.query(`select perfil_id from public.visitadores where nombre_sector = 'VM NUEVO'`)).rows[0].perfil_id).toBe(r.id);
+    });
+
+    it('crea un GD con su distrito; no deja correos repetidos, distritos con GD activo ni a quien no es admin', async () => {
+        const d = (await db.query(`insert into public.distritos (codigo, nombre) values ('100099', 'VACANTE') returning id`)).rows[0].id;
+        const r = (await crear(U.admin, 'gd.nuevo@lasante.com.ve', 'GD Nuevo', 'gd', 'tati-roke-1234', null, ['100099'])).rows[0].r;
+        expect((await db.query('select perfil_id from public.perfil_distritos where distrito_id = $1', [d])).rows[0].perfil_id).toBe(r.id);
+        const falla_ = async (...a) => { try { await crear(...a); return false; } catch { return true; } };
+        expect(await falla_(U.admin, 'gd.nuevo@lasante.com.ve', 'Otro', 'gte_nacional', 'tati-roke-1234', null, null)).toBe(true);
+        expect(await falla_(U.admin, 'otro@lasante.com.ve', 'Otro', 'gd', 'tati-roke-1234', null, ['100099'])).toBe(true);
+        expect(await falla_(U.admin, 'otro@lasante.com.ve', 'Otro', 'vm', 'tati-roke-1234', 'NO EXISTE', null)).toBe(true);
+        expect(await falla_(U.admin, 'otro@lasante.com.ve', 'Otro', 'vm', 'corta', 'VM NUEVO', null)).toBe(true);
+        expect(await falla_(U.gd1, 'otro2@lasante.com.ve', 'Otro', 'gte_nacional', 'tati-roke-1234', null, null)).toBe(true);
+        expect(await falla_(null, 'otro3@lasante.com.ve', 'Otro', 'gte_nacional', 'tati-roke-1234', null, null)).toBe(true);
+    });
+
+    it('pendientes de acceso: distritos sin GD (y solo el admin lo ve)', async () => {
+        const p = (await filas(U.admin, 'select public.admin_pendientes_acceso() as p'))[0].p;
+        expect(Array.isArray(p.visitadores)).toBe(true);
+        expect(p.distritos.map(x => x.codigo)).not.toContain('100099');
+        expect(await falla(U.gd1, 'select public.admin_pendientes_acceso()')).toBe(true);
+    });
+
+    it('clases con niveles e historial de catálogos (solo admin)', async () => {
+        const r = (await filas(U.admin, 'select public.admin_guardar_clases($1) as r', [JSON.stringify([
+            { codigo: 'A', nombre: 'APARAT.DIGEST.Y METAB.', nivel: 1, padre: null },
+            { codigo: 'A01', nombre: 'ESTOMATOLOGICOS', nivel: 2, padre: 'A' },
+            { codigo: 'A01A', nombre: 'ESTOMATOLOGICOS', nivel: 3, padre: 'A01' }])]))[0].r;
+        expect(r.nuevas).toBe(3);
+        expect((await db.query(`select nivel, padre from public.catalogo_clases where codigo = 'A01A'`)).rows[0]).toEqual({ nivel: 3, padre: 'A01' });
+        await como(db, U.admin, `insert into public.catalogo_versiones (tipo, nombre_archivo, registros) values ('clases', 'Clases.xls', 3)`);
+        expect(await filas(U.admin, 'select * from public.catalogo_versiones')).toHaveLength(1);
+        expect(await filas(U.gd1, 'select * from public.catalogo_versiones')).toHaveLength(0);
+        expect(await falla(U.vm1, `insert into public.catalogo_versiones (tipo, nombre_archivo) values ('x', 'y')`)).toBe(true);
+        expect(await falla(U.gd1, 'select public.admin_guardar_clases($1)', ['[]'])).toBe(true);
     });
 });
