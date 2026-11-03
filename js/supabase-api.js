@@ -414,15 +414,32 @@ window.App.sb.catalogo = async function(tipo) {
     return leerTodo(() => sb.from(tabla).select(columnas).order(orden), 'Catálogo ' + tipo);
 };
 // Se envía en partes de 2.000 filas; devuelve la suma de nuevas, cambiadas e iguales
-window.App.sb.guardarCatalogo = async function(tipo, filas) {
+window.App.sb.guardarCatalogo = async function(tipo, filas, rpc = 'admin_guardar_catalogo') {
     const sb = await window.App.sb.cliente();
     const total = { total: 0, nuevas: 0, cambiadas: 0, iguales: 0 };
     for (let i = 0; i < filas.length; i += 2000) {
-        const { data, error } = await sb.rpc('admin_guardar_catalogo', { p_tipo: tipo, p_filas: filas.slice(i, i + 2000) });
+        const params = rpc === 'admin_guardar_clases' ? { p_filas: filas.slice(i, i + 2000) } : { p_tipo: tipo, p_filas: filas.slice(i, i + 2000) };
+        const { data, error } = await sb.rpc(rpc, params);
         if (error) throw fallo(error, 'Guardar catálogo');
         ['total', 'nuevas', 'cambiadas', 'iguales'].forEach(k => { total[k] += Number((data || {})[k] || 0); });
     }
     return total;
+};
+
+// Clases terapéuticas con niveles (migración 18)
+window.App.sb.guardarClases = (filas) => window.App.sb.guardarCatalogo('clases', filas, 'admin_guardar_clases');
+// Historial de catálogos (migración 18)
+window.App.sb.versionesCatalogo = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.from('catalogo_versiones').select('id, tipo, nombre_archivo, ruta, bytes, registros, nuevas, cambiadas, subido_en')
+        .order('subido_en', { ascending: false }).limit(200);
+    if (error) throw fallo(error, 'Historial de catálogos');
+    return data || [];
+};
+window.App.sb.registrarVersionCatalogo = async function(v) {
+    const sb = await window.App.sb.cliente();
+    const { error } = await sb.from('catalogo_versiones').insert(v);
+    if (error) throw fallo(error, 'Historial de catálogos');
 };
 
 /* ============================================================
@@ -454,6 +471,20 @@ window.App.sb.clavesTemporales = async function(lista) {
     const { data, error } = await sb.rpc('admin_claves_temporales', { p_claves: lista });
     if (error) throw fallo(error, 'Claves temporales');
     return data;
+};
+
+// Crear el acceso de una persona y ver quién falta (migración 18)
+window.App.sb.crearUsuario = async function({ correo, nombre, rol, clave, visitador = null, distritos = null }) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_crear_usuario', { p_correo: correo, p_nombre: nombre, p_rol: rol, p_clave: clave, p_visitador: visitador, p_distritos: distritos });
+    if (error) throw fallo(error, 'Crear acceso');
+    return data;
+};
+window.App.sb.pendientesAcceso = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_pendientes_acceso');
+    if (error) throw fallo(error, 'Pendientes de acceso');
+    return data || { visitadores: [], distritos: [] };
 };
 
 window.App.sb.activarUsuario = async function(id, activo) {

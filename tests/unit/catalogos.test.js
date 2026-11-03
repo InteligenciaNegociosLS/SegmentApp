@@ -104,3 +104,73 @@ describe('Ajustes → Catálogos', () => {
         await expect(App.sb.guardarCatalogo('especialidades', [{ codigo: 'X', nombre: 'Y' }])).rejects.toThrow();
     });
 });
+
+describe('Fase 12C: clases con niveles, historial, cómo descargarlo y mis laboratorios', () => {
+    // Como sale del portal: "CÓDIGO-NOMBRE" en una sola celda, con sangrías
+    const CLASES = [
+        [' \n '], ['EXPORTACIONES TABLAS'], ['Buscar: '], ['Clases Terapeuticas'],
+        [' A-APARAT.DIGEST.Y METAB.'], ['      A01-ESTOMATOLOGICOS'], ['           A01A-ESTOMATOLOGICOS'],
+        ['      A02-A-AC.A-FL.A-ULC.PEPT.'], ['               A02A1-ANTIACIDOS SIMPLES'],
+        [' R-SISTEMA RESPIRATORIO'], ['      R06-ANTIHISTAMINICOS SISTEM'], ['           R06A-ANTIHISTAMINICOS SISTEM']
+    ];
+
+    it('lee las clases en una sola celda, con su nivel y su padre', () => {
+        const r = App.catalogos.leerClases(CLASES);
+        expect(r.filas.map(x => x.codigo)).toEqual(['A', 'A01', 'A01A', 'A02', 'A02A1', 'R', 'R06', 'R06A']);
+        expect(r.filas.find(x => x.codigo === 'A02')).toEqual({ codigo: 'A02', nombre: 'A-AC.A-FL.A-ULC.PEPT.', nivel: 2, padre: 'A' });
+        expect(r.filas.find(x => x.codigo === 'A02A1')).toMatchObject({ nivel: 4, padre: 'A02A' });
+    });
+
+    it('el código del producto ("R06A0") encuentra su clase y su grupo', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        App.catalogos.revisar('clases', CLASES, 'Clases.xls');
+        await App.catalogos.guardarPendiente();
+        expect(window.__calls).toContain('rpc:admin_guardar_catalogo:clases:8');
+        expect(App.catalogos.claseDe('R06A0').nombre).toBe('ANTIHISTAMINICOS SISTEM');
+        expect(App.catalogos.claseDe('A02A1').codigo).toBe('A02A1');
+        expect(App.catalogos.grupoDe('R06A0').nombre).toBe('SISTEMA RESPIRATORIO');
+    });
+
+    it('guarda el archivo original comprimido y lo muestra en el historial', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.catalogos.cargar();
+        const archivo = new File(['ABREVIATURA;NOMBRE;CODIGO\nPHQ;PHARMETIQUE;77\n'], 'Laboratorios.csv', { type: 'text/csv' });
+        await App.catalogos.alElegirArchivo('laboratorios', { files: [archivo], value: 'x' });
+        await App.catalogos.guardarPendiente();
+        const bd = baseSimulada(App);
+        expect(bd.catalogo_versiones).toHaveLength(1);
+        expect(bd.catalogo_versiones[0]).toMatchObject({ tipo: 'laboratorios', nombre_archivo: 'Laboratorios.csv', registros: 1, nuevas: 1 });
+        expect(bd.catalogo_versiones[0].ruta).toMatch(/^catalogos\/laboratorios\/.+Laboratorios\.csv\.gz$/);
+        expect(Object.keys(bd.archivos)).toContain(bd.catalogo_versiones[0].ruta);
+        App.catalogos.historial('laboratorios');
+        expect(document.getElementById('catalogoModalCuerpo').textContent).toContain('Laboratorios.csv');
+    });
+
+    it('"Cómo descargarlo": trae un borrador y el admin lo cambia', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.catalogos.cargar();
+        expect(App.catalogos.instructivo('closeup')).toContain('Médicos Prescriptores por Mercado');
+        App.catalogos.editarInstructivo('closeup');
+        document.getElementById('instructivoTexto').value = '1. Portal\n2. Descargar';
+        await App.catalogos.guardarInstructivo('closeup');
+        expect(baseSimulada(App).configuracion.find(c => c.clave === 'instructivos_descarga').valor.closeup).toBe('1. Portal\n2. Descargar');
+        expect(App.catalogos.instructivo('closeup')).toBe('1. Portal\n2. Descargar');
+    });
+
+    it('mis laboratorios: sus productos se marcan solos como La Santé; lo quitado a mano no vuelve', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.catalogos.cargar();
+        App.catalogos.revisar('productos', PRODUCTOS, 'Productos.xls');
+        await App.catalogos.guardarPendiente();   // marca solos los de PHQ y LST
+        const bd = baseSimulada(App);
+        const phq = () => bd.configuracion.find(c => c.clave === 'productos_phq').valor;
+        expect(phq()).toContain('DESLER PHQ');
+        expect(phq()).not.toContain('AZITROMICINA SAL SAL');
+        // El admin lo quita a mano: queda en la lista de excluidos y no se vuelve a marcar
+        await App.catalogos.registrarCambioPropios(phq(), phq().filter(p => p !== 'DESLER PHQ'));
+        bd.configuracion.find(c => c.clave === 'productos_phq').valor = phq().filter(p => p !== 'DESLER PHQ');
+        await App.catalogos.cargar();
+        expect(App.catalogos.productosDeLabsPropios()).not.toContain('DESLER PHQ');
+        expect(await App.catalogos.marcarPropios()).toBe(0);
+    });
+});

@@ -207,8 +207,11 @@ window.App.admin.renderProductCheckboxes = function() {
 
 window.App.admin.saveProductsConfig = async function() {
     const lista = Array.from(document.querySelectorAll('.phq-prod-cb:checked')).map(cb => cb.value.toUpperCase());
+    const antes = [...(window.App.state.PHQ_PRODUCTS || [])];
     const ok = await window.App.admin.guardarConfig({ productos_phq: lista }, "Productos guardados para todo el equipo.");
     if (!ok) return;
+    // Los que quitó a mano no se vuelven a marcar solos por "Mis laboratorios"
+    if (window.App.catalogos) window.App.catalogos.registrarCambioPropios(antes, lista);
     window.App.state.PHQ_PRODUCTS = lista;
     window.App.state._lastUniverseSignature = null;
     document.getElementById('productModal').classList.add('hidden');
