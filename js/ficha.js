@@ -316,7 +316,7 @@ function renderDatos(doc) {
     const linea = (icono, titulo, valor) => valor ? `<div class="flex gap-3 py-2"><span class="material-symbols-outlined text-[20px] text-slate-500">${icono}</span><div class="min-w-0"><div class="text-[11px] text-slate-500">${titulo}</div><div class="text-sm font-medium text-slate-800 break-words">${escF(valor)}</div></div></div>` : '';
     return filas.map((f, i) => `<section class="rounded-3xl border border-slate-200 p-4 ${i ? 'mt-3' : ''}">
         <div class="flex items-center justify-between gap-2 mb-1"><h3 class="text-sm font-bold text-slate-800">${escF(campo(f, 'Nombre de Fantasía', 'Razón Social', 'LOCAL_TRABAJO') || 'Registro del fichero')}</h3>
-            <span class="text-[11px] font-semibold ${/activo/i.test(campo(f, 'ATIVO')) ? 'text-green-800 bg-green-50' : 'text-slate-600 bg-slate-100'} rounded-full px-2 py-0.5">${escF(campo(f, 'ATIVO') || '')}</span></div>
+            <span class="text-[11px] font-semibold ${/activo/i.test(campo(f, 'ATIVO', 'Activo')) ? 'text-green-800 bg-green-50' : 'text-slate-600 bg-slate-100'} rounded-full px-2 py-0.5">${escF(campo(f, 'ATIVO', 'Activo') || '')}</span></div>
         <div class="grid sm:grid-cols-2 gap-x-6 divide-y sm:divide-y-0 divide-slate-100">
             ${linea('id_card', 'Cédula', cedulaDe(f))}
             ${linea('badge', 'Matrícula', campo(f, 'Matricula'))}

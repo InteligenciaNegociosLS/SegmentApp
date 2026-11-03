@@ -106,3 +106,21 @@ describe('Subida por lotes como borrador', () => {
         expect(document.getElementById('cargaDatosModal').classList.contains('hidden')).toBe(true);
     });
 });
+
+describe('Fichero con los nombres nuevos del CRM (IDENT02 = matrícula)', () => {
+    it('sin columna "Matricula", la toma de IDENT02 y el archivo se puede subir igual', () => {
+        // El fichero real, convertido al formato nuevo: "Matricula" pasa a IDENT02 y "Profesional" a "Médico"
+        const lineas = FICHERO.replace(/^﻿/, '').split(/\r?\n/);
+        lineas[0] = lineas[0].replace(/(^|;)Matricula(;|$)/, '$1IDENT02_TMP$2').replace(/(^|;)IDENT02(;|$)/, '$1IDENT02_VIEJO$2').replace('IDENT02_TMP', 'IDENT02');
+        const nuevo = lineas.join('\n');
+        const v = App.carga.validarFichero(App.carga.parsearCsv(nuevo));
+        expect(v.errores).toEqual([]);
+        expect(v.ok).toBe(true);
+        expect(v.resumen.filas).toBe(7308);
+        expect(v.encabezados[v.encabezados.length - 1]).toBe('Matricula');
+        expect(v.avisos.join(' ')).toContain('se tomó de "IDENT02"');
+        // Mismos médicos que con el formato de antes
+        const antes = App.carga.validarFichero(App.carga.parsearCsv(FICHERO));
+        expect(v.resumen.medicos).toBe(antes.resumen.medicos);
+    });
+});
