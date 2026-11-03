@@ -141,10 +141,30 @@ window.App.carga.validarRecetas = function({ encabezados, filas }) {
     };
 };
 
-window.App.carga.validarFichero = function({ encabezados, filas }, visitadoresExistentes = []) {
+// Nombres nuevos del CRM (noviembre 2026): la matrícula viene en IDENT02 y la cédula en IDENT01.
+// Si el archivo no trae "Matricula", se agrega esa columna con el valor de IDENT02 (todo lo demás queda igual)
+window.App.carga.ALIAS_FICHERO = { Matricula: ['IDENT02', 'Matrícula', 'Nro Matricula'] };
+window.App.carga.completarFichero = function({ encabezados, filas }) {
+    const avisos = [];
+    let enc = encabezados, fil = filas;
+    Object.entries(window.App.carga.ALIAS_FICHERO).forEach(([columna, alias]) => {
+        if (ubicarColumnas(enc, [columna]).faltan.length === 0) return;
+        const origen = alias.find(a => ubicarColumnas(enc, [a]).faltan.length === 0);
+        if (!origen) return;
+        const i = ubicarColumnas(enc, [origen]).posiciones[0];
+        enc = [...enc, columna];
+        fil = fil.map(r => [...r, r[i] == null ? '' : r[i]]);
+        avisos.push(`La columna "${columna}" se tomó de "${enc[i]}".`);
+    });
+    return { encabezados: enc, filas: fil, avisos };
+};
+
+window.App.carga.validarFichero = function(leido, visitadoresExistentes = []) {
+    const completo = window.App.carga.completarFichero(leido);
+    const { encabezados, filas } = completo;
     const C = window.App.carga.COLUMNAS_FICHERO;
     const { posiciones, faltan } = ubicarColumnas(encabezados, C);
-    const errores = [], avisos = [];
+    const errores = [], avisos = [...completo.avisos];
     if (faltan.length) {
         return { ok: false, errores: [{ fila: 1, mensaje: `Faltan columnas: ${faltan.join(', ')}` }], avisos, resumen: { filas: filas.length } };
     }
