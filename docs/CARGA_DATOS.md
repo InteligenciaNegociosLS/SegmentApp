@@ -72,3 +72,24 @@ Si alguien está viendo una versión anterior, el botón lo indica en color ámb
    fichero** deben dar ese mismo número de médicos únicos.
 3. **Composición del mercado**: La Santé + principal competidor + resto
    suman 100 %.
+
+## Catálogos de CloseUp (Fase 12B) · Ajustes → Catálogos
+Reemplazan las "tablas de dimensiones" de Power Query. Se actualizan cada
+semestre o año.
+1. Descarga del portal **Especialidades**, **Laboratorios** y **Productos**
+   (.xls, tal como salen; no hace falta limpiarlos).
+2. En **Ajustes → Catálogos**, en cada tarjeta: **Subir archivo**. La app salta
+   los títulos ("EXPORTACIONES TABLAS", "Buscar:"…), lee todas las hojas y te
+   muestra qué va a guardar. **Guardar**.
+3. **Productos:** el portal trae varias filas por producto (concentraciones,
+   formas). La app deja **una sola** (así las recetas no se duplican) con la
+   clase terapéutica más frecuente. Si un producto trae varias clases, lo
+   marca; en **Ver y editar** eliges la correcta y esa corrección se respeta en
+   las próximas cargas del catálogo.
+4. **Clases terapéuticas:** opcional. Si algún día consigues la tabla código →
+   nombre, súbela ahí y la app mostrará el nombre en vez del código.
+5. Nada se borra: lo que ya estaba y no viene en el archivo nuevo se queda.
+
+**Filtros de la carga de CloseUp** (en la misma sección): códigos de
+especialidad que se quitan (DCR, INS, OTR), especialidades por nombre (UNIDAD
+DE CUIDADOS INTENS) y matrícula en cero. Puedes agregar o quitar.

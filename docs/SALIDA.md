@@ -88,7 +88,7 @@ Cada script pide escribir **`MIGRAR PRODUCCION`**.
 node 0-preparar-base.mjs
 ```
 
-Debe decir: ✅ Base lista: se aplicaron 16 archivo(s).
+Debe decir: ✅ Base lista: se aplicaron 17 archivo(s).
 
 ```bash
 node 1-exportar-firebase.mjs
