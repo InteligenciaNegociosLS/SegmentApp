@@ -42,6 +42,10 @@ Los nombres de las columnas deben ser **los de siempre**; el orden no importa.
   de recetas) y las 10 columnas siguientes del archivo de CloseUp de siempre.
 - **Fichero:** como mínimo Matricula, Nombre, Nombre del sector, Sector,
   GER_DIS, NOME_GER_DIS y Equipo. Las demás columnas se guardan tal cual.
+  - **Formato nuevo del CRM (noviembre 2026):** ya no trae "Matricula"; la
+    matrícula viene en **IDENT02** y la cédula en **IDENT01**. La app toma la
+    matrícula de IDENT02 sola (lo avisa al revisar el archivo). "ATIVO" pasó a
+    "Activo": también se reconoce.
 
 ## Pestaña "Versiones"
 Lista todas las versiones de recetas y de fichero:

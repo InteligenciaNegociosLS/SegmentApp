@@ -488,3 +488,21 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   borran (la base lo impide); el VM solo crea o edita sus evaluaciones.
 - **Salud de los datos** muestra médicos únicos, visitadores y distritos del
   fichero para compararlos con el CRM.
+
+## Plan de carga simplificada (03/11/2026) · Fase 12
+- **Opción A:** la app hace todo el trabajo de Power Query. Sin Excel.
+- **12A · Fichero nuevo del CRM:** la matrícula viene en IDENT02 (cédula en
+  IDENT01); "ATIVO" pasó a "Activo". La app los reconoce sola.
+- **12B · Catálogos y filtros:** Especialidades, Productos y Laboratorios se
+  suben tal como salen del portal (.xls) en Ajustes → Catálogos; una fila por
+  producto (evita la duplicación que obligaba a poner la clase terapéutica en
+  "SIN DATOS"); clase terapéutica con código, lista para un futuro catálogo de
+  nombres. Filtros editables (DCR, INS, OTR, UCI, matrícula 0).
+- **12C · CloseUp en un paso:** los ~32 archivos de mercado (o un .zip) se
+  procesan en el navegador; informe previo con alertas (mercados con menos
+  filas o faltantes, productos de La Santé ausentes, productos sin catálogo);
+  descarga del consolidado; una sola versión a Supabase; comparación única
+  contra el archivo de Power Query. Se guardan los archivos originales
+  comprimidos en el almacén privado.
+- **12D · Recordatorio trimestral** de la carga de CloseUp y control del
+  espacio del plan gratis.
