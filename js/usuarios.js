@@ -53,6 +53,7 @@
 
     const textoError = (e) => {
         const m = String((e && e.original && e.original.message) || (e && e.message) || '');
+        if (/admin_crear_usuario|admin_pendientes_acceso/i.test(m)) return 'Falta aplicar la migración 18 en Supabase (en Cloud Shell: node 0-preparar-base.mjs).';
         if (/admin_claves_temporales/i.test(m)) return 'Falta aplicar la migración 15 en Supabase (en Cloud Shell: node 0-preparar-base.mjs).';
         if (/admin_usuarios|admin_editar|admin_clave|admin_activar|could not find the function|does not exist/i.test(m)) return 'Falta aplicar la migración 14 en Supabase (en Cloud Shell: node 0-preparar-base.mjs).';
         if (/failed to fetch|network|sin conexi/i.test(m)) return 'Sin conexión. Intenta de nuevo.';
@@ -73,6 +74,78 @@
             return;
         }
         U.pintar();
+        await U.cargarPendientes();
+    };
+
+    /* ---------- Quién no tiene acceso todavía (migración 18) ---------- */
+    let pendientes = { visitadores: [], distritos: [] };
+    U.cargarPendientes = async function() {
+        const zona = document.getElementById('ajUsuariosPendientes');
+        if (!zona) return;
+        try { pendientes = await window.App.sb.pendientesAcceso(); }
+        catch (e) { pendientes = { visitadores: [], distritos: [] }; zona.innerHTML = ''; return; }
+        U.pintarPendientes();
+    };
+    U.pendientes = () => pendientes;
+    U.pintarPendientes = function() {
+        const zona = document.getElementById('ajUsuariosPendientes');
+        if (!zona) return;
+        const v = pendientes.visitadores || [], d = pendientes.distritos || [];
+        if (!v.length && !d.length) {
+            zona.innerHTML = '<p class="text-xs text-green-800 bg-green-50 rounded-xl px-3 py-2">✅ Todos los visitadores del fichero y todos los distritos tienen acceso.</p>';
+            return;
+        }
+        const item = (titulo, detalle, accion) => `<li class="flex items-center gap-2 py-2">
+            <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-slate-800 truncate">${esc(titulo)}</span>
+            <span class="block text-[11px] text-slate-500 truncate">${esc(detalle)}</span></span>
+            <button type="button" class="boton-tonal !h-9 !px-3 !text-xs" onclick="${accion}"><span class="material-symbols-outlined text-[16px]">person_add</span> Crear acceso</button></li>`;
+        zona.innerHTML = `<details class="rounded-2xl bg-amber-50 px-4 py-3" ${v.length + d.length <= 6 ? 'open' : ''}>
+            <summary class="text-sm font-bold text-amber-900 cursor-pointer">Sin acceso: ${fmt(v.length)} ${v.length === 1 ? 'visitador' : 'visitadores'} del fichero · ${fmt(d.length)} ${d.length === 1 ? 'distrito' : 'distritos'} sin GD</summary>
+            <p class="text-[11px] text-amber-900 mt-1">Aparecen al cargar un fichero con personas nuevas. "Crear acceso" crea su usuario con una clave temporal y el mensaje listo para enviar.</p>
+            <ul class="divide-y divide-amber-100 mt-2">
+                ${v.map((x, i) => item(x.nombre, `Visitador${x.distrito ? ' · distrito ' + x.distrito : ''}`, `App.usuarios.nuevo('vm', ${i})`)).join('')}
+                ${d.map((x, i) => item(x.nombre || x.codigo, `Gerente de distrito · ${x.codigo}`, `App.usuarios.nuevo('gd', ${i})`)).join('')}
+            </ul></details>`;
+    };
+
+    // Crear el acceso: VM (de un visitador del fichero), GD (de un distrito) o Gerente Nacional / Administrador
+    let nuevoDatos = null;
+    U.nuevo = function(rol, i) {
+        const x = rol === 'vm' ? (pendientes.visitadores || [])[i] : (rol === 'gd' ? (pendientes.distritos || [])[i] : null);
+        nuevoDatos = { rol: rol || 'gte_nacional', visitador: rol === 'vm' && x ? x.nombre : null, distritos: rol === 'gd' && x ? [x.codigo] : null };
+        const nombre = x ? (x.nombre || '') : '';
+        actual = null;
+        abrir('Crear acceso', `
+            <p class="text-sm text-slate-600 mb-4">${rol === 'vm' ? `Visitador <b>${esc(nombre)}</b>: verá solo sus médicos.`
+                : rol === 'gd' ? `Gerente del distrito <b>${esc(x ? x.codigo : '')}</b>: verá a sus visitadores.`
+                : 'Elige el rol. Para un visitador o un GD, usa la lista "Sin acceso".'}</p>
+            ${!x ? `<label class="campo mb-3">Rol<select id="nuevoRol" class="filter-select !rounded-2xl"><option value="gte_nacional">Gerente Nacional (ve todo, solo consulta)</option><option value="admin">Administrador (todo)</option></select></label>` : ''}
+            <label class="campo">Nombre<input id="nuevoNombre" type="text" autocomplete="off" value="${esc(nombre)}"></label>
+            <label class="campo mt-3">Correo con el que entra<input id="nuevoCorreo" type="email" inputmode="email" autocomplete="off" placeholder="nombre@lasante.com.ve"></label>
+            <p class="text-[11px] text-slate-500 mt-2">Se crea con una clave temporal: al entrar, la app le pide crear la suya.</p>
+            <p id="usuarioError" class="text-sm text-rose-700 mt-3 min-h-[20px]" role="alert"></p>
+            ${botones('App.usuarios.crearNuevo()', 'Crear acceso', 'person_add')}`);
+    };
+    U.crearNuevo = async function() {
+        if (!nuevoDatos) return;
+        const nombre = document.getElementById('nuevoNombre').value.trim();
+        const correo = document.getElementById('nuevoCorreo').value.trim().toLowerCase();
+        const selRol = document.getElementById('nuevoRol');
+        const rol = selRol ? selRol.value : nuevoDatos.rol;
+        const error = (t) => window.App.ui.safeSetText('usuarioError', t);
+        if (!nombre) return error('Escribe el nombre.');
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return error('El correo no es válido.');
+        const clave = U.generarClave();
+        ocupado(true);
+        try {
+            await window.App.sb.crearUsuario({ correo, nombre, rol, clave, visitador: nuevoDatos.visitador, distritos: nuevoDatos.distritos });
+            nuevoDatos = null;
+            mostrarMensaje({ nombre, correo }, { tipo: 'temporal', clave, aviso: 'Acceso creado' });
+            await U.cargar();
+        } catch (e) {
+            ocupado(false);
+            error(textoError(e));
+        }
     };
 
     const fechaCorta = (x) => new Date(x).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
