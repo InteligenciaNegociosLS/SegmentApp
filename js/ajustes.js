@@ -34,6 +34,7 @@ window.App.ajustes.render = function() {
     window.App.ajustes.renderVerComo();
     window.App.ajustes.cargarBitacora();
     if (window.App.usuarios) window.App.usuarios.cargar();
+    if (window.App.catalogos) window.App.catalogos.cargar();
 };
 
 /* ============================================================
