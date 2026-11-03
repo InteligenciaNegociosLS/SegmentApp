@@ -40,8 +40,11 @@ export function datosDePrueba() {
             { id: 's-fic-1', nombre: 'Datos enero', tipo: 'fichero', fecha: '2026-01-31', estado: 'publicado', es_vigente: true, filas: 0, archivo: 'snapshots/s-fic-1/datos.csv.gz', archivo_bytes: 1, notas: null, creado_en: '2026-01-31T00:00:00Z', publicado_en: '2026-01-31T00:00:00Z' }
         ],
         configuracion: [
-            { clave: 'umbrales_matriz', valor: { TH_LOY_LOW: 33, TH_LOY_HIGH: 66, TH_POT_LOW: 33, TH_POT_HIGH: 66 } }
+            { clave: 'umbrales_matriz', valor: { TH_LOY_LOW: 33, TH_LOY_HIGH: 66, TH_POT_LOW: 33, TH_POT_HIGH: 66 } },
+            { clave: 'filtros_closeup', valor: { especialidades_excluir: ['DCR', 'INS', 'OTR'], nombres_especialidad_excluir: ['UNIDAD DE CUIDADOS INTENS'], excluir_matricula_cero: true } }
         ],
+        // Catálogos de CloseUp (migración 17)
+        catalogo_especialidades: [], catalogo_laboratorios: [], catalogo_productos: [], catalogo_clases: [],
         // Contenido de cada versión (para datos_equipo): { id: { encabezados, filas } }
         fuentes: {},
         // O el resultado ya calculado: { 'recetas|fichero|usuario': {...} }
@@ -280,6 +283,22 @@ export function createClient(url, clave, opciones = {}) {
             });
             registrar(`rpc:admin_claves_temporales:${p_claves.length}`);
             return { data: p_claves.length, error: null };
+        },
+        admin_guardar_catalogo({ p_tipo, p_filas }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const [tabla, clave] = { especialidades: ['catalogo_especialidades', 'codigo'], laboratorios: ['catalogo_laboratorios', 'abreviatura'],
+                productos: ['catalogo_productos', 'producto'], clases: ['catalogo_clases', 'codigo'] }[p_tipo];
+            const lista = bd[tabla];
+            let nuevas = 0, cambiadas = 0;
+            p_filas.forEach(f => {
+                const i = lista.findIndex(x => x[clave] === f[clave]);
+                if (i < 0) { lista.push({ ...f }); nuevas++; return; }
+                const antes = lista[i];
+                if (antes.editado_a_mano && !f.editado_a_mano) return;
+                if (JSON.stringify({ ...antes, ...f }) !== JSON.stringify(antes)) { lista[i] = { ...antes, ...f }; cambiadas++; }
+            });
+            registrar(`rpc:admin_guardar_catalogo:${p_tipo}:${p_filas.length}`);
+            return { data: { ok: true, total: p_filas.length, nuevas, cambiadas, iguales: p_filas.length - nuevas - cambiadas }, error: null };
         },
         admin_activar_usuario({ p_id, p_activo }) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };

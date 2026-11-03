@@ -400,6 +400,32 @@ window.App.sb.visitadoresConUsuario = async function() {
 };
 
 /* ============================================================
+   CATÁLOGOS DE CLOSEUP (solo admin, migración 17)
+============================================================ */
+const TABLAS_CATALOGO = {
+    especialidades: ['catalogo_especialidades', 'codigo, nombre', 'codigo'],
+    laboratorios: ['catalogo_laboratorios', 'abreviatura, nombre, codigo', 'abreviatura'],
+    productos: ['catalogo_productos', 'producto, laboratorio, molecula, clase_terapeutica, generico, variantes, clases_distintas, editado_a_mano', 'producto'],
+    clases: ['catalogo_clases', 'codigo, nombre', 'codigo']
+};
+window.App.sb.catalogo = async function(tipo) {
+    const sb = await window.App.sb.cliente();
+    const [tabla, columnas, orden] = TABLAS_CATALOGO[tipo];
+    return leerTodo(() => sb.from(tabla).select(columnas).order(orden), 'Catálogo ' + tipo);
+};
+// Se envía en partes de 2.000 filas; devuelve la suma de nuevas, cambiadas e iguales
+window.App.sb.guardarCatalogo = async function(tipo, filas) {
+    const sb = await window.App.sb.cliente();
+    const total = { total: 0, nuevas: 0, cambiadas: 0, iguales: 0 };
+    for (let i = 0; i < filas.length; i += 2000) {
+        const { data, error } = await sb.rpc('admin_guardar_catalogo', { p_tipo: tipo, p_filas: filas.slice(i, i + 2000) });
+        if (error) throw fallo(error, 'Guardar catálogo');
+        ['total', 'nuevas', 'cambiadas', 'iguales'].forEach(k => { total[k] += Number((data || {})[k] || 0); });
+    }
+    return total;
+};
+
+/* ============================================================
    USUARIOS (solo admin, migración 14)
 ============================================================ */
 window.App.sb.usuarios = async function() {

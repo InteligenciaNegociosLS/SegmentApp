@@ -506,3 +506,13 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   comprimidos en el almacén privado.
 - **12D · Recordatorio trimestral** de la carga de CloseUp y control del
   espacio del plan gratis.
+
+### Ajustes del dueño al plan (03/11/2026)
+- **Nombre del mercado = nombre del archivo** (no el "ARAII Mercado C09C0"
+  que viene adentro): así cada mercado se llama como el dueño lo guarde
+  (Fase 12C).
+- Clase terapéutica con código, **escalable**: catálogo de clases opcional
+  (vacío hasta que exista la tabla).
+- **Guardar los archivos originales** de CloseUp: sí (Fase 12C).
+- Fase 12B hecha: catálogos y filtros editables; lo corregido a mano en un
+  producto no se pisa al volver a subir el catálogo.

@@ -582,6 +582,7 @@
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajEncuesta')"><span class="material-symbols-outlined text-[18px]">balance</span> Encuesta</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajDatos')"><span class="material-symbols-outlined text-[18px]">database</span> Datos y equipo</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajUsuarios')"><span class="material-symbols-outlined text-[18px]">manage_accounts</span> Usuarios</button>
+                <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajCatalogos')"><span class="material-symbols-outlined text-[18px]">menu_book</span> Catálogos</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajSalud')"><span class="material-symbols-outlined text-[18px]">health_and_safety</span> Salud de los datos</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajVerComo')"><span class="material-symbols-outlined text-[18px]">visibility</span> Ver como…</button>
                 <button type="button" class="chip" aria-pressed="false" onclick="App.ajustes.irA('ajBitacora')"><span class="material-symbols-outlined text-[18px]">history_edu</span> Bitácora</button>
@@ -678,6 +679,16 @@
                 </div>
                 <p class="text-[11px] text-slate-500 -mt-1 mb-2">Los dos botones usan la lista que ves: busca o elige un rol para hacerlo solo con algunos.</p>
                 <ul id="ajUsuariosLista" class="divide-y divide-slate-100"></ul>
+            </article>
+
+            <!-- Catálogos de CloseUp y filtros (Fase 12B, migración 17) -->
+            <article id="ajCatalogos" class="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 mb-4 scroll-mt-20">
+                <header class="flex items-start gap-3 mb-4">
+                    <span class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0"><span class="material-symbols-outlined">menu_book</span></span>
+                    <div><h3 class="text-lg font-display font-bold text-slate-800">Catálogos de CloseUp</h3>
+                        <p class="text-sm text-slate-500">Las tablas que dan nombre a especialidades, productos y laboratorios al cargar CloseUp. Súbelas tal como salen del portal (.xls); se actualizan cada semestre o año.</p></div>
+                </header>
+                <div id="ajCatalogosCuerpo"></div>
             </article>
 
             <!-- Salud de los datos (Fase 9B) -->
@@ -1119,6 +1130,17 @@
     </div>
 </div>
 
+<!-- Catálogos: revisar archivo, ver y editar (Fase 12B) -->
+<div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[96] flex items-end sm:items-center justify-center p-0 sm:p-4" id="catalogoModal" onclick="if (event.target === this) App.catalogos.cerrar()">
+    <div class="bg-white w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="catalogoModalTitulo">
+        <div class="flex items-center justify-between px-5 pt-5">
+            <h3 id="catalogoModalTitulo" class="text-xl font-display font-bold text-slate-800">Catálogo</h3>
+            <button type="button" class="boton-icono" aria-label="Cerrar" onclick="App.catalogos.cerrar()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div id="catalogoModalCuerpo" class="px-5 pb-5 pt-3"></div>
+    </div>
+</div>
+
 <!-- Usuarios: cambiar nombre o correo, clave temporal, activar (Fase 10C) -->
 <div class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[96] flex items-end sm:items-center justify-center p-0 sm:p-4" id="usuarioModal" onclick="if (event.target === this) App.usuarios.cerrar()">
     <div class="bg-white w-full sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="usuarioModalTitulo">
@@ -1524,6 +1546,7 @@
 <script src="js/ficha.js"></script>
 <script src="js/ajustes.js"></script>
 <script src="js/usuarios.js"></script>
+<script src="js/catalogos.js"></script>
 <script src="js/equipo.js"></script>
 <script src="js/tableros.js"></script>
 <script src="js/avisos.js"></script>

@@ -132,7 +132,7 @@ describe('Visitador (vm)', () => {
         expect(await falla(U.vm1, 'update public.evaluaciones set eliminado_en = now() where id = $1', [ids.e1])).toBe(true);
     });
     it('lee la configuración compartida pero no la cambia', async () => {
-        expect((await filas(U.vm1, 'select clave from public.configuracion')).length).toBe(5);
+        expect((await filas(U.vm1, 'select clave from public.configuracion')).length).toBe(6)   // incluye filtros_closeup (migración 17);
         await como(db, U.vm1, `update public.configuracion set valor = '{}' where clave = 'umbrales_matriz'`);
         const v = (await db.query(`select valor from public.configuracion where clave = 'umbrales_matriz'`)).rows[0].valor;
         expect(v.TH_LOY_HIGH).toBe(66);
@@ -399,5 +399,62 @@ describe('Desactivar a un VM oculta su visitador sin borrar nada (migración 16)
         expect(Number((await db.query('select count(*) as n from public.evaluaciones')).rows[0].n)).toBe(evalsAntes);
         await filas(U.admin, 'select public.admin_activar_usuario($1, true)', [U.vm2]);
         expect(await activo()).toBe(true);
+    });
+});
+
+describe('Catálogos de CloseUp (migración 17)', () => {
+    const guardar = (quien, tipo, filas) => filas_(quien, 'select public.admin_guardar_catalogo($1, $2) as r', [tipo, JSON.stringify(filas)]);
+    const filas_ = async (uid, sql, p) => (await como(db, uid, sql, p)).rows;
+
+    it('el admin guarda un catálogo: agrega, actualiza y cuenta (nunca borra)', async () => {
+        let r = (await guardar(U.admin, 'productos', [
+            { producto: 'DESLER PHQ', laboratorio: 'PHQ', molecula: 'DESLORATADINA', clase_terapeutica: 'R06A0', generico: 'NO', variantes: 3, clases_distintas: [] },
+            { producto: 'AZITROMICINA SAL SAL', laboratorio: 'SAL', molecula: 'AZITROMICINA', clase_terapeutica: 'J01F0', generico: 'SI' }
+        ]))[0].r;
+        expect(r).toMatchObject({ total: 2, nuevas: 2, cambiadas: 0, iguales: 0 });
+        r = (await guardar(U.admin, 'productos', [
+            { producto: 'DESLER PHQ', laboratorio: 'PHQ', molecula: 'DESLORATADINA', clase_terapeutica: 'R06A0', generico: 'NO', variantes: 3, clases_distintas: [] },
+            { producto: 'XAROX PHQ', laboratorio: 'PHQ', molecula: 'RIVAROXABAN', clase_terapeutica: 'B01F0', generico: 'NO' }
+        ]))[0].r;
+        expect(r).toMatchObject({ total: 2, nuevas: 1, cambiadas: 0, iguales: 1 });
+        // La que no vino en la segunda carga sigue ahí
+        expect((await filas_(U.admin, 'select count(*)::int as n from public.catalogo_productos'))[0].n).toBe(3);
+        r = (await guardar(U.admin, 'especialidades', [{ codigo: 'CAR', nombre: 'CARDIOLOGIA' }, { codigo: 'CIR', nombre: 'CIRUGIA' }]))[0].r;
+        expect(r.nuevas).toBe(2);
+        r = (await guardar(U.admin, 'especialidades', [{ codigo: 'CAR', nombre: 'CARDIOLOGÍA' }]))[0].r;
+        expect(r).toMatchObject({ nuevas: 0, cambiadas: 1 });
+        r = (await guardar(U.admin, 'laboratorios', [{ abreviatura: 'PHQ', nombre: 'PHARMETIQUE', codigo: '123' }]))[0].r;
+        expect(r.nuevas).toBe(1);
+        r = (await guardar(U.admin, 'clases', [{ codigo: 'R06A0', nombre: 'ANTIHISTAMINICOS' }]))[0].r;
+        expect(r.nuevas).toBe(1);
+    });
+
+    it('solo el admin los lee o los cambia', async () => {
+        for (const quien of [U.gte, U.gd1, U.vm1, null]) {
+            expect(await falla(quien, 'select public.admin_guardar_catalogo($1, $2)', ['especialidades', '[]'])).toBe(true);
+        }
+        for (const quien of [U.gte, U.gd1, U.vm1]) {
+            expect(await filas(quien, 'select * from public.catalogo_productos')).toHaveLength(0);
+            expect(await falla(quien, `insert into public.catalogo_especialidades values ('XX', 'X')`)).toBe(true);
+        }
+        expect(await falla(null, 'select * from public.catalogo_productos')).toBe(true);
+    });
+
+    it('los filtros de la carga vienen con los de Power Query', async () => {
+        const f = (await filas(U.admin, `select valor from public.configuracion where clave = 'filtros_closeup'`))[0].valor;
+        expect(f.especialidades_excluir).toEqual(['DCR', 'INS', 'OTR']);
+        expect(f.nombres_especialidad_excluir).toEqual(['UNIDAD DE CUIDADOS INTENS']);
+        expect(f.excluir_matricula_cero).toBe(true);
+    });
+});
+
+describe('Catálogos: lo corregido a mano se respeta (migración 17)', () => {
+    it('subir el catálogo del portal no pisa un producto corregido en la app', async () => {
+        const g = (filas) => como(db, U.admin, 'select public.admin_guardar_catalogo($1, $2)', ['productos', JSON.stringify(filas)]);
+        await g([{ producto: 'TRALIX PHQ', laboratorio: 'PHQ', molecula: 'X', clase_terapeutica: 'A01', generico: 'NO', clases_distintas: ['A01', 'B02'] }]);
+        await g([{ producto: 'TRALIX PHQ', laboratorio: 'PHQ', molecula: 'X', clase_terapeutica: 'B02', generico: 'NO', clases_distintas: ['A01', 'B02'], editado_a_mano: true }]);
+        await g([{ producto: 'TRALIX PHQ', laboratorio: 'PHQ', molecula: 'X', clase_terapeutica: 'A01', generico: 'NO', clases_distintas: ['A01', 'B02'] }]);
+        const p = (await db.query(`select clase_terapeutica, editado_a_mano from public.catalogo_productos where producto = 'TRALIX PHQ'`)).rows[0];
+        expect(p).toEqual({ clase_terapeutica: 'B02', editado_a_mano: true });
     });
 });

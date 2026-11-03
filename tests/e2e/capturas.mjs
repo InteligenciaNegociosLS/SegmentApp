@@ -198,6 +198,15 @@ try {
         await page.evaluate(async () => { App.usuarios.clave('u-gd'); await App.usuarios.crearClave(); });
         await foto('4i-admin-usuario-clave');
         await page.evaluate(() => App.usuarios.cerrar());
+        await page.evaluate(async () => { await App.catalogos.cargar(); App.ajustes.irA('ajCatalogos'); });
+        await page.waitForTimeout(300);
+        await foto('4k-admin-catalogos');
+        await page.evaluate(() => App.catalogos.revisar('productos', [
+            ['Producto', 'Laboratorio', 'Concentracion', 'Formas Farmaceuticas', 'Molecula', 'Clase Terapeutica', 'Generico'],
+            ['DESLER PHQ', 'PHQ', '5MG', 'TABLETAS', 'DESLORATADINA', 'R06A0', 'N'], ['DESLER PHQ', 'PHQ', '0.5MG', 'GOTAS', 'DESLORATADINA', 'R05X0', 'N'],
+            ['AZITROMICINA SAL SAL', 'SAL', '500MG', 'TABLETAS', 'AZITROMICINA', 'J01F0', 'S']], 'Productos.xls'));
+        await foto('4l-admin-catalogo-revisar');
+        await page.evaluate(() => App.catalogos.cerrar());
         await page.evaluate(async () => { App.usuarios.clavesMasivas(); await App.usuarios.crearClavesMasivas(); });
         await foto('4j-admin-claves-masivas');
         await page.evaluate(() => { window.confirm = () => true; App.usuarios.cerrarAccesos(); });
