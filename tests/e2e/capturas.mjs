@@ -207,6 +207,14 @@ try {
             ['AZITROMICINA SAL SAL', 'SAL', '500MG', 'TABLETAS', 'AZITROMICINA', 'J01F0', 'S']], 'Productos.xls'));
         await foto('4l-admin-catalogo-revisar');
         await page.evaluate(() => App.catalogos.cerrar());
+        await page.evaluate(async () => { App.ajustes.irA('ajUsuarios'); await App.usuarios.cargarPendientes(); });
+        await page.waitForTimeout(300);
+        await foto('4m-admin-sin-acceso');
+        await page.evaluate(() => App.usuarios.nuevo('vm', 0));
+        await foto('4n-admin-crear-acceso');
+        await page.evaluate(() => { App.usuarios.cerrar(); App.descargas.abrir(); });
+        await foto('4o-descargar-datos');
+        await page.evaluate(() => App.descargas.cerrar());
         await page.evaluate(async () => { App.usuarios.clavesMasivas(); await App.usuarios.crearClavesMasivas(); });
         await foto('4j-admin-claves-masivas');
         await page.evaluate(() => { window.confirm = () => true; App.usuarios.cerrarAccesos(); });

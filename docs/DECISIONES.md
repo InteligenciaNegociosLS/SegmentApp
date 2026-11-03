@@ -516,3 +516,18 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 - **Guardar los archivos originales** de CloseUp: sí (Fase 12C).
 - Fase 12B hecha: catálogos y filtros editables; lo corregido a mano en un
   producto no se pisa al volver a subir el catálogo.
+
+## Fase 12C (03/11/2026)
+- **Historial de catálogos:** cada archivo subido se guarda (comprimido) con
+  su resumen; subir uno nuevo agrega o actualiza, nunca borra.
+- **"Cómo descargarlo"** de cada fuente, editable (texto, también para el
+  fichero del CRM).
+- **Clases terapéuticas** con niveles y corrección a mano.
+- **Mis laboratorios:** PHQ y LST (configurable); sus productos se marcan
+  solos como La Santé.
+- **Crear acceso desde la app** para visitadores o GD nuevos (y Gerente
+  Nacional o admin): ya no hace falta Cloud Shell para usuarios.
+- **Descargar datos crudos por rol** (recetas, fichero, evaluaciones).
+- Pregunta del dueño: Cloud Shell solo queda para aplicar migraciones de la
+  base. Propuesta para la Fase 12E: que GitHub las aplique sola al fusionar a
+  `main` (con la clave de la base como secreto de GitHub).
