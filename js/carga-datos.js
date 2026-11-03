@@ -335,7 +335,8 @@ window.App.carga.mostrarPestana = function(pestana) {
 /* ---------- Paso 2: revisar ---------- */
 window.App.carga.revisar = async function() {
     const ui = window.App.ui;
-    const archivo = document.getElementById('cargaArchivo').files[0];
+    const elegidos = [...(document.getElementById('cargaArchivo').files || [])];
+    const archivo = elegidos[0];
     const tipo = document.querySelector('input[name="cargaTipo"]:checked')?.value;
     const zona = document.getElementById('cargaResultado');
     if (!tipo) { ui.showToast('Elige si el archivo es de recetas o de fichero.'); return; }
@@ -344,6 +345,12 @@ window.App.carga.revisar = async function() {
     zona.innerHTML = '<div class="p-6 text-center text-indigo-600 font-bold flex items-center justify-center gap-2"><span class="material-symbols-outlined animate-spin-reverse">sync</span> Revisando el archivo...</div>';
     await new Promise(r => setTimeout(r, 30));
     try {
+        // CloseUp crudo del portal (varios mercados o un .zip): la app hace el cruce (Fase 12D)
+        if (tipo === 'recetas' && window.App.closeup) {
+            const crudo = await window.App.carga.intentarCloseUp(elegidos);
+            if (crudo) return;
+        }
+        if (elegidos.length > 1) { zona.innerHTML = '<div class="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-sm">Elegiste varios archivos: eso es solo para los mercados de CloseUp tal como salen del portal. Para el fichero o un consolidado, elige un solo archivo.</div>'; return; }
         const leido = await window.App.carga.leerArchivo(archivo);
         let existentes = [];
         if (tipo === 'fichero') existentes = await window.App.sb.nombresVisitadoresVisibles().catch(() => []);
@@ -382,6 +389,114 @@ window.App.carga.renderRevision = function(v, tipo, origen) {
         </div>`;
 };
 
+/* ---------- CloseUp crudo: varios mercados o .zip (Fase 12D) ---------- */
+// Devuelve true si eran archivos crudos del portal (y ya dejó la revisión en pantalla)
+window.App.carga.intentarCloseUp = async function(elegidos) {
+    const CU = window.App.closeup;
+    const zona = document.getElementById('cargaResultado');
+    const archivos = await CU.expandir(elegidos);
+    // El texto de cada archivo se lee solo cuando se usa (con 30 mercados de hasta 35 MB, no se guardan todos a la vez)
+    const textos = archivos.map(a => ({ nombre: a.nombre, bytes: a.bytes, get texto() { return CU.decodificar(this.bytes); },
+        crudo: CU.esCrudo(CU.decodificar(a.bytes.subarray(0, 8000))) }));
+    const crudos = textos.filter(a => a.crudo);
+    if (!crudos.length) return false;
+    if (crudos.length !== textos.length) {
+        const otros = textos.filter(a => !a.crudo).map(a => a.nombre);
+        zona.innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-sm"><b>Estos archivos no son mercados de CloseUp del portal:</b> ${esc(otros.join(', '))}. Quítalos y vuelve a revisar.</div>`;
+        return true;
+    }
+    zona.innerHTML = `<div class="p-6 text-center text-indigo-600 font-bold flex items-center justify-center gap-2"><span class="material-symbols-outlined animate-spin-reverse">sync</span> Cruzando ${fmt(crudos.length)} mercado(s) con los catálogos...</div>`;
+    await new Promise(r => setTimeout(r, 30));
+    const ctx = await CU.contexto();
+    const res = CU.consolidar(crudos, ctx, CU.resumenAnterior());
+    const v = window.App.carga.validarRecetas(res.leido);
+    if (res.errores.length) { v.errores = [...res.errores.map(m => ({ fila: '—', mensaje: m })), ...v.errores]; v.ok = false; }
+    if (ctx.vacio) v.avisos = ['Los catálogos están vacíos: sube Especialidades y Productos en Ajustes → Catálogos antes de cargar CloseUp.', ...v.avisos];
+    window.App.carga._estado = { validacion: v, tipo: 'recetas', snapshotId: null, closeup: { res, originales: crudos.map(a => ({ nombre: a.nombre, bytes: a.bytes })), guardados: false } };
+    const nombre = document.getElementById('cargaNombre'), fecha = document.getElementById('cargaFecha');
+    if (nombre && !nombre.value && res.edicion) nombre.value = `CloseUp ${res.edicion}`;
+    if (fecha && !fecha.value && res.edicion) fecha.value = CU.fechaDeEdicion(res.edicion);
+    window.App.carga.renderRevision(v, 'recetas', `CloseUp: ${fmt(crudos.length)} archivo(s) de mercado`);
+    zona.insertAdjacentHTML('afterbegin', window.App.carga.informeCloseUp(res));
+    return true;
+};
+
+window.App.carga.informeCloseUp = function(res) {
+    const r = res.resumen;
+    const pct = (n) => window.App.ui.formatNumber(n || 0, 2) + '%';
+    const cambio = (ahora, antes) => antes == null ? '' : ` <span class="text-[11px] ${ahora >= antes ? 'text-green-700' : 'text-rose-700'}">(${ahora >= antes ? '+' : ''}${fmt(ahora - antes)} vs. hoy)</span>`;
+    const alertas = res.alertas.map(a => `<li class="${a.tipo === 'aviso' ? 'text-amber-900' : 'text-slate-700'}">${a.tipo === 'aviso' ? '⚠️' : 'ℹ️'} ${esc(a.texto)}${a.lista ? `<details class="ml-5"><summary class="cursor-pointer text-[11px] font-bold">Ver lista</summary><div class="text-[11px] break-words">${esc(a.lista.join(', '))}</div></details>` : ''}</li>`).join('');
+    return `<div class="mb-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4" id="informeCloseUp">
+        <div class="text-sm font-bold text-slate-800 mb-1">Informe de CloseUp · edición ${esc(res.edicion || '—')}</div>
+        <p class="text-xs text-slate-700 mb-3">${fmt(r.archivos)} mercados · ${fmt(r.filas)} filas · <b>${fmt(r.rx)}</b> recetas${cambio(r.rx, r.rxAntes)} · La Santé <b>${pct(r.share)}</b>${r.shareAntes != null ? ` (hoy ${pct(r.shareAntes)})` : ''}${res.repetidas ? ` · ${fmt(res.repetidas)} filas repetidas quitadas` : ''}</p>
+        ${alertas ? `<ul class="text-xs space-y-1 mb-3">${alertas}</ul>` : '<p class="text-xs text-green-800 mb-3">✅ Sin alertas.</p>'}
+        <details class="mb-3"><summary class="text-xs font-bold text-indigo-800 cursor-pointer">Ver cada mercado</summary>
+            <div class="overflow-x-auto mt-2"><table class="w-full text-[11px]"><thead><tr class="text-left text-slate-500"><th class="p-1">Mercado (archivo)</th><th class="p-1 text-right">Leídas</th><th class="p-1 text-right">Quitadas</th><th class="p-1 text-right">Filas</th><th class="p-1 text-right">Rx</th><th class="p-1 text-right">Rx hoy</th></tr></thead><tbody>
+            ${res.porMercado.map(m => `<tr class="border-t border-slate-100"><td class="p-1">${esc(m.mercado)}</td><td class="p-1 text-right">${fmt(m.leidas)}</td>
+                <td class="p-1 text-right">${fmt(m.quitadas.matricula + m.quitadas.especialidad + m.quitadas.nombreEspecialidad)}</td><td class="p-1 text-right">${fmt(m.filas)}</td>
+                <td class="p-1 text-right">${fmt(m.rx)}</td><td class="p-1 text-right">${m.rxAntes == null ? '—' : fmt(m.rxAntes)}</td></tr>`).join('')}
+            </tbody></table></div></details>
+        <div class="flex flex-wrap gap-2">
+            <button type="button" class="boton-tonal" onclick="App.carga.descargarConsolidado()"><span class="material-symbols-outlined text-[18px]">download</span> Descargar consolidado</button>
+            <label class="boton-texto cursor-pointer"><span class="material-symbols-outlined text-[18px]">compare</span> Comparar con mi archivo de Power Query
+                <input type="file" class="sr-only" accept=".xlsx,.xls,.csv,.gz" onchange="App.carga.compararConPowerQuery(this)"></label>
+        </div>
+        <div id="comparacionPowerQuery" class="mt-3"></div>
+    </div>`;
+};
+
+window.App.carga.descargarConsolidado = function() {
+    const c = window.App.carga._estado.closeup;
+    if (!c) return;
+    const texto = window.App.closeup.consolidadoCsv(c.res.leido);
+    const url = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `closeup-consolidado-${(c.res.edicion || 'sin-edicion').replace('/', '-')}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+};
+
+// Una sola vez: confirma que la app da lo mismo que la consulta de Power Query
+window.App.carga.compararConPowerQuery = async function(input) {
+    const c = window.App.carga._estado.closeup;
+    const archivo = input && input.files && input.files[0];
+    const zona = document.getElementById('comparacionPowerQuery');
+    if (!c || !archivo || !zona) return;
+    input.value = '';
+    zona.innerHTML = '<p class="text-xs text-indigo-700">Comparando…</p>';
+    try {
+        const suyo = await window.App.carga.leerArchivo(archivo);
+        const r = window.App.closeup.comparar(c.res.leido, suyo);
+        const filasMercado = r.mercados.filter(m => m.app !== m.powerQuery);
+        zona.innerHTML = `<div class="rounded-xl p-3 text-xs ${r.iguales ? 'bg-green-50 text-green-900' : 'bg-amber-50 text-amber-900'}">
+            <b>${r.iguales ? '✅ Dan exactamente lo mismo' : `⚠️ Hay ${fmt(r.totalDiferencias)} diferencia(s)`}</b> ·
+            filas: app ${fmt(r.filas.app)} / Power Query ${fmt(r.filas.powerQuery)} · recetas: app ${fmt(r.rx.app)} / Power Query ${fmt(r.rx.powerQuery)}
+            ${filasMercado.length ? `<div class="mt-2"><b>Mercados distintos:</b> ${filasMercado.slice(0, 20).map(m => `${esc(m.mercado)} (app ${fmt(m.app)} / PQ ${fmt(m.powerQuery)})`).join(' · ')}</div>
+                <div class="mt-1 text-[11px]">Si un mercado aparece dos veces con nombres distintos, es porque el nombre del archivo no es igual al que usaba Power Query: no es un error de datos.</div>` : ''}
+            ${r.diferencias.length ? `<details class="mt-2"><summary class="cursor-pointer font-bold">Ejemplos (matrícula | mercado | producto)</summary><div class="text-[11px]">${r.diferencias.slice(0, 20).map(d => `${esc(d.clave)}: app ${fmt(d.app)} / PQ ${fmt(d.powerQuery)}`).join('<br>')}</div></details>` : ''}
+        </div>`;
+    } catch (e) {
+        zona.innerHTML = `<p class="text-xs text-rose-700">No se pudo leer el archivo: ${esc(e.message)}</p>`;
+    }
+};
+
+// Después de subir: los archivos originales del portal quedan guardados (comprimidos) junto a la versión
+window.App.carga.guardarOriginalesCloseUp = async function(id) {
+    const c = window.App.carga._estado.closeup;
+    if (!c || c.guardados) return 0;
+    let n = 0;
+    for (const o of c.originales) {
+        const blob = await window.App.carga.comprimir(o.bytes);   // los bytes tal cual (texto o Uint8Array sirven)
+        const ruta = `closeup/${id}/${o.nombre.replace(/[^\w.-]+/g, '_')}.gz`;
+        await conReintentos(() => window.App.sb.subirArchivo(ruta, blob));
+        await window.App.sb.registrarVersionCatalogo({ tipo: 'closeup', nombre_archivo: o.nombre, ruta, bytes: blob.size,
+            registros: (c.res.porMercado.find(m => m.archivo === o.nombre) || {}).filas || 0, nuevas: 0, cambiadas: 0 });
+        n++;
+    }
+    c.guardados = true;
+    return n;
+};
+
 /* ---------- Paso 3: subir ---------- */
 window.App.carga.iniciarSubida = async function() {
     const ui = window.App.ui;
@@ -407,6 +522,11 @@ window.App.carga.iniciarSubida = async function() {
         const id = await window.App.carga.subir({ tipo: est.tipo, nombre, fecha, validacion: est.validacion, snapshotId: est.snapshotId },
             (p) => { est.snapshotId = p.id; pintar(p); });
         est.snapshotId = id;
+        if (est.closeup && !est.closeup.guardados) {
+            zona.innerHTML = '<div class="text-sm font-bold text-slate-700">Guardando los archivos originales del portal...</div>';
+            try { await window.App.carga.guardarOriginalesCloseUp(id); }
+            catch (e) { console.error('[SegmentApp] No se guardaron los originales:', e); ui.showToast('La versión se cargó, pero no se pudieron guardar los archivos originales.'); }
+        }
         ui.showToast('Borrador cargado. Revisa la comparación antes de publicar.');
         await window.App.carga.mostrarComparacion(id, est.tipo);
     } catch (e) {

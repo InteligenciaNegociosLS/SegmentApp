@@ -910,8 +910,9 @@
                     <div class="file-drop-area">
                         <span class="fake-btn">Explorar</span>
                         <span class="file-msg" id="cargaArchivoMsg">O arrastra el archivo aquí</span>
-                        <input class="file-input" type="file" id="cargaArchivo" accept=".xlsx,.xls,.csv,.gz" onchange="updateFileLabel('cargaArchivo', 'cargaArchivoMsg')">
+                        <input class="file-input" type="file" id="cargaArchivo" multiple accept=".xlsx,.xls,.csv,.gz,.zip,.txt" onchange="updateFileLabel('cargaArchivo', 'cargaArchivoMsg')">
                     </div>
+                    <p class="text-[11px] text-slate-500 mt-2"><b>CloseUp:</b> puedes elegir <b>todos los archivos de mercados</b> tal como salen del portal (o un .zip con ellos): la app hace el cruce con los catálogos. El nombre de cada archivo es el nombre del mercado.</p>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                     <label class="block"><span class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">3. Nombre de la versión</span>
@@ -1566,6 +1567,7 @@
 <script src="js/usuarios.js"></script>
 <script src="js/catalogos.js"></script>
 <script src="js/descargas.js"></script>
+<script src="js/closeup.js"></script>
 <script src="js/equipo.js"></script>
 <script src="js/tableros.js"></script>
 <script src="js/avisos.js"></script>
