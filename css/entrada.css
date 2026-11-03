@@ -390,6 +390,11 @@
         transition: background-color var(--md-motion-short) var(--md-ease-standard); }
     .ver-clave .material-symbols-outlined { font-size: 20px; }
 
+    /* Ajustes → Catálogos (Fase 12B) */
+    .catalogo-tarjeta { border: 1px solid var(--md-outline-variant); border-radius: 20px; padding: 14px; }
+    .campo-mini { height: 32px; width: 120px; padding: 0 10px; border: 1px solid var(--md-outline-variant); border-radius: 10px; font-size: 13px; background: rgb(var(--c-white)); outline: none; }
+    .campo-mini:focus { border-color: var(--md-primary); }
+
     /* Ajustes → Usuarios (Fase 10C) */
     .usuario-fila { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
     .usuario-fila.inactivo { opacity: 0.6; }
