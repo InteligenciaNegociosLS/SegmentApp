@@ -543,3 +543,14 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 - A Supabase llega **una sola versión** (igual que antes): no se sobrecarga.
 - Los archivos originales se guardan comprimidos (`closeup/<versión>/…`,
   registrados en `catalogo_versiones` con tipo `closeup`). Sin migración nueva.
+
+## Fase 12D-2 (04/11/2026)
+- **Descarga en tandas:** el mercado sale de la columna "Mercado"; tabla de
+  **nombres de mercado** (`configuracion.nombres_mercado`, se crea sola) con
+  sugerencias y confirmación obligatoria de los nuevos.
+- **Matriz en el teléfono:** sin barra de porcentaje; número arriba de "méd."
+  para que quepan 5 cifras.
+- **Barra de navegación:** el botón se marca al instante al tocarlo; la
+  pantalla cambia en el siguiente cuadro. Sin la espera del doble toque.
+- **iPad (ERR_SSL_PROTOCOL_ERROR):** no es de la app (funciona en otros
+  equipos); pasos para revisar la red del iPad en la respuesta al dueño.
