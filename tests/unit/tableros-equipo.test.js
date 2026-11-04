@@ -138,14 +138,21 @@ describe('Fase 11: Equipo más claro', () => {
         expect(resumen).toContain('Evaluaciones');
     });
 
-    it('filtra por línea (OTC o Pharmetique) según el "Equipo" del fichero', async () => {
+    it('filtra por línea según el "Equipo" del fichero (las 9 líneas: 7 → OTC, 1 → LINEA_HIBRIDA_1…)', async () => {
         await admin();
         expect(App.equipo.estadisticas().vms.length).toBe(2);
         App.equipo.elegirLinea('OTC');
         expect(App.equipo.estadisticas().vms.map(v => v.linea)).toEqual(['OTC', 'OTC']);
-        App.equipo.elegirLinea('Pharmetique');
+        App.equipo.elegirLinea('LINEA_1');
         expect(App.equipo.estadisticas().vms).toHaveLength(0);
         App.equipo.elegirLinea('todas');
+        // Con códigos del fichero
+        App.state.FICHERO_MAP.forEach(filas => filas.forEach(r => { r.Equipo = r.Nombre === 'PEREZ ANA' ? '1' : '7'; }));
+        App.state.FICHERO_MAP = new Map(App.state.FICHERO_MAP);
+        expect(App.equipo.estadisticas().vms.map(v => v.linea).sort()).toEqual(['LINEA_HIBRIDA_1', 'OTC']);
+        App.ux.irA('equipo', { historial: false });
+        App.equipo.render();
+        expect([...document.getElementById('equipoLinea').options].map(o => o.value)).toEqual(['todas', 'LINEA_HIBRIDA_1', 'OTC']);
     });
 
     it('al desactivar a un VM, sus médicos y sus números dejan de verse (sin borrar nada)', async () => {
@@ -240,5 +247,70 @@ describe('Fase 12E: visitadores con acceso que no cuentan en las métricas', () 
         baseSimulada(App).visitadores[0].en_metricas = false;
         await ingresar('gd@lasante.com', '123456');
         expect([...(App.state.REPS_FUERA_METRICAS || [])]).toEqual(['NEIVIS PARRA']);
+    });
+});
+
+describe('Fase 12G: resumen de la semana para WhatsApp', () => {
+    it('arma el texto con cobertura, actividad, quién no evaluó y prioridades; sin los "fuera de métricas"', async () => {
+        await admin();
+        const doc = App.state.PROCESSED_DATA.find(d => d.id.startsWith('123_'));
+        App.state.ALL_EVALUATIONS.push({ id: 'e-r', firebaseId: 'e-r', visitador: 'NEIVIS PARRA', medico_id: doc.id, medico_name: 'PEREZ ANA', mercado: 'DESLER MERCADO', cuadrante: 'A+', survey: {}, timestamp: new Date().toISOString() });
+        App.evaluation.marcarCambio();
+        const r = App.equipo.resumenSemanal();
+        expect(r.alcance).toBe('Todo el país');
+        expect(r.texto).toContain('*SegmentApp · Resumen de la semana*');
+        expect(r.texto).toMatch(/Cobertura:\* 50% \(1 de 2 médicos evaluados\)/);
+        expect(r.texto).toContain('Evaluaciones esta semana:* 1');
+        expect(r.texto).toContain('Terminaron su fichero:* NEIVIS PARRA');
+        expect(r.texto).toContain('Sin evaluar 7 días o más:* OTRO VISITADOR (nunca)');
+        expect(r.texto).toContain('*Por distrito:*');
+        App.state.REPS_FUERA_METRICAS = new Set(['OTRO VISITADOR']);
+        expect(App.equipo.resumenSemanal().texto).not.toContain('OTRO VISITADOR (nunca)');
+        // Ventana con copiar y WhatsApp
+        App.equipo.abrirResumen();
+        expect(document.getElementById('resumenModal').classList.contains('hidden')).toBe(false);
+        expect(document.getElementById('resumenTexto').value).toContain('Resumen de la semana');
+        let url = '';
+        window.open = (u) => { url = u; };
+        App.equipo.whatsappResumen();
+        expect(url).toMatch(/^https:\/\/wa\.me\/\?text=/);
+    });
+
+    it('los lunes la campanita avisa que el resumen está listo y abre la ventana', async () => {
+        await ingresar('gd@lasante.com', '123456');
+        await App.avisos.alEntrar();
+        App.avisos.generar();
+        const i = App.avisos.lista.findIndex(a => a.tipo === 'resumen');
+        expect(i).toBeGreaterThanOrEqual(0);
+        App.avisos.ir(i);
+        expect(document.getElementById('resumenModal').classList.contains('hidden')).toBe(false);
+    });
+});
+
+describe('Fase 12G: Movimientos por mercado', () => {
+    const evolucion = [
+        { id: 'v-ago', nombre: 'CloseUp 08/2026', mercados: [['Mdo Esoz', 1000, 100], ['Mdo Fludil', 500, 200], ['Mdo Desler', 300, 30]] },
+        { id: 'v-sep', nombre: 'CloseUp 09/2026', mercados: [['Mdo Esoz', 1000, 150], ['Mdo Fludil', 500, 150], ['Mdo Desler', 300, 30], ['Mdo Nuevo', 50, 5]] }
+    ];
+    it('calcula cuánto ganó o perdió La Santé en cada mercado frente a la versión anterior', () => {
+        const c = App.comparar.cambiosPorMercado(evolucion, 'v-sep');
+        expect(c.version).toBe('CloseUp 08/2026');
+        expect(c.sube.map(x => [x.mercado, Math.round(x.delta)])).toEqual([['Mdo Esoz', 5]]);
+        expect(c.baja.map(x => [x.mercado, Math.round(x.delta)])).toEqual([['Mdo Fludil', -10]]);
+        expect(c.iguales).toBe(1);
+        expect(c.nuevos).toEqual(['Mdo Nuevo']);
+        expect(App.comparar.cambiosPorMercado(evolucion, 'v-ago')).toBeNull();   // no hay anterior
+    });
+    it('se muestra en la tarjeta Movimientos del inicio', async () => {
+        await admin();
+        const actual = App.state.VERSIONES_EN_USO.recetas.id;
+        App.comparar.mercados = { datos: [{ ...evolucion[0], id: 'x-antes' }, { ...evolucion[1], id: actual }], cargando: false, clave: actual };
+        App.comparar.render();
+        const t = document.getElementById('movimientosMercados').textContent;
+        expect(t).toContain('La Santé por mercado');
+        expect(t).toContain('Donde más ganó');
+        expect(t).toContain('Mdo Esoz');
+        expect(t).toContain('Donde más perdió');
+        expect(t).toContain('Mdo Fludil');
     });
 });

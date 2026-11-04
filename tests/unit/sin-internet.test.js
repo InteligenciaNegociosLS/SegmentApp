@@ -114,6 +114,27 @@ describe('Sesión sin internet', () => {
 });
 
 describe('App instalable', () => {
+    it('Fase 12G: "por subir" muestra la lista de lo guardado, y el aviso de sin conexión dice cuántas', async () => {
+        await ingresar('vm@lasante.com', '123456');
+        enLinea = false;
+        await App.offline.encolar(evaluacion('123', 'DESLER MERCADO', 'A+'));
+        await App.offline.encolar(evaluacion('456', 'DESLER MERCADO', 'B'));
+        App.offline.actualizarIndicadores();
+        expect(document.getElementById('lblSinConexion').textContent).toBe('Sin conexión · 2 guardadas aquí');
+        App.offline.verPendientes();
+        const cuerpo = document.getElementById('pendientesCuerpo').textContent;
+        expect(document.getElementById('pendientesModal').classList.contains('hidden')).toBe(false);
+        expect(cuerpo).toContain('No cierres sesión');
+        expect(cuerpo).toContain('PEREZ ANA');
+        expect(cuerpo).toContain('DESLER MERCADO · A+');
+        // Vuelve internet: se suben y la lista queda vacía, con la hora de la última subida
+        enLinea = true;
+        await App.offline.subirAhora();
+        App.offline.pintarPendientes();
+        expect(document.getElementById('pendientesCuerpo').textContent).toContain('No hay nada por subir');
+        expect(document.getElementById('pendientesCuerpo').textContent).toContain('Última subida desde este dispositivo');
+    });
+
     it('la página enlaza el manifiesto y los íconos', () => {
         const html = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');
         expect(html).toContain('rel="manifest" href="manifest.webmanifest"');

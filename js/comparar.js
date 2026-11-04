@@ -121,6 +121,57 @@ function delta(actual, antes, decimales, sufijo) {
     return `<span class="tendencia ${dlt > 0 ? 'sube' : 'baja'}">${dlt > 0 ? '▲' : '▼'} ${fmtC(Math.abs(dlt), decimales)}${sufijo}</span>`;
 }
 
+/* ---------- Por mercado (Fase 12G): cuánto ganó o perdió La Santé en cada mercado ----------
+   Con la evolución que calcula el servidor (cada persona ve solo su alcance): la versión que se
+   está viendo contra la anterior publicada. */
+window.App.comparar.mercados = { datos: null, cargando: false, clave: null };
+window.App.comparar.cambiosPorMercado = function(evolucion, idActual) {
+    const lista = evolucion || [];
+    const i = lista.findIndex(v => v.id === idActual);
+    if (i <= 0) return null;
+    const share = (v) => new Map((v.mercados || []).map(([m, total, phq]) => [m, { total: Number(total) || 0, share: total ? phq / total * 100 : 0 }]));
+    const ahora = share(lista[i]), antes = share(lista[i - 1]);
+    const cambios = [...ahora.entries()].filter(([m]) => antes.has(m)).map(([m, a]) => ({ mercado: m, share: a.share, antes: antes.get(m).share, delta: a.share - antes.get(m).share, total: a.total }));
+    return {
+        version: lista[i - 1].nombre,
+        sube: cambios.filter(c => c.delta >= 0.05).sort((a, b) => b.delta - a.delta),
+        baja: cambios.filter(c => c.delta <= -0.05).sort((a, b) => a.delta - b.delta),
+        iguales: cambios.filter(c => Math.abs(c.delta) < 0.05).length,
+        nuevos: [...ahora.keys()].filter(m => !antes.has(m))
+    };
+};
+window.App.comparar.cargarMercados = async function() {
+    const st = window.App.state;
+    const actual = st.VERSIONES_EN_USO && st.VERSIONES_EN_USO.recetas;
+    const M = window.App.comparar.mercados;
+    if (!actual || M.cargando || M.clave === actual.id || !window.App.sb.evolucionMercados) return;
+    M.cargando = true;
+    try { M.datos = await window.App.sb.evolucionMercados(); M.clave = actual.id; }
+    catch (e) { M.datos = null; M.clave = actual.id; }
+    finally { M.cargando = false; }
+    window.App.comparar.render();
+};
+const bloqueMercados = () => {
+    const st = window.App.state;
+    const actual = st.VERSIONES_EN_USO && st.VERSIONES_EN_USO.recetas;
+    const M = window.App.comparar.mercados;
+    if (!actual) return '';
+    if (M.clave !== actual.id) { setTimeout(() => window.App.comparar.cargarMercados(), 0); return ''; }
+    const c = window.App.comparar.cambiosPorMercado(M.datos, actual.id);
+    if (!c || (!c.sube.length && !c.baja.length)) return '';
+    const item = (x, sube) => `<li class="flex items-center justify-between gap-2 py-1"><span class="truncate">${escC(x.mercado)}</span>
+        <span class="shrink-0 font-bold ${sube ? 'text-green-700' : 'text-rose-700'}">${sube ? '▲' : '▼'} ${fmtC(Math.abs(x.delta), 1)} pts <span class="font-normal text-slate-500">(${fmtC(x.share, 1)}%)</span></span></li>`;
+    const lista = (titulo, xs, sube) => xs.length ? `<div><div class="text-[11px] font-bold ${sube ? 'text-green-800' : 'text-rose-800'} mb-1">${titulo}</div><ul class="text-xs text-slate-700">${xs.slice(0, 3).map(x => item(x, sube)).join('')}</ul></div>` : '';
+    const todos = c.sube.concat(c.baja.slice().reverse());
+    return `<div class="mt-4 pt-3 border-t border-slate-100" id="movimientosMercados">
+        <div class="text-xs font-bold text-slate-800 mb-2">La Santé por mercado <span class="font-medium text-slate-500">vs. ${escC(c.version)}</span></div>
+        <div class="grid sm:grid-cols-2 gap-3">${lista('Donde más ganó', c.sube, true)}${lista('Donde más perdió', c.baja, false)}</div>
+        ${todos.length > 3 ? `<details class="mt-2"><summary class="text-[11px] font-bold text-blue-800 cursor-pointer">Ver los ${fmtC(todos.length)} mercados que cambiaron</summary>
+            <ul class="text-xs text-slate-700 mt-1">${todos.map(x => item(x, x.delta > 0)).join('')}</ul></details>` : ''}
+        <p class="text-[11px] text-slate-500 mt-1">${fmtC(c.iguales)} sin cambio${c.nuevos.length ? ` · ${fmtC(c.nuevos.length)} mercado(s) nuevos` : ''}. Participación de La Santé en las recetas del mercado.</p>
+    </div>`;
+};
+
 window.App.comparar.render = function() {
     const st = window.App.state;
     const est = window.App.comparar.estado;
@@ -146,7 +197,7 @@ window.App.comparar.render = function() {
                 </div>
                 <p class="text-[11px] text-slate-500 mt-2">${fmtC(r.igual)} sin cambio · ${fmtC(r.nuevo)} nuevos con recetas${r.salieron ? ` · ${fmtC(r.salieron)} sin recetas ahora` : ''}</p>`;
         }
-        zona.innerHTML = html;
+        zona.innerHTML = html + bloqueMercados();
     }
     // Tendencia en los indicadores
     const k = est && est.kpis;

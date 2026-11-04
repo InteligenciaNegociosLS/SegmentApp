@@ -31,13 +31,11 @@
     const SIGNO_E = { A: '+', B: '', C: '-' };
 
     const esNacional = () => ['admin', 'gte_nacional'].includes(window.App.ux ? window.App.ux.rolVisible() : window.App.state.rolReal);
-    // Línea del visitador (OTC o Pharmetique) según la columna "Equipo" del fichero
+    // Línea del visitador según la columna "Equipo" del fichero (1 LINEA_HIBRIDA_1 … 7 OTC … 9 LINEA_2, Fase 12G)
     const lineaDeFila = (r) => {
         const k = Object.keys(r).find(x => /^equipo$/i.test(x.trim()));
         if (!k || r[k] === undefined || r[k] === '') return '';
-        const otc = (window.App.state.EQUIPOS_OTC || ['7']).map(String);
-        const v = String(r[k]).trim();
-        return otc.includes(v) || /^otc$/i.test(v) ? 'OTC' : 'Pharmetique';
+        return window.App.data.nombreLinea(r[k]);
     };
     // Celda de la matriz que corresponde a una evaluación ("A+" → A_A, "B" → B_B, "C-" → C_C)
     const celdaDeEvaluacion = (cuadrante) => {
@@ -61,7 +59,7 @@
         const comp = window.App.comparar && window.App.comparar.estado;
         const previos = comp && comp.previos;
         const firma = [st.PROCESSED_DATA, st._versionEvaluaciones, st.ALL_EVALUATIONS, st.ALL_EVALUATIONS.length, st.FICHERO_MAP,
-            st.REPS_PERMITIDOS, previos, window.App.equipo.cruce, window.App.equipo.linea, st.EQUIPOS_OTC, st.REPS_FUERA_METRICAS];
+            st.REPS_PERMITIDOS, previos, window.App.equipo.cruce, window.App.equipo.linea, st.REPS_FUERA_METRICAS];
         if (memoEquipo && memoEquipo.firma.every((v, i) => v === firma[i])) return memoEquipo.datos;
 
         // Línea de cada visitador (de su fichero) y filtro por línea
@@ -226,9 +224,15 @@
             kpi('assignment', 'Evaluaciones', fmtE(encuestas), `${fmtE(semana)} esta semana`, 'bg-green-50 text-green-900'),
             kpi('schedule', 'Sin evaluar 7+ días', fmtE(inactivos), 'visitadores', (inactivos ? 'bg-amber-50 text-amber-900' : 'bg-white border border-slate-200 text-slate-800') + ' col-span-2 lg:col-span-1')
         ].join('');
-        // Línea (OTC o Pharmetique)
+        // Línea: las que hay en el fichero, en el orden de la tabla de líneas
         const selL = document.getElementById('equipoLinea');
-        if (selL) selL.value = window.App.equipo.linea || 'todas';
+        if (selL) {
+            const orden = Object.values((window.App.config && window.App.config.LINEAS_EQUIPO) || {});
+            const hay = [...new Set([...e.lineas.values()])].sort((a, b) => ((orden.indexOf(a) + 1) || 99) - ((orden.indexOf(b) + 1) || 99) || a.localeCompare(b));
+            if (window.App.equipo.linea !== 'todas' && !hay.includes(window.App.equipo.linea)) hay.push(window.App.equipo.linea);
+            selL.innerHTML = '<option value="todas">Todas las líneas</option>' + hay.map(l => `<option value="${escE(l)}">${escE(l)}</option>`).join('');
+            selL.value = window.App.equipo.linea || 'todas';
+        }
         const ocultos = st.REPS_OCULTOS ? st.REPS_OCULTOS.size : 0;
         const notaOcultos = document.getElementById('equipoOcultos');
         if (notaOcultos) {
@@ -244,6 +248,63 @@
 
         const zonaC = document.getElementById('equipoContenido');
         zonaC.innerHTML = ({ distritos: renderDistritos, visitadores: renderVisitadores, prioridades: renderPrioridades, alertas: renderAlertas })[window.App.equipo.vista](e);
+    };
+
+    /* ============================================================
+       RESUMEN DE LA SEMANA (Fase 12G): texto listo para WhatsApp
+       Con el distrito y la línea elegidos; sin los visitadores "fuera de métricas".
+    ============================================================ */
+    window.App.equipo.resumenSemanal = function() {
+        const e = window.App.equipo.estadisticas();
+        const nacional = esNacional();
+        const g = window.App.equipo.distrito;
+        const vms = delDistrito(e.vms).filter(v => !v.fueraMetricas);
+        const unicos = new Set(), hechos = new Set();
+        vms.forEach(v => { v.fichero.forEach(m => unicos.add(m)); v.evaluados.forEach(m => hechos.add(m)); });
+        const pct = unicos.size ? hechos.size / unicos.size * 100 : 0;
+        const semana = vms.reduce((s, v) => s + v.semana, 0), total = vms.reduce((s, v) => s + v.encuestas, 0);
+        const quietos = vms.filter(v => v.fichero.size && v.pct < 100 && (v.dias === null || v.dias >= 7)).sort((a, b) => (b.dias ?? 999) - (a.dias ?? 999));
+        const terminaron = vms.filter(v => v.fichero.size && v.pct >= 100);
+        const masSemana = vms.filter(v => v.semana).sort((a, b) => b.semana - a.semana).slice(0, 3);
+        const alertas = delDistrito(e.alertas).filter(a => vms.some(v => v.nombre === a.vm));
+        const prioridades = window.App.equipo.prioridades(e).slice(0, 3);
+        const linea = window.App.equipo.linea && window.App.equipo.linea !== 'todas' ? ` · línea ${window.App.equipo.linea}` : '';
+        const alcance = (nacional ? (g === 'todos' ? 'Todo el país' : `Distrito de ${g}`) : 'Tu distrito') + linea;
+        const hoy = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
+        const n = (x) => fmtE(x);
+        const lineas = [
+            `*SegmentApp · Resumen de la semana*`, `${alcance} · ${hoy}`, '',
+            `📊 *Cobertura:* ${fmtE(pct, 0)}% (${n(hechos.size)} de ${n(unicos.size)} médicos evaluados)`,
+            `📝 *Evaluaciones esta semana:* ${n(semana)} (en total ${n(total)})`,
+            masSemana.length ? `🏃 *Más activos:* ${masSemana.map(v => `${nomE(v.nombre)} (${n(v.semana)})`).join(', ')}` : '',
+            terminaron.length ? `🎉 *Terminaron su fichero:* ${terminaron.map(v => nomE(v.nombre)).join(', ')}` : '',
+            quietos.length ? `⏰ *Sin evaluar 7 días o más:* ${quietos.slice(0, 8).map(v => `${nomE(v.nombre)}${v.dias === null ? ' (nunca)' : ` (${n(v.dias)} días)`}`).join(', ')}${quietos.length > 8 ? ` y ${n(quietos.length - 8)} más` : ''}` : '✅ Todos evaluaron en los últimos 7 días',
+            alertas.length ? `⚠️ *Evaluaciones distintas a CloseUp:* ${n(alertas.length)}${alertas.filter(a => a.distancia === 2).length ? ` (${n(alertas.filter(a => a.distancia === 2).length)} muy distintas)` : ''}` : '',
+            prioridades.length ? `🎯 *Prioridades (más recetas, sin evaluar):* ${prioridades.map(d => `${nomE(d.name)} (${n(d.totalRx)} Rx)`).join(', ')}` : ''
+        ];
+        // Nacional con todos los distritos: una línea por distrito
+        if (nacional && g === 'todos') {
+            const ds = e.distritos.slice().sort((a, b) => b.pct - a.pct);
+            if (ds.length) lineas.push('', '*Por distrito:*', ...ds.map(d => `• ${d.nombre}: ${fmtE(d.pct, 0)}% · ${n(d.semana)} esta semana${d.inactivos ? ` · ${n(d.inactivos)} sin evaluar 7+ días` : ''}`));
+        }
+        return { texto: lineas.filter(x => x !== '').join('\n').replace(/\n\n\n+/g, '\n\n'), alcance };
+    };
+    window.App.equipo.abrirResumen = function() {
+        const r = window.App.equipo.resumenSemanal();
+        document.getElementById('resumenTexto').value = r.texto;
+        document.getElementById('resumenAlcance').textContent = r.alcance;
+        document.getElementById('resumenModal').classList.remove('hidden');
+    };
+    window.App.equipo.cerrarResumen = function() { document.getElementById('resumenModal').classList.add('hidden'); };
+    window.App.equipo.copiarResumen = async function() {
+        const t = document.getElementById('resumenTexto').value;
+        let ok = false;
+        try { await navigator.clipboard.writeText(t); ok = true; } catch (e) { /* sin portapapeles */ }
+        window.App.ui.showToast(ok ? 'Resumen copiado. Pégalo en WhatsApp o en un correo.' : 'No se pudo copiar: selecciona el texto y cópialo.');
+    };
+    window.App.equipo.whatsappResumen = function() {
+        const t = document.getElementById('resumenTexto').value;
+        window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener');
     };
 
     window.App.equipo.verVista = function(v) {
