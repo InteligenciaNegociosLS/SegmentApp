@@ -277,6 +277,22 @@ window.App.ajustes.renderSalud = async function() {
         fila(e.sinFichero ? 'info' : 'ok', `${fmtA(e.sinFichero)} médicos con recetas no están en el fichero`, 'Están en CloseUp pero ningún visitador los tiene asignados.'),
         fila('info', `${fmtA(Math.max(0, (e.fichados || 0) - (e.conRx || 0)))} médicos del fichero sin recetas en CloseUp`, 'Con los filtros elegidos ahora (mercados, productos).'),
         fila(cruces ? 'aviso' : 'ok', `${fmtA(cruces)} evaluaciones marcadas como "cruce errado"`, `De ${fmtA(evals.length)} evaluaciones activas. El médico de CloseUp no coincide con el del fichero.`),
+        (() => {
+            // Fase 12I: evaluaciones de mercados que ya no vienen en la versión de hoy (se conservan, no se borran)
+            const hoy = new Set((st.RAW_DATA || []).map(r => r.market));
+            const fuera = evals.filter(x => x.mercado && x.mercado !== 'General' && hoy.size && !hoy.has(x.mercado));
+            const cuales = [...new Set(fuera.map(x => x.mercado))];
+            return fila(fuera.length ? 'info' : 'ok', `${fmtA(fuera.length)} evaluaciones de mercados que no están en la versión de hoy`,
+                fuera.length ? `${escA(cuales.slice(0, 4).join(', '))}${cuales.length > 4 ? '…' : ''}. Siguen guardadas y vuelven a verse si el mercado regresa en una carga (o vuelve a la versión anterior).`
+                    : 'Todas las evaluaciones son de mercados de la versión de hoy.');
+        })(),
+        (() => {
+            const n = window.App.data.nombresDistintos();
+            const distintos = n.filter(x => x.nivel === 'distinto').length, parecidos = n.length - distintos;
+            return fila(distintos ? 'aviso' : (parecidos ? 'info' : 'ok'), `${fmtA(distintos)} médicos con la misma matrícula y otro nombre (CloseUp vs fichero)`,
+                n.length ? `${fmtA(parecidos)} más con un nombre parecido, por revisar. Puede ser otro médico con esa matrícula o un error en el CRM. · <button type="button" class="font-bold text-blue-700 underline" onclick="App.ajustes.verNombres()">Ver la lista</button>`
+                    : 'Los nombres coinciden (sin contar orden, iniciales ni tildes).');
+        })(),
         '<li id="ajSaludUsuarios" class="py-3 text-xs text-slate-500">Revisando qué visitadores tienen usuario…</li>',
         '<li id="ajSaludEspacio" class="py-3 text-xs text-slate-500">Revisando el espacio usado en Supabase…</li>'
     ];
@@ -299,6 +315,34 @@ window.App.ajustes.renderSalud = async function() {
         const li = document.getElementById('ajSaludUsuarios');
         if (li) li.textContent = 'No se pudo revisar los usuarios (¿sin conexión?).';
     }
+};
+
+// Lista de nombres distintos (Fase 12I): misma matrícula, otro nombre en CloseUp y en el fichero
+window.App.ajustes.verNombres = function() {
+    const lista = window.App.data.nombresDistintos();
+    const zona = document.getElementById('nombresCuerpo');
+    const etiqueta = (n) => n === 'distinto' ? '<span class="usuario-etiqueta aviso">Distinto</span>' : '<span class="usuario-etiqueta">Parecido</span>';
+    zona.innerHTML = lista.length ? `<p class="text-xs text-slate-600 mb-3"><b>Distinto</b>: no tienen ninguna palabra en común (probablemente otro médico con esa matrícula, o un error en el CRM).
+        <b>Parecido</b>: comparten una sola palabra (puede ser un error de tipeo). El visitador puede marcar "Cruce errado" al evaluar si no es el mismo médico.</p>
+        <ul class="divide-y divide-slate-100">${lista.slice(0, 300).map(x => `<li class="py-2 flex items-start gap-2">
+            <div class="min-w-0 flex-1"><div class="text-sm text-slate-800"><b>CloseUp:</b> ${escA(x.closeup)} · <b>Fichero:</b> ${escA(x.fichero)}</div>
+                <div class="text-[11px] text-slate-500">Matrícula ${escA(x.matricula)} · ${escA(window.App.ui.nombreVisible(x.visitador))}${x.distrito ? ' · ' + escA(x.distrito) : ''} · ${fmtA(x.rx)} Rx</div></div>
+            ${etiqueta(x.nivel)}
+            <button type="button" class="boton-icono" aria-label="Abrir la ficha" onclick="App.ajustes.cerrarNombres(); App.ficha.abrir(${escA(JSON.stringify(x.id))})"><span class="material-symbols-outlined">open_in_new</span></button></li>`).join('')}</ul>
+        ${lista.length > 300 ? `<p class="text-xs text-slate-500 mt-2">Se muestran 300 de ${fmtA(lista.length)}. Descarga la lista completa.</p>` : ''}`
+        : '<p class="text-sm text-slate-600">✅ No hay médicos con nombre distinto.</p>';
+    document.getElementById('nombresModal').classList.remove('hidden');
+};
+window.App.ajustes.cerrarNombres = function() { document.getElementById('nombresModal').classList.add('hidden'); };
+window.App.ajustes.descargarNombres = function() {
+    const celda = (v) => { const t = v == null ? '' : String(v); return /[;"\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const filas = [['Matricula', 'Nombre en CloseUp', 'Nombre en fichero', 'Nivel', 'Visitador', 'Distrito', 'Rx']]
+        .concat(window.App.data.nombresDistintos().map(x => [x.matricula, x.closeup, x.fichero, x.nivel === 'distinto' ? 'Distinto' : 'Parecido', x.visitador, x.distrito, x.rx]));
+    const url = URL.createObjectURL(new Blob(['\ufeff' + filas.map(f => f.map(celda).join(';')).join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `segmentapp-nombres-distintos-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
 };
 
 // Espacio usado en Supabase (migración 20): base de datos y archivos guardados, frente al plan gratis

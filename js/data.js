@@ -253,6 +253,65 @@ window.App.data.lineasDelFichero = function() {
     return st._lineasMemo;
 };
 
+/* ------------------------------------------------------------
+   NOMBRE DISTINTO ENTRE CLOSEUP Y EL FICHERO (misma matrícula, Fase 12I)
+   "SANOJA HERNANDO JOSE" = "Hernando J Sanoja" (orden, iniciales, tildes, Ñ escrita "#"
+   y errores de tipeo chicos no cuentan). Se compara palabra por palabra:
+   2 o más palabras en común → 'igual'; 1 → 'parecido' (revisar); 0 → 'distinto'.
+------------------------------------------------------------ */
+const RELLENO_NOMBRE = new Set(['DE', 'DEL', 'LA', 'LOS', 'LAS', 'Y']);
+const palabrasNombre = (s) => String(s || '').replace(/#/g, 'N').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+    .split(/[^A-Z]+/).filter(w => w && !RELLENO_NOMBRE.has(w));
+const distanciaEdicion = (a, b) => {
+    let previa = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+        const fila = [i];
+        for (let j = 1; j <= b.length; j++) fila[j] = Math.min(previa[j] + 1, fila[j - 1] + 1, previa[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        previa = fila;
+    }
+    return previa[b.length];
+};
+const palabrasParecidas = (x, y) => x === y || (x.length >= 4 && y.length >= 4 && x.slice(0, 4) === y.slice(0, 4))
+    || (Math.min(x.length, y.length) >= 5 && distanciaEdicion(x, y) <= 2) || (Math.min(x.length, y.length) >= 3 && distanciaEdicion(x, y) <= 1);
+window.App.data.compararNombres = function(a, b) {
+    const A = palabrasNombre(a).filter(w => w.length > 1), B = palabrasNombre(b).filter(w => w.length > 1);
+    if (!A.length || !B.length) return 'igual';   // sin nombre en un lado: no se puede comparar
+    const usadas = new Set();
+    let comunes = 0;
+    A.forEach(x => {
+        const j = B.findIndex((y, k) => !usadas.has(k) && palabrasParecidas(x, y));
+        if (j >= 0) { usadas.add(j); comunes++; }
+    });
+    if (comunes >= 2 || (comunes === 1 && Math.min(A.length, B.length) === 1)) return 'igual';
+    return comunes === 1 ? 'parecido' : 'distinto';
+};
+// Nombre del médico en una fila del fichero (columna "Nombre", no "Nombre del sector")
+window.App.data.nombreEnFichero = function(fila) {
+    if (!fila) return '';
+    const k = Object.keys(fila).find(x => x.trim().toLowerCase() === 'nombre');
+    return k ? String(fila[k] || '').trim() : '';
+};
+// Médicos con recetas cuya matrícula está en el fichero pero con otro nombre (lo que la persona ve)
+window.App.data.nombresDistintos = function() {
+    const st = window.App.state;
+    if (st._nombresMemo && st._nombresMemo.docs === st.PROCESSED_DATA) return st._nombresMemo.lista;
+    const lista = [];
+    (st.PROCESSED_DATA || []).forEach(doc => {
+        const f = (doc.ficheroData || [])[0];
+        if (!f) return;
+        const enFichero = window.App.data.nombreEnFichero(f);
+        const nivel = window.App.data.compararNombres(doc.name, enFichero);
+        if (nivel === 'igual') return;
+        const kRep = window.App.data.getFicheroRepKey(f);
+        const vm = kRep && f[kRep] ? String(f[kRep]).trim().toUpperCase() : '';
+        lista.push({ id: doc.id, matricula: window.App.data.normalizeKey(doc.id), closeup: doc.name, fichero: enFichero, nivel,
+            visitador: vm, distrito: st.REP_MANAGER_MAP[vm] || '', rx: doc.totalRx || 0 });
+    });
+    lista.sort((a, b) => (a.nivel === b.nivel ? 0 : a.nivel === 'distinto' ? -1 : 1) || b.rx - a.rx);
+    st._nombresMemo = { docs: st.PROCESSED_DATA, lista };
+    return lista;
+};
+
 // ¿Cuenta en las métricas del GD y nacionales? (Fase 12E: con acceso pero "fuera de métricas" = no)
 window.App.data.cuentaEnMetricas = function(nombre) {
     const fuera = window.App.state.REPS_FUERA_METRICAS;

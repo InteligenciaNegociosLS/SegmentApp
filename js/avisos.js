@@ -98,7 +98,15 @@ window.App = window.App || {};
         if (e.vms.length) avisos.push({ tipo: 'resumen', t: lunes.getTime(), icono: 'summarize', color: 'bg-blue-50 text-blue-800',
             texto: 'El <b>resumen de la semana</b> está listo para compartir con tu equipo por WhatsApp. Tócalo para verlo.' });
 
-        // 6) Solo el admin: recordatorio de carga (la versión de hoy ya tiene sus días)
+        // 6) Médicos con la misma matrícula y otro nombre en CloseUp y el fichero (Fase 12I), desde la versión de recetas de hoy
+        const nombres = window.App.data.nombresDistintos ? window.App.data.nombresDistintos() : [];
+        const distintos = nombres.filter(x => x.nivel === 'distinto').length;
+        const vRec = window.App.state.VERSIONES_EN_USO && window.App.state.VERSIONES_EN_USO.recetas;
+        const desdeRec = vRec ? Date.parse(vRec.publicado_en || vRec.creado_en || '') : 0;
+        if (nombres.length) avisos.push({ tipo: 'nombres', t: desdeRec || ahora - DIA, icono: 'badge', color: distintos ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-700',
+            texto: `${distintos ? `<b>${fmtV(distintos)}</b> médicos tienen la misma matrícula pero <b>otro nombre</b> en CloseUp y en el fichero` : 'Hay médicos con un nombre parecido entre CloseUp y el fichero'}${nombres.length - distintos ? ` (y ${fmtV(nombres.length - distintos)} parecidos)` : ''}. Tócalo para revisarlos.` });
+
+        // 7) Solo el admin: recordatorio de carga (la versión de hoy ya tiene sus días)
         window.App.avisos.recordatorios(ahora).forEach(a => avisos.push(a));
 
         avisos.sort((a, b) => (b.fijo ? 1 : 0) - (a.fijo ? 1 : 0) || b.t - a.t);
@@ -206,6 +214,7 @@ window.App = window.App || {};
         window.App.avisos.cerrar();
         if (!a) return;
         if (a.tipo === 'recordatorio') { window.App.carga.abrirPanel('nueva'); return; }
+        if (a.tipo === 'nombres') { window.App.ajustes.verNombres(); return; }
         if (a.tipo === 'resumen') { window.App.ux.irA('equipo'); window.App.equipo.abrirResumen(); return; }
         if (a.tipo === 'espacio') { window.App.ux.irA('ajustes'); window.App.ajustes.irA && window.App.ajustes.irA('ajSalud'); return; }
         window.App.ux.irA('equipo');
