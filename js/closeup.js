@@ -33,6 +33,25 @@
     };
     const nombreSinExtension = (n) => limpio(String(n || '').split(/[\\/]/).pop().replace(/\.(csv|txt|gz)$/i, '').replace(/\.(csv|txt)$/i, ''));
     CU.mercadoDeArchivo = (nombre) => nombreSinExtension(nombre).toUpperCase();
+    // Nombre del mercado como viene en el portal ("Esoz", "Bumetin Retard Mercado 2") → clave para la tabla de nombres
+    CU.claveMercado = (crudo) => limpio(crudo).toUpperCase();
+    // Nombre oficial: el de la tabla de nombres (Ajustes → Catálogos); si aún no tiene, el del portal en mayúsculas
+    CU.nombreMercado = (crudo, ctx) => {
+        const k = CU.claveMercado(crudo);
+        const tabla = (ctx && ctx.nombresMercado) || {};
+        return tabla[k] ? limpio(tabla[k]).toUpperCase() : k;
+    };
+    // Sugerencia para un nombre nuevo: el mercado de la versión de hoy que más se le parece
+    CU.sugerirMercado = function(crudo, existentes) {
+        const palabras = CU.claveMercado(crudo).split(/[^A-Z0-9]+/).filter(w => w.length > 1);
+        let mejor = null, puntos = 0;
+        (existentes || []).forEach(e => {
+            const ew = String(e).toUpperCase().split(/[^A-Z0-9]+/);
+            const p = palabras.filter(w => ew.includes(w)).length + (ew[0] === palabras[0] ? 0.5 : 0);
+            if (p > puntos) { puntos = p; mejor = e; }
+        });
+        return puntos >= 1 ? mejor : null;
+    };
 
     // ¿Es un archivo crudo del portal? (encabezados "Matricula" y "Productos1" en las primeras filas)
     CU.esCrudo = function(texto) {
@@ -57,8 +76,10 @@
             dom: col('domicilio'), cp: col('codpostal'), loc: col('localidad'), reg: col('region') };
         const faltan = Object.entries(i).filter(([, v]) => v < 0).map(([k]) => k);
         if (faltan.length) return { error: `"${nombreArchivo}": faltan columnas (${faltan.join(', ')}).` };
-
-        const mercado = CU.mercadoDeArchivo(nombreArchivo);
+        // El mercado sale de la columna "Mercado" (un archivo puede traer varios); si no está, del nombre del archivo
+        const iMer = col('mercado');
+        const porArchivo = CU.mercadoDeArchivo(nombreArchivo);
+        const nombresCrudos = new Map();   // nombre del portal → filas
         const f = ctx.filtros || {};
         const espExcluir = new Set((f.especialidades_excluir || []).map(x => String(x).toUpperCase()));
         const nomExcluir = new Set((f.nombres_especialidad_excluir || []).map(x => String(x).toUpperCase()));
@@ -86,6 +107,9 @@
             const claseCod = p ? limpio(p.clase_terapeutica).toUpperCase() : '';
             const clase = claseCod ? (ctx.claseDe(claseCod) || null) : null;
             const rx = parseInt(String(r[i.px]).replace(/[.\s]/g, ''), 10) || 0;
+            const crudo = iMer >= 0 && limpio(r[iMer]) ? CU.claveMercado(r[iMer]) : porArchivo;
+            nombresCrudos.set(crudo, (nombresCrudos.get(crudo) || 0) + 1);
+            const mercado = iMer >= 0 && limpio(r[iMer]) ? CU.nombreMercado(r[iMer], ctx) : porArchivo;
             salida.push([
                 limpio(r[i.nom]), matRaw.padStart(10, '0'), mercado, producto, rx,
                 limpio(r[i.unico]), limpio(r[i.dom]), limpio(r[i.cp]), limpio(r[i.loc]), limpio(r[i.reg]),
@@ -93,8 +117,8 @@
                 p ? limpio(p.generico) : '', laboratorio
             ]);
         });
-        return { mercado, archivo: nombreArchivo, edicion: ed ? `${ed[1].padStart(2, '0')}/${ed[2]}` : '', periodo: per ? limpio(per[1]) : '',
-            filas: salida, leidas, quitadas, sinCatalogo };
+        return { archivo: nombreArchivo, edicion: ed ? `${ed[1].padStart(2, '0')}/${ed[2]}` : '', periodo: per ? limpio(per[1]) : '',
+            filas: salida, leidas, quitadas, sinCatalogo, nombresCrudos, porColumna: iMer >= 0 };
     };
 
     /* ---------- Todos los archivos: consolidado + informe ---------- */
@@ -105,23 +129,42 @@
         const sinCatalogo = { especialidades: new Set(), productos: new Set(), laboratorios: new Set() };
         const ediciones = new Set();
         let repetidas = 0;
-        const mercados = new Map();
+        const mercados = new Map();         // nombre oficial → { mercado, archivos, crudos, leidas?, filas, rx }
+        const crudosVistos = new Map();     // nombre del portal → { filas, archivos }
+        const archivoDe = new Map();        // nombre del portal → primer archivo donde apareció
         archivos.forEach(({ nombre, texto }) => {
             const r = CU.leerArchivo(texto, nombre, ctx);
             if (r.error) { errores.push(r.error); return; }
-            if (mercados.has(r.mercado)) { errores.push(`Hay dos archivos para el mercado "${r.mercado}" (${mercados.get(r.mercado)} y ${nombre}). Deja uno.`); return; }
-            mercados.set(r.mercado, nombre);
             if (r.edicion) ediciones.add(r.edicion);
-            let antes = filas.length, rx = 0;
+            r.nombresCrudos.forEach((n, crudo) => {
+                const c = crudosVistos.get(crudo) || { filas: 0, archivos: new Set() };
+                c.filas += n; c.archivos.add(nombre); crudosVistos.set(crudo, c);
+                if (archivoDe.has(crudo) && archivoDe.get(crudo) !== nombre) {
+                    errores.push(`El mercado "${crudo}" viene en dos archivos (${archivoDe.get(crudo)} y ${nombre}). Quita uno para no sumarlo dos veces.`);
+                }
+                if (!archivoDe.has(crudo)) archivoDe.set(crudo, nombre);
+            });
             r.filas.forEach(f => {
                 const clave = f.join('\u0001');
                 if (vistos.has(clave)) { repetidas++; return; }
-                vistos.add(clave); filas.push(f); rx += f[4];
+                vistos.add(clave); filas.push(f);
+                const m = mercados.get(f[2]) || { mercado: f[2], archivos: new Set(), filas: 0, rx: 0 };
+                m.filas++; m.rx += f[4]; m.archivos.add(nombre); mercados.set(f[2], m);
             });
             Object.keys(sinCatalogo).forEach(k => r.sinCatalogo[k].forEach(x => sinCatalogo[k].add(x)));
-            porMercado.push({ mercado: r.mercado, archivo: nombre, edicion: r.edicion, leidas: r.leidas, quitadas: r.quitadas, filas: filas.length - antes, rx });
+            porMercado.push({ archivo: nombre, leidas: r.leidas, quitadas: r.quitadas });
         });
+        // Por mercado (oficial), sumando todos los archivos
+        const archivosLeidos = porMercado.splice(0);
+        mercados.forEach(m => porMercado.push({ mercado: m.mercado, archivo: [...m.archivos].join(', '), filas: m.filas, rx: m.rx,
+            crudos: [...crudosVistos.keys()].filter(c => CU.nombreMercado(c, ctx) === m.mercado) }));
         porMercado.sort((a, b) => a.mercado.localeCompare(b.mercado));
+        // Nombres del portal que todavía no están en la tabla de nombres
+        const tabla = ctx.nombresMercado || {};
+        const existentes = anterior && anterior.porMercado ? [...anterior.porMercado.keys()] : [];
+        const nombres = [...crudosVistos.entries()].map(([crudo, c]) => ({ crudo, filas: c.filas, oficial: tabla[crudo] || null,
+            sugerencia: tabla[crudo] ? null : (CU.sugerirMercado(crudo, existentes) || crudo) })).sort((a, b) => a.crudo.localeCompare(b.crudo));
+        const sinNombre = nombres.filter(n => !n.oficial);
 
         // Comparación con la versión anterior (la que usa hoy la app)
         const alertas = [];
@@ -148,7 +191,7 @@
 
         const edicion = [...ediciones].sort().pop() || '';
         return {
-            errores, alertas, porMercado, repetidas, edicion, sinCatalogo,
+            errores, alertas, porMercado, archivosLeidos, nombres, sinNombre, repetidas, edicion, sinCatalogo,
             leido: { encabezados: window.App.carga.COLUMNAS_RECETAS.slice(), filas: filas.map(f => f.map(v => String(v))) },
             resumen: { archivos: porMercado.length, filas: filas.length, rx: totalRx, rxPropio, share: totalRx ? rxPropio / totalRx * 100 : 0,
                 shareAntes: anterior && anterior.rx ? anterior.rxPropio / anterior.rx * 100 : null, rxAntes: anterior ? anterior.rx : null }
@@ -195,6 +238,7 @@
             claseDe,
             filtros: { especialidades_excluir: ['DCR', 'INS', 'OTR'], nombres_especialidad_excluir: ['UNIDAD DE CUIDADOS INTENS'], excluir_matricula_cero: true, ...((cfg && cfg.filtros_closeup) || {}) },
             esPropio: (prodNombre) => window.App.data.isPhq(prodNombre),
+            nombresMercado: (cfg && cfg.nombres_mercado) || {},
             vacio: !esp.length || !prod.length
         };
     };

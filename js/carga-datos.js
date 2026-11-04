@@ -411,8 +411,10 @@ window.App.carga.intentarCloseUp = async function(elegidos) {
     const res = CU.consolidar(crudos, ctx, CU.resumenAnterior());
     const v = window.App.carga.validarRecetas(res.leido);
     if (res.errores.length) { v.errores = [...res.errores.map(m => ({ fila: '—', mensaje: m })), ...v.errores]; v.ok = false; }
+    // Los nombres de mercado nuevos se confirman antes de subir (una sola vez: después la app los recuerda)
+    if (res.sinNombre.length) { v.errores = [{ fila: '—', mensaje: `Confirma el nombre de ${res.sinNombre.length} mercado(s) nuevo(s) en "Nombres de mercado" (arriba) y pulsa "Guardar nombres".` }, ...v.errores]; v.ok = false; }
     if (ctx.vacio) v.avisos = ['Los catálogos están vacíos: sube Especialidades y Productos en Ajustes → Catálogos antes de cargar CloseUp.', ...v.avisos];
-    window.App.carga._estado = { validacion: v, tipo: 'recetas', snapshotId: null, closeup: { res, originales: crudos.map(a => ({ nombre: a.nombre, bytes: a.bytes })), guardados: false } };
+    window.App.carga._estado = { validacion: v, tipo: 'recetas', snapshotId: null, closeup: { res, elegidos, nombresMercado: ctx.nombresMercado, originales: crudos.map(a => ({ nombre: a.nombre, bytes: a.bytes })), guardados: false } };
     const nombre = document.getElementById('cargaNombre'), fecha = document.getElementById('cargaFecha');
     if (nombre && !nombre.value && res.edicion) nombre.value = `CloseUp ${res.edicion}`;
     if (fecha && !fecha.value && res.edicion) fecha.value = CU.fechaDeEdicion(res.edicion);
@@ -430,11 +432,13 @@ window.App.carga.informeCloseUp = function(res) {
         <div class="text-sm font-bold text-slate-800 mb-1">Informe de CloseUp · edición ${esc(res.edicion || '—')}</div>
         <p class="text-xs text-slate-700 mb-3">${fmt(r.archivos)} mercados · ${fmt(r.filas)} filas · <b>${fmt(r.rx)}</b> recetas${cambio(r.rx, r.rxAntes)} · La Santé <b>${pct(r.share)}</b>${r.shareAntes != null ? ` (hoy ${pct(r.shareAntes)})` : ''}${res.repetidas ? ` · ${fmt(res.repetidas)} filas repetidas quitadas` : ''}</p>
         ${alertas ? `<ul class="text-xs space-y-1 mb-3">${alertas}</ul>` : '<p class="text-xs text-green-800 mb-3">✅ Sin alertas.</p>'}
+        ${window.App.carga.bloqueNombresMercado(res)}
+        <p class="text-[11px] text-slate-600 mb-2">${fmt((res.archivosLeidos || []).length)} archivo(s): ${fmt((res.archivosLeidos || []).reduce((s, a) => s + a.leidas, 0))} filas leídas ·
+            ${fmt((res.archivosLeidos || []).reduce((s, a) => s + a.quitadas.matricula + a.quitadas.especialidad + a.quitadas.nombreEspecialidad, 0))} quitadas por los filtros.</p>
         <details class="mb-3"><summary class="text-xs font-bold text-indigo-800 cursor-pointer">Ver cada mercado</summary>
-            <div class="overflow-x-auto mt-2"><table class="w-full text-[11px]"><thead><tr class="text-left text-slate-500"><th class="p-1">Mercado (archivo)</th><th class="p-1 text-right">Leídas</th><th class="p-1 text-right">Quitadas</th><th class="p-1 text-right">Filas</th><th class="p-1 text-right">Rx</th><th class="p-1 text-right">Rx hoy</th></tr></thead><tbody>
-            ${res.porMercado.map(m => `<tr class="border-t border-slate-100"><td class="p-1">${esc(m.mercado)}</td><td class="p-1 text-right">${fmt(m.leidas)}</td>
-                <td class="p-1 text-right">${fmt(m.quitadas.matricula + m.quitadas.especialidad + m.quitadas.nombreEspecialidad)}</td><td class="p-1 text-right">${fmt(m.filas)}</td>
-                <td class="p-1 text-right">${fmt(m.rx)}</td><td class="p-1 text-right">${m.rxAntes == null ? '—' : fmt(m.rxAntes)}</td></tr>`).join('')}
+            <div class="overflow-x-auto mt-2"><table class="w-full text-[11px]"><thead><tr class="text-left text-slate-500"><th class="p-1">Mercado</th><th class="p-1">Nombre en el portal</th><th class="p-1 text-right">Filas</th><th class="p-1 text-right">Rx</th><th class="p-1 text-right">Rx hoy</th></tr></thead><tbody>
+            ${res.porMercado.map(m => `<tr class="border-t border-slate-100"><td class="p-1">${esc(m.mercado)}</td><td class="p-1 text-slate-500">${esc((m.crudos || []).join(', '))}</td>
+                <td class="p-1 text-right">${fmt(m.filas)}</td><td class="p-1 text-right">${fmt(m.rx)}</td><td class="p-1 text-right">${m.rxAntes == null ? '—' : fmt(m.rxAntes)}</td></tr>`).join('')}
             </tbody></table></div></details>
         <div class="flex flex-wrap gap-2">
             <button type="button" class="boton-tonal" onclick="App.carga.descargarConsolidado()"><span class="material-symbols-outlined text-[18px]">download</span> Descargar consolidado</button>
@@ -443,6 +447,43 @@ window.App.carga.informeCloseUp = function(res) {
         </div>
         <div id="comparacionPowerQuery" class="mt-3"></div>
     </div>`;
+};
+
+// Tabla de nombres de mercado: el nombre del portal ("Esoz") → el nombre oficial ("ESOZ MERCADO A02B2").
+// La primera vez se confirman los nuevos; después la app los pone sola.
+window.App.carga.bloqueNombresMercado = function(res) {
+    const existentes = [...new Set([...(window.App.closeup.resumenAnterior() || { porMercado: new Map() }).porMercado.keys()])].sort();
+    const filas = res.nombres || [];
+    if (!filas.length) return '';
+    const nuevos = res.sinNombre.length;
+    return `<details class="mb-3 rounded-xl bg-white border border-slate-200 p-3" ${nuevos ? 'open' : ''}>
+        <summary class="text-xs font-bold ${nuevos ? 'text-amber-900' : 'text-indigo-800'} cursor-pointer">Nombres de mercado ${nuevos ? `· ${fmt(nuevos)} nuevo(s) por confirmar` : '· todos con nombre ✅'}</summary>
+        <p class="text-[11px] text-slate-600 mt-2">El portal escribe los mercados a su manera. Escribe (o elige de la lista) el nombre que usa la app. Se recuerda para las próximas cargas.
+            <b>Usa el mismo nombre de antes</b> para un mercado que ya existía: así sus evaluaciones siguen enlazadas.</p>
+        <datalist id="mercadosExistentes">${existentes.map(m => `<option value="${esc(m)}">`).join('')}</datalist>
+        <div class="mt-2 space-y-1.5">${filas.map((n, i) => `<label class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs">
+            <span class="sm:w-1/2 text-slate-700"><b>${esc(n.crudo)}</b> <span class="text-slate-500">· ${fmt(n.filas)} filas</span>${n.oficial ? '' : ' <span class="text-amber-700 font-bold">nuevo</span>'}</span>
+            <input type="text" class="campo-mini !w-full sm:!w-1/2" list="mercadosExistentes" data-mercado-crudo="${esc(n.crudo)}" value="${esc(n.oficial || n.sugerencia || n.crudo)}"></label>`).join('')}</div>
+        <div class="flex justify-end mt-3"><button type="button" class="boton-lleno" onclick="App.carga.guardarNombresMercado()"><span class="material-symbols-outlined text-[18px]">save</span> Guardar nombres y revisar de nuevo</button></div>
+    </details>`;
+};
+
+window.App.carga.guardarNombresMercado = async function() {
+    const c = window.App.carga._estado.closeup;
+    if (!c) return;
+    const tabla = { ...(c.nombresMercado || {}) };
+    document.querySelectorAll('[data-mercado-crudo]').forEach(i => {
+        const v = String(i.value || '').replace(/\s+/g, ' ').trim().toUpperCase();
+        if (v) tabla[i.dataset.mercadoCrudo] = v;
+    });
+    try {
+        await window.App.sb.guardarConfiguracion('nombres_mercado', tabla);
+    } catch (e) {
+        window.App.ui.showToast('No se pudieron guardar los nombres. Revisa tu conexión.');
+        return;
+    }
+    window.App.ui.showToast('Nombres guardados. Revisando de nuevo…');
+    await window.App.carga.intentarCloseUp(c.elegidos);
 };
 
 window.App.carga.descargarConsolidado = function() {

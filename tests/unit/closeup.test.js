@@ -12,7 +12,7 @@ const TITULOS = [
     'Medico;;;;;;TAM 09/26;;;;TAM 09/26;;;;Domicilio;;;;'
 ];
 const CAB = 'Nombre;Matricula;Esp1;Esp2;Representantes;Mercado;Categ;%MS;Px;Productos1;Rnk1;%MS1;Px1;Medico Unico;Domicilio;Cod.Postal;Localidad ;Region;Domicilio 2;Cod.Postal 2;Localidad  2;Region 2';
-const fila = (nom, mat, esp, prod, px) => `${nom};${mat};${esp};;;ARAII Mercado C09C0;1;2,377301;434;${prod};1;40,552995;${px};1000382890;CTRA 17 CON CLL 12;3001;CASCO CENTRAL;REG CTRO OCCIDENTE;;;;`;
+const fila = (nom, mat, esp, prod, px, mer = 'ARAII Mercado C09C0') => `${nom};${mat};${esp};;;${mer};1;2,377301;434;${prod};1;40,552995;${px};1000382890;CTRA 17 CON CLL 12;3001;CASCO CENTRAL;REG CTRO OCCIDENTE;;;;`;
 const archivo = (filas) => [...TITULOS, CAB, ...filas].join('\r\n');
 const ARAII = archivo([
     fila('SEIJAS G FRANCYS E', '107041', 'CAR', 'NEFROTAL RWE', 176),
@@ -31,15 +31,20 @@ const ctx = () => ({
         ['CANDETIQUE PHQ', { laboratorio: 'PHQ', molecula: 'CANDESARTAN', clase_terapeutica: 'C09C0', generico: 'NO' }]]),
     claseDe: (c) => (c.startsWith('C09C') ? { codigo: 'C09C', nombre: 'ANTAG.ANGIOTENSINA II SOLOS' } : null),
     filtros: { especialidades_excluir: ['DCR', 'INS', 'OTR'], nombres_especialidad_excluir: ['UNIDAD DE CUIDADOS INTENS'], excluir_matricula_cero: true },
-    esPropio: (p) => /PHQ|LST/.test(p)
+    esPropio: (p) => /PHQ|LST/.test(p),
+    nombresMercado: { 'ARAII MERCADO C09C0': 'ARAII MCDO', 'OTRO': 'OTRO MCDO' }
 });
 
 describe('Lectura de un archivo de mercado tal como sale del portal', () => {
-    it('reconoce el archivo crudo y toma el mercado del nombre del archivo', () => {
+    it('reconoce el archivo crudo y toma el mercado de la columna "Mercado" con la tabla de nombres', () => {
         expect(App.closeup.esCrudo(ARAII)).toBe(true);
         expect(App.closeup.esCrudo('Medico;Matricula;Mercado;Producto;Px_Product')).toBe(false);
-        const r = App.closeup.leerArchivo(ARAII, 'ARAII MCDO.csv', ctx());
-        expect(r.mercado).toBe('ARAII MCDO');
+        const r = App.closeup.leerArchivo(ARAII, 'descarga 1.csv', ctx());
+        expect(r.filas[0][2]).toBe('ARAII MCDO');
+        expect([...r.nombresCrudos.keys()]).toEqual(['ARAII MERCADO C09C0']);
+        // Sin nombre en la tabla: el del portal en mayúsculas
+        const sin = App.closeup.leerArchivo(ARAII, 'descarga 1.csv', { ...ctx(), nombresMercado: {} });
+        expect(sin.filas[0][2]).toBe('ARAII MERCADO C09C0');
         expect(r.edicion).toBe('09/2026');
         expect(r.leidas).toBe(7);
         expect(r.quitadas).toEqual({ matricula: 1, especialidad: 1, nombreEspecialidad: 1 });
@@ -65,7 +70,7 @@ describe('Lectura de un archivo de mercado tal como sale del portal', () => {
 });
 
 describe('Varios mercados juntos: consolidado e informe', () => {
-    const OTRO = archivo([fila('PEREZ ANA', '123', 'CAR', 'NEFROTAL RWE', 4)]);
+    const OTRO = archivo([fila('PEREZ ANA', '123', 'CAR', 'NEFROTAL RWE', 4, 'Otro')]);
     it('consolida, quita repetidas y valida con la revisión de siempre', () => {
         const r = App.closeup.consolidar([{ nombre: 'ARAII MCDO.csv', texto: ARAII }, { nombre: 'OTRO MCDO.csv', texto: OTRO }], ctx());
         expect(r.errores).toEqual([]);
@@ -91,10 +96,10 @@ describe('Varios mercados juntos: consolidado e informe', () => {
         expect(t).toContain('no están en el catálogo');
     });
 
-    it('dos archivos del mismo mercado o un archivo que no es de CloseUp: error claro', () => {
-        const r = App.closeup.consolidar([{ nombre: 'ARAII MCDO.csv', texto: ARAII }, { nombre: 'araii mcdo.csv', texto: ARAII },
+    it('el mismo mercado en dos archivos o un archivo que no es de CloseUp: error claro', () => {
+        const r = App.closeup.consolidar([{ nombre: 'tanda 1.csv', texto: ARAII }, { nombre: 'tanda 2.csv', texto: ARAII },
             { nombre: 'otra cosa.csv', texto: 'a;b;c\n1;2;3' }], ctx());
-        expect(r.errores.join('\n')).toContain('dos archivos para el mercado "ARAII MCDO"');
+        expect(r.errores.join('\n')).toContain('"ARAII MERCADO C09C0" viene en dos archivos');
         expect(r.errores.join('\n')).toContain('no parece un archivo de mercado');
     });
 
@@ -118,9 +123,10 @@ describe('En "Cargar datos": de los archivos del portal a la versión', () => {
         const bd = baseSimulada(App);
         bd.catalogo_especialidades.push({ codigo: 'CAR', nombre: 'CARDIOLOGIA' });
         bd.catalogo_productos.push({ producto: 'NEFROTAL RWE', laboratorio: 'RWE', molecula: 'LOSARTAN', clase_terapeutica: 'C09C0', generico: 'NO' });
+        bd.configuracion.push({ clave: 'nombres_mercado', valor: { 'ARAII MERCADO C09C0': 'ARAII MCDO', OTRO: 'OTRO MCDO' } });
         App.carga.comprimir = async (t) => new Blob([t]);   // jsdom no comprime
         App.carga.abrirPanel();
-        const archivos = [new File([ARAII], 'ARAII MCDO.csv'), new File([archivo([fila('PEREZ ANA', '123', 'CAR', 'NEFROTAL RWE', 4)])], 'OTRO MCDO.csv')];
+        const archivos = [new File([ARAII], 'ARAII MCDO.csv'), new File([archivo([fila('PEREZ ANA', '123', 'CAR', 'NEFROTAL RWE', 4, 'Otro')])], 'OTRO MCDO.csv')];
         expect(await App.carga.intentarCloseUp(archivos)).toBe(true);
         const est = App.carga._estado;
         expect(est.validacion.ok).toBe(true);
@@ -138,5 +144,40 @@ describe('En "Cargar datos": de los archivos del portal a la versión', () => {
     it('un consolidado de siempre (un solo archivo con Px_Product) sigue por el camino de antes', async () => {
         const consolidado = new File([App.carga.COLUMNAS_RECETAS.join(';') + '\nDR;1;M;P;1;a;b;c;d;e;f;g;h;i;j'], 'consolidado.csv');
         expect(await App.carga.intentarCloseUp([consolidado])).toBe(false);
+    });
+});
+
+describe('Fase 12D-2: descarga en tandas (varios mercados por archivo) y tabla de nombres', () => {
+    const TANDA = archivo([fila('DR A', '1', 'CAR', 'NEFROTAL RWE', 10, 'Bumetin Retard Mercado 2'), fila('DR A', '1', 'CAR', 'CANDETIQUE PHQ', 2, 'Esoz'),
+        fila('DR B', '2', 'CAR', 'NEFROTAL RWE', 5, 'FLUDIL SOLO')]);
+    it('un archivo con varios mercados se separa por la columna "Mercado"; los nuevos piden nombre', () => {
+        const anterior = { porMercado: new Map([['ESOZ MERCADO A02B2', { filas: 1, rx: 1 }], ['BUMETIN RETARD MERCADO A03F0', { filas: 1, rx: 1 }]]), rx: 2, rxPropio: 0, productosPropios: new Set() };
+        const r = App.closeup.consolidar([{ nombre: 'tanda 1.csv', texto: TANDA }], { ...ctx(), nombresMercado: { 'FLUDIL SOLO': 'FLUDIL MERCADO' } }, anterior);
+        expect(r.porMercado.map(m => m.mercado)).toEqual(['BUMETIN RETARD MERCADO 2', 'ESOZ', 'FLUDIL MERCADO']);
+        expect(r.sinNombre.map(n => n.crudo)).toEqual(['BUMETIN RETARD MERCADO 2', 'ESOZ']);
+        // Sugerencia: el mercado de hoy que más se parece
+        expect(r.nombres.find(n => n.crudo === 'ESOZ').sugerencia).toBe('ESOZ MERCADO A02B2');
+        expect(r.nombres.find(n => n.crudo === 'BUMETIN RETARD MERCADO 2').sugerencia).toBe('BUMETIN RETARD MERCADO A03F0');
+        expect(r.nombres.find(n => n.crudo === 'FLUDIL SOLO').oficial).toBe('FLUDIL MERCADO');
+    });
+
+    it('en "Cargar datos": no deja subir hasta confirmar los nombres; al guardarlos se recuerdan', async () => {
+        document.getElementById('loginEmail').value = 'admin@lasante.com';
+        document.getElementById('visitadorPwd').value = 'adminadmin';
+        await App.auth.attemptLogin();
+        App.carga.abrirPanel();
+        const archivos = [new File([TANDA], 'tanda 1.csv')];
+        await App.carga.intentarCloseUp(archivos);
+        expect(App.carga._estado.validacion.ok).toBe(false);
+        expect(document.querySelectorAll('[data-mercado-crudo]')).toHaveLength(3);
+        document.querySelector('[data-mercado-crudo="ESOZ"]').value = 'esoz mercado a02b2';
+        await App.carga.guardarNombresMercado();
+        const { baseSimulada } = await import('./cargar-app.js');
+        const tabla = baseSimulada(App).configuracion.find(c => c.clave === 'nombres_mercado').valor;
+        expect(tabla.ESOZ).toBe('ESOZ MERCADO A02B2');
+        expect(Object.keys(tabla).sort()).toEqual(['BUMETIN RETARD MERCADO 2', 'ESOZ', 'FLUDIL SOLO']);
+        // Revisado de nuevo con los nombres: ya se puede subir y el mercado es el oficial
+        expect(App.carga._estado.validacion.ok).toBe(true);
+        expect(App.carga._estado.closeup.res.porMercado.map(m => m.mercado)).toContain('ESOZ MERCADO A02B2');
     });
 });

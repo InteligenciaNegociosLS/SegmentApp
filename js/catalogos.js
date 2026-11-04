@@ -215,7 +215,7 @@
             datos = { especialidades: esp, laboratorios: lab, productos: prod, clases: cla };
             C._mapaClases = new Map(cla.map(c => [c.codigo, c]));
             filtros = { ...C.FILTROS_INICIALES, ...((cfg && cfg.filtros_closeup) || {}) };
-            config = { ...config, ...Object.fromEntries(['laboratorios_propios', 'productos_phq_excluidos', 'instructivos_descarga', 'productos_phq']
+            config = { ...config, ...Object.fromEntries(['laboratorios_propios', 'productos_phq_excluidos', 'instructivos_descarga', 'productos_phq', 'nombres_mercado']
                 .filter(k => cfg && cfg[k] != null).map(k => [k, cfg[k]])) };
             versiones = ver || [];
         } catch (e) {
@@ -231,6 +231,33 @@
         <button type="button" class="boton-texto !h-8 !px-2 mt-1" onclick="App.catalogos.editarInstructivo('${fuente}')"><span class="material-symbols-outlined text-[16px]">edit</span> Editar</button>
     </details>`;
     C.bloqueInstructivo = bloqueInstructivo;
+
+    // Nombres de mercado: cómo los escribe el portal → cómo se llaman en la app (Fase 12D-2)
+    const bloqueNombresMercado = () => {
+        const tabla = config.nombres_mercado || {};
+        const claves = Object.keys(tabla).sort();
+        return `<details class="rounded-2xl border border-slate-200 p-4 mb-4" id="catNombresMercado">
+            <summary class="text-base font-bold text-slate-800 cursor-pointer">Nombres de mercado <span class="text-xs font-semibold text-slate-500">(${fmt(claves.length)})</span></summary>
+            <p class="text-xs text-slate-600 mt-2">El portal de CloseUp escribe los mercados a su manera ("Esoz", "Bumetin Retard Mercado 2"). Aquí está el nombre que usa la app para cada uno. Los nuevos se confirman al cargar CloseUp.</p>
+            ${claves.length ? `<div class="mt-3 space-y-1.5">${claves.map(k => `<label class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs">
+                <span class="sm:w-1/2 font-semibold text-slate-700">${esc(k)}</span>
+                <input type="text" class="campo-mini !w-full sm:!w-1/2" data-nombre-mercado="${esc(k)}" value="${esc(tabla[k])}"></label>`).join('')}</div>
+                <div class="flex justify-end mt-3"><button type="button" class="boton-lleno" onclick="App.catalogos.guardarNombresMercado()"><span class="material-symbols-outlined text-[18px]">save</span> Guardar</button></div>`
+            : '<p class="text-xs text-slate-500 mt-2">Todavía no hay nombres: se agregan en la primera carga de CloseUp.</p>'}
+        </details>`;
+    };
+    C.guardarNombresMercado = async function() {
+        const tabla = { ...(config.nombres_mercado || {}) };
+        document.querySelectorAll('[data-nombre-mercado]').forEach(i => {
+            const v = limpio(i.value).toUpperCase();
+            if (v) tabla[i.dataset.nombreMercado] = v;
+        });
+        try {
+            await window.App.sb.guardarConfiguracion('nombres_mercado', tabla);
+            config = { ...config, nombres_mercado: tabla };
+            toast('Nombres de mercado guardados. Se usan desde la próxima carga de CloseUp.');
+        } catch (e) { toast(textoError(e)); }
+    };
 
     C.pintar = function() {
         const zona = document.getElementById('ajCatalogosCuerpo');
@@ -278,6 +305,7 @@
                 <p class="text-sm text-slate-700" data-propios>En el catálogo: <b>${fmt(propios.length)}</b> productos de mis laboratorios · marcados hoy como La Santé: <b>${fmt((config.productos_phq || []).length)}</b>${nuevosPropios ? ` · <b class="text-green-800">${fmt(nuevosPropios)} por marcar</b>` : ''}.</p>
                 ${nuevosPropios ? `<button type="button" class="boton-lleno mt-3" onclick="App.catalogos.marcarPropios()"><span class="material-symbols-outlined text-[18px]">done_all</span> Marcar ${fmt(nuevosPropios)} como La Santé</button>` : ''}
             </div>
+            ${bloqueNombresMercado()}
             <div class="rounded-2xl border border-slate-200 p-4 mb-4">
                 <div class="flex items-center gap-2 mb-1"><span class="material-symbols-outlined text-blue-700">menu_book</span>
                     <h4 class="text-base font-bold text-slate-800">Cómo descargar los datos de origen</h4></div>

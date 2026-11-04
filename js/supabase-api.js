@@ -263,8 +263,13 @@ window.App.sb.configuracion = async function() {
 
 window.App.sb.guardarConfiguracion = async function(clave, valor) {
     const sb = await window.App.sb.cliente();
-    const { error } = await sb.from('configuracion').update({ valor }).eq('clave', clave);
+    const { data, error } = await sb.from('configuracion').update({ valor }).eq('clave', clave).select('clave');
     if (error) throw fallo(error, 'Guardar configuración');
+    // Si esa clave todavía no existe (ej. una nueva como "nombres_mercado"), se crea (solo el admin puede)
+    if (!data || !data.length) {
+        const r = await sb.from('configuracion').insert({ clave, valor });
+        if (r.error) throw fallo(r.error, 'Guardar configuración');
+    }
 };
 
 /* ============================================================
