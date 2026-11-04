@@ -228,6 +228,11 @@ window.App.data.esOculto = function(nombre) {
     const ocultos = window.App.state.REPS_OCULTOS;
     return !!(ocultos && nombre && ocultos.has(String(nombre).trim().toUpperCase()));
 };
+// ¿Cuenta en las métricas del GD y nacionales? (Fase 12E: con acceso pero "fuera de métricas" = no)
+window.App.data.cuentaEnMetricas = function(nombre) {
+    const fuera = window.App.state.REPS_FUERA_METRICAS;
+    return !(fuera && nombre && fuera.has(String(nombre).trim().toUpperCase()));
+};
 window.App.data.sinOcultos = function(evaluaciones) {
     if (!window.App.state.REPS_OCULTOS) return evaluaciones;
     return (evaluaciones || []).filter(e => !window.App.data.esOculto(e.visitador));

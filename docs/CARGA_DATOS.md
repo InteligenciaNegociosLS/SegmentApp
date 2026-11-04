@@ -185,3 +185,12 @@ lo carga como antes.
   Cargar datos.
 - Los días se cambian en **Ajustes → Catálogos → Cómo descargar los datos de
   origen → Recordarme cada N días** (0 = nunca).
+
+## CloseUp en varias tandas y corregir un solo mercado (Fase 12E)
+- El portal deja bajar **hasta 10 mercados por archivo**: baja las tandas que
+  hagan falta (4, 6…) y **súbelas todas juntas** (se pueden elegir varias a la
+  vez o un .zip).
+- **Corregir un mercado ya publicado:** sube **solo** el archivo corregido. En
+  el informe toca **"Completar con los N mercados de hoy"**: la app toma los
+  demás de la versión de hoy, sin cambios, y arma una versión nueva completa.
+  Publícala como siempre; la de hoy queda guardada por si hay que volver.

@@ -70,7 +70,7 @@ window.App = window.App || {};
         });
 
         // 3) Visitadores sin evaluar en 7 días o más (un solo aviso)
-        const quietos = e.vms.filter(v => v.fichero.size && v.pct < 100 && v.ultima && v.dias >= 7).sort((a, b) => b.dias - a.dias);
+        const quietos = e.vms.filter(v => !v.fueraMetricas && v.fichero.size && v.pct < 100 && v.ultima && v.dias >= 7).sort((a, b) => b.dias - a.dias);
         if (quietos.length) avisos.push({
             tipo: 'inactivo', t: Math.max(...quietos.map(v => v.ultima + 7 * DIA)), icono: 'schedule', color: 'bg-amber-50 text-amber-800',
             texto: `${quietos.slice(0, 2).map(v => `<b>${escV(nomV(v.nombre))}</b> (${fmtV(v.dias)} días)`).join(', ')}${quietos.length > 2 ? ` y ${fmtV(quietos.length - 2)} más` : ''} ${quietos.length === 1 ? 'lleva' : 'llevan'} 7 días o más sin evaluar`
@@ -206,6 +206,7 @@ window.App = window.App || {};
         if (a.vm) {
             const vm = window.App.equipo.estadisticas().vms.find(v => v.nombre === a.vm);
             if (vm && window.App.state.rolReal !== 'gd') window.App.equipo.elegirDistrito(vm.gerente);
+            if (window.App.equipo.irAVisitador) window.App.equipo.irAVisitador(a.vm);
             setTimeout(() => {
                 const tarjeta = [...document.querySelectorAll('#equipoContenido article')].find(t => t.textContent.includes(nomV(a.vm)));
                 if (tarjeta) { tarjeta.querySelector('button[aria-expanded]')?.click(); tarjeta.scrollIntoView && tarjeta.scrollIntoView({ block: 'center' }); }

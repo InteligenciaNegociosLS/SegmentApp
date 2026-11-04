@@ -712,6 +712,7 @@
         try {
             await window.App.sb.guardarConfiguracion('laboratorios_propios', lista);
             config = { ...config, laboratorios_propios: lista };
+            window.App.state.LABS_PROPIOS = lista.slice();
             C.pintar();
         } catch (e) { toast(textoError(e)); }
     };

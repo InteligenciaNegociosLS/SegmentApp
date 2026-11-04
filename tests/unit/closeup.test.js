@@ -148,6 +148,32 @@ describe('En "Cargar datos": de los archivos del portal a la versión', () => {
         expect(Object.keys(bd.archivos).filter(k => k.startsWith(`closeup/${id}/`))).toHaveLength(2);
     });
 
+    it('corregir un solo mercado: los demás se toman, tal cual, de la versión de hoy', async () => {
+        document.getElementById('loginEmail').value = 'admin@lasante.com';
+        document.getElementById('visitadorPwd').value = 'adminadmin';
+        await App.auth.attemptLogin();
+        const { baseSimulada } = await import('./cargar-app.js');
+        const bd = baseSimulada(App);
+        bd.catalogo_especialidades.push({ codigo: 'CAR', nombre: 'CARDIOLOGIA' });
+        bd.catalogo_productos.push({ producto: 'NEFROTAL RWE', laboratorio: 'RWE', molecula: 'LOSARTAN', clase_terapeutica: 'C09C0', generico: 'NO' });
+        bd.configuracion.push({ clave: 'nombres_mercado', valor: { 'ARAII MERCADO C09C0': 'ARAII MCDO' } });
+        App.carga.abrirPanel();
+        await App.carga.intentarCloseUp([new File([ARAII], 'ARAII corregido.csv')]);
+        let c = App.carga._estado.closeup;
+        expect(c.res.faltan).toEqual(['DESLER MERCADO']);   // el mercado de la versión de hoy que no viene
+        expect(document.getElementById('informeCloseUp').textContent).toContain('Completar con los 1 mercados de hoy');
+        await App.carga.completarConHoy();
+        c = App.carga._estado.closeup;
+        expect(c.res.completado).toBe(1);
+        expect(c.res.porMercado.map(m => m.mercado)).toEqual(['ARAII MCDO', 'DESLER MERCADO']);
+        expect(c.res.leido.filas.filter(f => f[2] === 'DESLER MERCADO')).toHaveLength(3);
+        expect(c.res.leido.filas.find(f => f[2] === 'DESLER MERCADO')).toEqual(['PEREZ ANA', '00123', 'DESLER MERCADO', 'DESLER PHQ', '12', 'MG', 'C1', '1010', 'CCS', 'DC', 'MG', 'DESLORATADINA', 'R06', 'N', 'LST']);
+        expect(App.carga._estado.validacion.ok).toBe(true);
+        expect(App.carga._estado.validacion.resumen).toMatchObject({ mercados: 2 });
+        expect(c.res.alertas.some(a => /Se completó con 1 mercado/.test(a.texto))).toBe(true);
+        expect(c.res.alertas.some(a => /^Faltan/.test(a.texto))).toBe(false);
+    });
+
     it('un consolidado de siempre (un solo archivo con Px_Product) sigue por el camino de antes', async () => {
         const consolidado = new File([App.carga.COLUMNAS_RECETAS.join(';') + '\nDR;1;M;P;1;a;b;c;d;e;f;g;h;i;j'], 'consolidado.csv');
         expect(await App.carga.intentarCloseUp([consolidado])).toBe(false);

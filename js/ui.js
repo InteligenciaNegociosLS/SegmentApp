@@ -45,6 +45,31 @@ window.App.ui.escapeHtml = function(value) {
 ------------------------------------------------------------ */
 // Aviso inferior (snackbar). Opcional: un botón de acción, p. ej. "Deshacer".
 let temporizadorToast = null;
+/* ------------------------------------------------------------
+   PAGINACIÓN (listas largas: 10 por página, Fase 12E)
+   App.ui.paginar(lista, pagina, porPagina) → { items, pagina, paginas, desde }
+   App.ui.paginacion({ pagina, paginas, total, accion }) → botones Anterior / Siguiente
+   "accion" es el nombre de una función que recibe el número de página.
+------------------------------------------------------------ */
+window.App.ui.POR_PAGINA = 10;
+window.App.ui.paginar = function(lista, pagina = 1, porPagina = window.App.ui.POR_PAGINA) {
+    const paginas = Math.max(1, Math.ceil((lista || []).length / porPagina));
+    const p = Math.min(Math.max(1, Math.floor(Number(pagina) || 1)), paginas);
+    const desde = (p - 1) * porPagina;
+    return { items: (lista || []).slice(desde, desde + porPagina), pagina: p, paginas, desde };
+};
+window.App.ui.paginacion = function({ pagina, paginas, total, accion }) {
+    if (paginas <= 1) return '';
+    const fmtP = (n) => window.App.ui.formatNumber(n, 0);
+    const boton = (p, icono, texto, deshabilitado) => `<button type="button" class="boton-texto !h-10 !px-3" ${deshabilitado ? 'disabled' : ''} onclick="${accion}(${p})" aria-label="${texto}">
+        ${icono === 'chevron_left' ? `<span class="material-symbols-outlined text-[20px]">${icono}</span>` : ''}<span class="hidden sm:inline">${texto}</span>${icono === 'chevron_right' ? `<span class="material-symbols-outlined text-[20px]">${icono}</span>` : ''}</button>`;
+    return `<nav class="paginacion flex items-center justify-between gap-2 mt-3" aria-label="Páginas">
+        ${boton(pagina - 1, 'chevron_left', 'Anterior', pagina <= 1)}
+        <span class="text-xs font-semibold text-slate-600" aria-live="polite">Página ${fmtP(pagina)} de ${fmtP(paginas)} · ${fmtP(total)} en total</span>
+        ${boton(pagina + 1, 'chevron_right', 'Siguiente', pagina >= paginas)}
+    </nav>`;
+};
+
 window.App.ui.showToast = function(msg, opciones = {}) {
     const t = document.getElementById('toast');
     if (!t) return;

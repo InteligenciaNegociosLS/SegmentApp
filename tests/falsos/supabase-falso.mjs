@@ -361,6 +361,14 @@ export function createClient(url, clave, opciones = {}) {
             registrar(`rpc:admin_crear_usuario:${p_rol}:${correo}`);
             return { data: { ok: true, id, correo, nombre: p_nombre, rol: p_rol }, error: null };
         },
+        admin_metricas_visitador({ p_visitador, p_en_metricas }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const v = bd.visitadores.find(x => x.nombre_sector === String(p_visitador).toUpperCase());
+            if (!v) return { data: null, error: { message: 'No existe el visitador.' } };
+            v.en_metricas = p_en_metricas;
+            registrar(`rpc:admin_metricas_visitador:${v.nombre_sector}:${p_en_metricas}`);
+            return { data: { ok: true, visitador: v.nombre_sector, en_metricas: p_en_metricas }, error: null };
+        },
         admin_activar_usuario({ p_id, p_activo }) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
             bd.perfiles.find(x => x.id === p_id).activo = p_activo;

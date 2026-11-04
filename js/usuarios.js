@@ -99,13 +99,87 @@
             <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-slate-800 truncate">${esc(titulo)}</span>
             <span class="block text-[11px] text-slate-500 truncate">${esc(detalle)}</span></span>
             <button type="button" class="boton-tonal !h-9 !px-3 !text-xs" onclick="${accion}"><span class="material-symbols-outlined text-[16px]">person_add</span> Crear acceso</button></li>`;
-        zona.innerHTML = `<details class="rounded-2xl bg-amber-50 px-4 py-3" ${v.length + d.length <= 6 ? 'open' : ''}>
+        const todos = [
+            ...v.map((x, i) => item(x.nombre, `Visitador${x.distrito ? ' · distrito ' + x.distrito : ''} · ${U.correoSugerido(x.nombre)}`, `App.usuarios.nuevo('vm', ${i})`)),
+            ...d.map((x, i) => item(x.nombre || x.codigo, `Gerente de distrito · ${x.codigo}${x.nombre ? ' · ' + U.correoSugerido(x.nombre) : ''}`, `App.usuarios.nuevo('gd', ${i})`))];
+        const pag = window.App.ui.paginar(todos, U._paginaPend || 1);
+        U._paginaPend = pag.pagina;
+        const abierto = v.length + d.length <= 6 || U._pendAbierto;
+        zona.innerHTML = `<details class="rounded-2xl bg-amber-50 px-4 py-3" ${abierto ? 'open' : ''} ontoggle="App.usuarios._pendAbierto = this.open">
             <summary class="text-sm font-bold text-amber-900 cursor-pointer">Sin acceso: ${fmt(v.length)} ${v.length === 1 ? 'visitador' : 'visitadores'} del fichero · ${fmt(d.length)} ${d.length === 1 ? 'distrito' : 'distritos'} sin GD</summary>
-            <p class="text-[11px] text-amber-900 mt-1">Aparecen al cargar un fichero con personas nuevas. "Crear acceso" crea su usuario con una clave temporal y el mensaje listo para enviar.</p>
-            <ul class="divide-y divide-amber-100 mt-2">
-                ${v.map((x, i) => item(x.nombre, `Visitador${x.distrito ? ' · distrito ' + x.distrito : ''}`, `App.usuarios.nuevo('vm', ${i})`)).join('')}
-                ${d.map((x, i) => item(x.nombre || x.codigo, `Gerente de distrito · ${x.codigo}`, `App.usuarios.nuevo('gd', ${i})`)).join('')}
-            </ul></details>`;
+            <p class="text-[11px] text-amber-900 mt-1">Aparecen al cargar un fichero con personas nuevas. "Crear acceso" crea su usuario con una clave temporal y el mensaje listo para enviar.
+                El correo se arma solo: <b>nombre.apellido@lasante.com.ve</b>.</p>
+            <button type="button" class="boton-lleno !h-9 !px-4 !text-xs mt-2" onclick="App.usuarios.nuevosEnBloque()"><span class="material-symbols-outlined text-[16px]">group_add</span> Crear varios a la vez (${fmt(todos.length)})</button>
+            <ul class="divide-y divide-amber-100 mt-2">${pag.items.join('')}</ul>
+            ${window.App.ui.paginacion({ pagina: pag.pagina, paginas: pag.paginas, total: todos.length, accion: 'App.usuarios.paginaPendientes' })}</details>`;
+    };
+
+    // Crear varios accesos a la vez: se revisan (y corrigen) los correos sugeridos, luego se crean con su clave temporal
+    const enBloque = () => [
+        ...(pendientes.visitadores || []).map(x => ({ rol: 'vm', nombre: x.nombre, visitador: x.nombre, distritos: null, detalle: `Visitador${x.distrito ? ' · ' + x.distrito : ''}` })),
+        ...(pendientes.distritos || []).filter(x => x.nombre).map(x => ({ rol: 'gd', nombre: x.nombre, visitador: null, distritos: [x.codigo], detalle: `GD · ${x.codigo}` }))];
+    U.nuevosEnBloque = function() {
+        const lista2 = enBloque();
+        if (!lista2.length) return;
+        actual = null;
+        abrir('Crear accesos a la vez', `
+            <p class="text-sm text-slate-700">Revisa los correos (se arman con <b>nombre.apellido@lasante.com.ve</b>) y desmarca a quien no quieras crear todavía.
+                Cada uno recibe una clave temporal; <b>descarga el archivo antes de cerrar</b>.</p>
+            <ul class="divide-y divide-slate-100 mt-3 max-h-[45vh] overflow-y-auto pr-1">${lista2.map((x, i) => `
+                <li class="py-2"><label class="flex items-start gap-2">
+                    <input type="checkbox" class="mt-1" data-bloque-marca="${i}" checked>
+                    <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-slate-800 truncate">${esc(x.nombre)} <span class="text-[11px] font-normal text-slate-500">· ${esc(x.detalle)}</span></span>
+                    <input type="email" class="campo-mini !w-full mt-1" data-bloque-correo="${i}" value="${esc(U.correoSugerido(x.nombre))}" aria-label="Correo de ${esc(x.nombre)}"></span>
+                </label></li>`).join('')}</ul>
+            <p id="usuarioError" class="text-sm text-rose-700 mt-3 min-h-[20px]" role="alert"></p>
+            ${botones('App.usuarios.crearEnBloque()', 'Crear los marcados', 'group_add')}`);
+    };
+    U.crearEnBloque = async function() {
+        const lista2 = enBloque();
+        const elegidos = lista2.map((x, i) => {
+            const marca = document.querySelector(`[data-bloque-marca="${i}"]`);
+            const correo = String((document.querySelector(`[data-bloque-correo="${i}"]`) || {}).value || '').trim().toLowerCase();
+            return marca && marca.checked ? { ...x, correo } : null;
+        }).filter(Boolean);
+        const error = (t) => window.App.ui.safeSetText('usuarioError', t);
+        if (!elegidos.length) return error('Marca al menos una persona.');
+        const malo = elegidos.find(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x.correo));
+        if (malo) return error(`El correo de ${malo.nombre} no es válido.`);
+        const repetido = elegidos.find((x, i) => elegidos.findIndex(y => y.correo === x.correo) !== i);
+        if (repetido) return error(`El correo ${repetido.correo} está repetido: corrige uno.`);
+        ocupado(true);
+        const dir = direccionApp();
+        const hechos = [], fallas = [];
+        for (const x of elegidos) {
+            const clave = U.generarClave();
+            try {
+                await window.App.sb.crearUsuario({ correo: x.correo, nombre: x.nombre, rol: x.rol, clave, visitador: x.visitador, distritos: x.distritos });
+                const a = { nombre: x.nombre, correo: x.correo, rol: x.rol, clave, tipo: 'temporal' };
+                hechos.push({ ...a, mensaje: U.mensaje(a, dir) });
+            } catch (e) { fallas.push(`${x.nombre}: ${textoError(e)}`); }
+        }
+        accesos = hechos;
+        guardados = false;
+        await U.cargar();
+        if (!hechos.length) { ocupado(false); error(`No se creó ninguno. ${fallas.join(' · ')}`); return; }
+        mostrarAccesos();
+        if (fallas.length) {
+            const zona = document.getElementById('usuarioAccesos');
+            if (zona) zona.insertAdjacentHTML('beforebegin', `<p class="text-xs text-rose-700 bg-rose-50 rounded-xl px-3 py-2 mt-3" role="alert">No se pudieron crear ${fmt(fallas.length)}: ${esc(fallas.join(' · '))}</p>`);
+        }
+    };
+
+    U.paginaPendientes = function(p) { U._paginaPend = p; U._pendAbierto = true; U.pintarPendientes(); };
+
+    // Correo de La Santé: nombre.apellido@lasante.com.ve (sin tildes ni ñ). Con 4 palabras
+    // ("MARIA JOSE PEREZ GOMEZ") se toma el 1.º nombre y el 1.er apellido; con 2 o 3, las dos primeras.
+    U.DOMINIO = 'lasante.com.ve';
+    U.correoSugerido = function(nombre) {
+        const p = String(nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+            .replace(/[-']/g, '').replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !['de', 'del', 'la', 'las', 'los', 'y'].includes(w));
+        if (!p.length) return '';
+        const apellido = p.length >= 4 ? p[2] : p[1];
+        return `${p[0]}${apellido ? '.' + apellido : ''}@${U.DOMINIO}`;
     };
 
     // Crear el acceso: VM (de un visitador del fichero), GD (de un distrito) o Gerente Nacional / Administrador
@@ -121,7 +195,8 @@
                 : 'Elige el rol. Para un visitador o un GD, usa la lista "Sin acceso".'}</p>
             ${!x ? `<label class="campo mb-3">Rol<select id="nuevoRol" class="filter-select !rounded-2xl"><option value="gte_nacional">Gerente Nacional (ve todo, solo consulta)</option><option value="admin">Administrador (todo)</option></select></label>` : ''}
             <label class="campo">Nombre<input id="nuevoNombre" type="text" autocomplete="off" value="${esc(nombre)}"></label>
-            <label class="campo mt-3">Correo con el que entra<input id="nuevoCorreo" type="email" inputmode="email" autocomplete="off" placeholder="nombre@lasante.com.ve"></label>
+            <label class="campo mt-3">Correo con el que entra<input id="nuevoCorreo" type="email" inputmode="email" autocomplete="off" placeholder="nombre.apellido@lasante.com.ve" value="${esc(U.correoSugerido(nombre))}"></label>
+            <p class="text-[11px] text-slate-500 mt-1">Sugerido con la regla <b>nombre.apellido@lasante.com.ve</b>. Corrígelo si la persona usa otro.</p>
             <p class="text-[11px] text-slate-500 mt-2">Se crea con una clave temporal: al entrar, la app le pide crear la suya.</p>
             <p id="usuarioError" class="text-sm text-rose-700 mt-3 min-h-[20px]" role="alert"></p>
             ${botones('App.usuarios.crearNuevo()', 'Crear acceso', 'person_add')}`);
@@ -178,15 +253,26 @@
         window.App.ui.safeSetText('ajUsuariosResumen', `${fmt(lista.length)} usuarios · ${fmt(temporales)} con clave temporal pendiente · ${fmt(nunca)} nunca han entrado`
             + (internos ? ` · ${fmt(internos)} con correo interno de la app vieja` : ''));
         if (!vistos.length) {
+            const zp = document.getElementById('ajUsuariosPaginas');
+            if (zp) zp.innerHTML = '';
             zona.innerHTML = `<li class="py-3 text-sm text-slate-500">${lista.length ? 'Nadie coincide con la búsqueda.' : 'Todavía no hay usuarios.'}</li>`;
             return;
         }
-        zona.innerHTML = vistos.map(u => {
+        // De 10 en 10 (Fase 12E); al cambiar la búsqueda o el rol se vuelve a la primera página
+        const firma = String((document.getElementById('ajUsuariosBuscar') || {}).value || '') + '|' + String((document.getElementById('ajUsuariosRol') || {}).value || '');
+        if (firma !== U._firma) { U._firma = firma; U._pagina = 1; }
+        const pag = window.App.ui.paginar(vistos, U._pagina);
+        U._pagina = pag.pagina;
+        const paginas = window.App.ui.paginacion({ pagina: pag.pagina, paginas: pag.paginas, total: vistos.length, accion: 'App.usuarios.irAPagina' });
+        const zonaPag = document.getElementById('ajUsuariosPaginas');
+        if (zonaPag) zonaPag.innerHTML = paginas;
+        zona.innerHTML = pag.items.map(u => {
             const etiquetas = [
                 `<span class="usuario-etiqueta">${esc(ROL_CORTO[u.rol] || u.rol)}</span>`,
                 u.visitador && u.visitador.toUpperCase() !== String(u.nombre).toUpperCase() ? `<span class="usuario-etiqueta">${esc(u.visitador)}</span>` : '',
                 u.distritos ? `<span class="usuario-etiqueta">${esc(u.distritos)}</span>` : '',
                 !u.activo ? '<span class="usuario-etiqueta aviso">Acceso desactivado</span>' : '',
+                u.rol === 'vm' && u.visitador && !window.App.data.cuentaEnMetricas(u.visitador) ? '<span class="usuario-etiqueta">No cuenta en las métricas</span>' : '',
                 u.clave_temporal ? '<span class="usuario-etiqueta aviso">Clave temporal pendiente</span>' : '',
                 /@segmentapp\.internal$/i.test(u.correo) ? '<span class="usuario-etiqueta aviso">Correo interno</span>' : ''
             ].filter(Boolean).join('');
@@ -203,10 +289,56 @@
                 <div class="usuario-acciones">
                     <button type="button" class="boton-icono" title="Cambiar nombre o correo" aria-label="Cambiar nombre o correo de ${esc(u.nombre)}" data-accion="editar" onclick="App.usuarios.editar('${esc(u.id)}')"><span class="material-symbols-outlined">edit</span></button>
                     ${esYo ? '' : `<button type="button" class="boton-icono" title="Dar clave temporal" aria-label="Dar clave temporal a ${esc(u.nombre)}" data-accion="clave" onclick="App.usuarios.clave('${esc(u.id)}')"><span class="material-symbols-outlined">key</span></button>
+                    ${u.rol === 'vm' && u.visitador ? (() => { const cuenta = window.App.data.cuentaEnMetricas(u.visitador);
+                        return `<button type="button" class="boton-icono" title="${cuenta ? 'Sacar de las métricas' : 'Volver a contar en las métricas'}" aria-pressed="${!cuenta}" aria-label="${cuenta ? 'Sacar de las métricas a' : 'Volver a contar en las métricas a'} ${esc(u.nombre)}" data-accion="metricas" onclick="App.usuarios.metricas('${esc(u.id)}')"><span class="material-symbols-outlined">${cuenta ? 'query_stats' : 'visibility_off'}</span></button>`; })() : ''}
                     <button type="button" class="boton-icono" title="${u.activo ? 'Desactivar acceso' : 'Activar acceso'}" aria-label="${u.activo ? 'Desactivar' : 'Activar'} el acceso de ${esc(u.nombre)}" data-accion="activar" onclick="App.usuarios.activar('${esc(u.id)}')"><span class="material-symbols-outlined">${u.activo ? 'person_off' : 'person_check'}</span></button>`}
                 </div>
             </li>`;
         }).join('');
+    };
+
+    // Con acceso pero sin contar en las métricas del GD ni nacionales (Fase 12E, migración 21)
+    U.metricas = function(id) {
+        actual = buscarUsuario(id);
+        if (!actual || !actual.visitador) return;
+        const cuenta = window.App.data.cuentaEnMetricas(actual.visitador);
+        abrir(cuenta ? 'Sacar de las métricas' : 'Volver a contar en las métricas', `
+            <p class="text-sm text-slate-700">${cuenta
+                ? `<b>${esc(actual.nombre)}</b> sigue entrando a la app y viendo a sus médicos, pero <b>deja de sumar</b> en la cobertura, los visitadores y los avisos de su GD y del país. Útil para quien tiene usuario pero no le corresponde llenar encuestas.`
+                : `<b>${esc(actual.nombre)}</b> vuelve a sumar en las métricas de su GD y del país.`}</p>
+            <p class="text-xs text-slate-500 mt-2">No se borra nada; se puede cambiar cuando quieras.</p>
+            <p id="usuarioError" class="text-sm text-rose-700 mt-3 min-h-[20px]" role="alert"></p>
+            ${botones('App.usuarios.confirmarMetricas()', cuenta ? 'Sacar de las métricas' : 'Volver a contar', 'query_stats')}`);
+    };
+    U.confirmarMetricas = async function() {
+        if (!actual || !actual.visitador) return;
+        const st = window.App.state;
+        const nombre = String(actual.visitador).trim().toUpperCase();
+        const cuenta = window.App.data.cuentaEnMetricas(nombre);
+        ocupado(true);
+        try {
+            await window.App.sb.metricasVisitador(nombre, !cuenta);
+            const fuera = new Set(st.REPS_FUERA_METRICAS || []);
+            if (cuenta) fuera.add(nombre); else fuera.delete(nombre);
+            st.REPS_FUERA_METRICAS = fuera.size ? fuera : null;   // un Set nuevo: Equipo e Inicio se recalculan
+            try { localStorage.setItem('SEGMENTAPP_FUERA_METRICAS_' + st.usuarioId, JSON.stringify([...fuera])); } catch (e) { /* sin almacenamiento */ }
+            U.cerrar();
+            U.pintar();
+            if (window.App.avisos) window.App.avisos.actualizar();
+            toast(cuenta ? 'Listo: ya no cuenta en las métricas.' : 'Listo: vuelve a contar en las métricas.');
+        } catch (e) {
+            ocupado(false);
+            const m = String((e && e.original && e.original.message) || (e && e.message) || '');
+            window.App.ui.safeSetText('usuarioError', /admin_metricas_visitador|does not exist|could not find/i.test(m) ? 'Falta aplicar la migración 21 en Supabase.' : textoError(e));
+        }
+    };
+
+    U._pagina = 1;
+    U.irAPagina = function(p) {
+        U._pagina = p;
+        U.pintar();
+        const z = document.getElementById('ajUsuariosLista');
+        if (z && z.scrollIntoView) z.scrollIntoView({ block: 'start', behavior: 'smooth' });
     };
 
     /* ---------- Ventana (una sola, con varios pasos) ---------- */
@@ -441,7 +573,7 @@
     function mostrarAccesos() {
         const puedeCompartir = !!(navigator.canShare && typeof File !== 'undefined'
             && navigator.canShare({ files: [new File(['x'], 'a.csv', { type: 'text/csv' })] }));
-        abrir(`${fmt(accesos.length)} claves temporales creadas`, `
+        abrir(`${fmt(accesos.length)} ${accesos.length === 1 ? 'clave temporal creada' : 'claves temporales creadas'}`, `
             <p class="text-sm text-slate-700">Envía a cada persona su mensaje. <b>Descarga el archivo antes de cerrar</b>: las claves no se vuelven a mostrar.</p>
             <div class="flex flex-wrap gap-2 mt-4">
                 <button type="button" class="boton-lleno" data-accion="descargar-accesos" onclick="App.usuarios.descargarAccesos()"><span class="material-symbols-outlined text-[18px]">download</span> Descargar accesos</button>

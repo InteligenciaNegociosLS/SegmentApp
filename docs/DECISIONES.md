@@ -584,3 +584,23 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   pendiente: se hará solo si hace falta y con aprobación del dueño.
 - **Nomenclatura:** el informe de CloseUp avisa si algún mercado no sigue la
   regla "Mdo + producto".
+- **Arreglo (PR aparte):** el admin y el Gerente Nacional leen el archivo
+  guardado de cada versión, que conserva el nombre de mercado viejo; la app lo
+  traduce al de hoy con la tabla de nombres (`App.data.mercadoDeHoy`).
+- **Listas de 10 en 10** con Anterior / Siguiente: Equipo (visitadores,
+  prioridades, alertas), Ajustes → Usuarios y "Sin acceso".
+- **Correo automático:** `nombre.apellido@lasante.com.ve` (sin tildes ni ñ;
+  con 4 palabras, 1.er nombre y 1.er apellido). "Crear varios a la vez" revisa
+  los correos sugeridos y crea los marcados con su clave temporal.
+- **Fuera de métricas** (migración 21): un VM con acceso puede no contar en
+  las métricas del GD ni nacionales (Ajustes → Usuarios → botón de métricas).
+  Sigue entrando y viendo lo suyo; en Equipo aparece al final, marcado.
+- **Corregir un solo mercado:** se sube solo el archivo corregido y "Completar
+  con los mercados de hoy" toma los demás, tal cual, de la versión vigente;
+  se publica como una versión nueva completa (la anterior queda guardada).
+  CloseUp limita a 10 mercados por descarga: se suben todas las tandas juntas.
+- **Productos (PHQ):** contador de seleccionados, buscador y "Marcar los que
+  terminan en…" con los sufijos de Mis laboratorios (editables ahí mismo).
+- **Umbrales de Potencial:** se muestran como Adopción (Bajo a la izquierda,
+  Alto a la derecha). Los controles van de derecha a izquierda porque A se
+  cuenta desde los que más recetan (Pareto).
