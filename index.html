@@ -65,8 +65,8 @@
             </div>
         </a>
         <div class="flex items-center gap-1 sm:gap-2 shrink-0">
-            <div id="offlineIndicator" class="hidden bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-full text-xs font-bold items-center gap-1"><span class="material-symbols-outlined text-[16px]">wifi_off</span> <span class="hidden sm:inline">Sin conexión</span></div>
-            <button id="chipPendientes" class="hidden bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-xs font-bold items-center gap-1" onclick="App.offline.subirAhora()"><span class="material-symbols-outlined text-[16px]">cloud_upload</span> <span id="lblPendientes">0</span><span class="hidden sm:inline">por subir</span></button>
+            <div id="offlineIndicator" class="hidden bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-full text-xs font-bold items-center gap-1"><span class="material-symbols-outlined text-[16px]">wifi_off</span> <span class="hidden sm:inline" id="lblSinConexion">Sin conexión</span></div>
+            <button id="chipPendientes" class="hidden bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-xs font-bold items-center gap-1" onclick="App.offline.verPendientes()"><span class="material-symbols-outlined text-[16px]">cloud_upload</span> <span id="lblPendientes">0</span><span class="hidden sm:inline">por subir</span></button>
             <button id="btnVersionDatos" class="hidden flex items-center gap-1 text-slate-600 border border-slate-200 px-3 py-2 rounded-full text-xs font-bold" onclick="abrirVersiones()" title="Versión de datos">
                 <span class="material-symbols-outlined text-[18px]">history</span> <span id="lblVersionDatos" class="hidden lg:inline whitespace-nowrap">Datos: Hoy</span>
             </button>
@@ -546,10 +546,11 @@
                         <p class="text-sm text-slate-500" id="equipoSubtitulo">Avance y calidad de las evaluaciones</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" class="boton-tonal !h-9 !px-3 !text-xs" onclick="App.equipo.abrirResumen()"><span class="material-symbols-outlined text-[18px]">summarize</span> Resumen de la semana</button>
                         <label class="relative">
                             <span class="sr-only">Línea</span>
                             <select id="equipoLinea" class="filter-select !rounded-full !py-2 !text-xs !font-bold max-w-[180px]" onchange="App.equipo.elegirLinea(this.value)">
-                                <option value="todas">Todas las líneas</option><option value="OTC">OTC</option><option value="Pharmetique">Pharmetique</option>
+                                <option value="todas">Todas las líneas</option>
                             </select>
                         </label>
                         <label class="relative" id="equipoDistritoZona">
@@ -984,6 +985,40 @@
 </div>
 
 <!-- Products/Config Modal M3 -->
+<!-- Evaluaciones guardadas en el dispositivo, por subir (Fase 12G) -->
+<div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4" id="pendientesModal" role="dialog" aria-modal="true" aria-labelledby="pendientesTitulo">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh] overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+            <h3 id="pendientesTitulo" class="text-lg font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-amber-700">cloud_upload</span> Por subir</h3>
+            <button type="button" class="boton-icono" aria-label="Cerrar" onclick="App.offline.cerrarPendientes()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-5 overflow-y-auto flex-1" id="pendientesCuerpo"></div>
+        <div class="p-5 border-t border-slate-100 flex justify-end gap-2">
+            <button type="button" class="boton-texto" onclick="App.offline.cerrarPendientes()">Cerrar</button>
+            <button type="button" class="boton-lleno" onclick="App.offline.subirAhora()"><span class="material-symbols-outlined text-[18px]">cloud_upload</span> Subir ahora</button>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen de la semana para compartir (Fase 12G) -->
+<div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4" id="resumenModal" role="dialog" aria-modal="true" aria-labelledby="resumenTitulo">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+            <div><h3 id="resumenTitulo" class="text-lg font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-blue-700">summarize</span> Resumen de la semana</h3>
+                <p class="text-xs text-slate-500 mt-0.5" id="resumenAlcance"></p></div>
+            <button type="button" class="boton-icono" aria-label="Cerrar" onclick="App.equipo.cerrarResumen()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-5 overflow-y-auto flex-1">
+            <p class="text-xs text-slate-600 mb-2">Listo para enviar a tu equipo. Puedes cambiar el texto antes de compartirlo.</p>
+            <textarea id="resumenTexto" rows="14" class="w-full rounded-2xl border border-slate-200 p-3 text-sm font-mono text-slate-800" aria-label="Texto del resumen"></textarea>
+        </div>
+        <div class="p-5 border-t border-slate-100 flex flex-wrap justify-end gap-2">
+            <button type="button" class="boton-tonal" onclick="App.equipo.copiarResumen()"><span class="material-symbols-outlined text-[18px]">content_copy</span> Copiar</button>
+            <button type="button" class="boton-lleno" onclick="App.equipo.whatsappResumen()"><span class="material-symbols-outlined text-[18px]">send</span> WhatsApp</button>
+        </div>
+    </div>
+</div>
+
 <div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-opacity" id="productModal">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
         <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
