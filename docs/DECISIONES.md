@@ -614,3 +614,21 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   LINEA_HIBRIDA_1, 2 LINEA_HIBRIDA_2, 3 COMERCIAL, 4 LINEA_3, 5 LINEA_HIBRIDA_3,
   6 LA SANTE, 7 OTC, 8 LINEA_1, 9 LINEA_2 (`App.config.LINEAS_EQUIPO`). El GD
   tiene las líneas de los visitadores de sus distritos.
+
+## Fase 12G (04/11/2026)
+- **Equipo → Línea:** las 9 líneas reales del campo "Equipo" del fichero (en
+  vez de OTC / Pharmetique). El reporte PDF avanzado sigue agrupando OTC y
+  Pharmetique.
+- **Resumen de la semana:** botón en Equipo; texto listo para WhatsApp con
+  cobertura, evaluaciones de la semana, más activos, quién terminó, quién lleva
+  7+ días sin evaluar, alertas y prioridades (y, en el país, una línea por
+  distrito). Respeta distrito y línea elegidos y deja fuera a los "fuera de
+  métricas". Los lunes la campanita lo recuerda.
+- **Movimientos por mercado:** en la tarjeta Movimientos del inicio, dónde
+  ganó y dónde perdió participación La Santé frente a la versión anterior
+  (`evolucion_mercados`, cada persona ve su alcance). Movimientos ya mostraba
+  los médicos que subieron o bajaron de cuadrante.
+- **Sin internet:** "N por subir" abre la lista de lo guardado en el
+  dispositivo (médico, mercado, hace cuánto) con "Subir ahora" y la última
+  subida; el aviso "Sin conexión" dice cuántas hay guardadas; la app pide al
+  navegador no borrar lo guardado (`navigator.storage.persist`).

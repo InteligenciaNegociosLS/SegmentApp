@@ -33,6 +33,7 @@ const mismaEvaluacion = (a, b) => a && b && a.visitador_id === b.visitador_id &&
 // Agrega a la cola. Si el mismo médico y mercado ya estaba esperando, queda solo la última versión.
 window.App.offline.encolar = async function(evaluacion) {
     const st = window.App.state;
+    window.App.offline.protegerAlmacen();
     st.OFFLINE_QUEUE = st.OFFLINE_QUEUE.filter(item => !mismaEvaluacion(item.evaluacion, evaluacion));
     st.OFFLINE_QUEUE.push({ tipo: 'evaluacion', evaluacion, encolada_en: new Date().toISOString() });
     if (window.localforage) await localforage.setItem('OFFLINE_QUEUE', st.OFFLINE_QUEUE);
@@ -95,6 +96,8 @@ window.App.offline.syncOfflineEvaluations = async function({ avisar = true } = {
     }
 
     if (syncedCount > 0) {
+        try { localStorage.setItem('SEGMENTAPP_ULTIMA_SUBIDA', new Date().toISOString()); } catch (e) { /* sin almacenamiento */ }
+        if (window.App.offline.pintarPendientes) window.App.offline.pintarPendientes();
         if (avisar) ui.showToast(syncedCount === 1 ? 'Se subió 1 evaluación que estaba guardada en el dispositivo.' : `Se subieron ${syncedCount} evaluaciones que estaban guardadas en el dispositivo.`);
         if (st.isAdmin) window.App.evaluation.fetchAllEvaluacionesAdmin();
         else window.App.evaluation.fetchEvaluacionesYCalcular();
@@ -112,6 +115,51 @@ window.App.offline.subirAhora = async function() {
     if (window.App.offline.pendientesPropias().length) ui.showToast('Algunas evaluaciones no se pudieron subir todavía. Se intentará otra vez en un minuto.');
 };
 
+/* ---------- Fase 12G: ver lo que espera subir y proteger lo guardado ---------- */
+const haceCuanto = (iso) => {
+    const t = Date.parse(iso);
+    if (!t) return '';
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return 'hace un momento';
+    if (m < 60) return `hace ${m} min`;
+    const h = Math.round(m / 60);
+    return h < 24 ? `hace ${h} h` : `hace ${Math.round(h / 24)} días`;
+};
+window.App.offline.listaPendientes = function() {
+    const st = window.App.state;
+    return (st.isAdmin ? st.OFFLINE_QUEUE : st.OFFLINE_QUEUE.filter(item => item.evaluacion && item.evaluacion.visitador_id === st.visitadorId));
+};
+window.App.offline.pintarPendientes = function() {
+    const zona = document.getElementById('pendientesCuerpo');
+    if (!zona) return;
+    const esc = (v) => window.App.ui.escapeHtml(v);
+    const lista = window.App.offline.listaPendientes();
+    let ultima = null;
+    try { ultima = localStorage.getItem('SEGMENTAPP_ULTIMA_SUBIDA'); } catch (e) { /* sin almacenamiento */ }
+    const estado = navigator.onLine
+        ? '<p class="text-xs text-green-800 bg-green-50 rounded-xl px-3 py-2 mb-3">Hay conexión: se suben solas en menos de un minuto (o toca "Subir ahora").</p>'
+        : '<p class="text-xs text-rose-800 bg-rose-50 rounded-xl px-3 py-2 mb-3"><b>Sin conexión.</b> Están seguras en este dispositivo y se suben solas al volver internet. <b>No cierres sesión</b> hasta que se suban.</p>';
+    zona.innerHTML = estado + (lista.length
+        ? `<ul class="divide-y divide-slate-100">${lista.map(item => {
+            const ev = item.evaluacion || item.payload || {};
+            return `<li class="py-2"><div class="text-sm font-semibold text-slate-800 truncate">${esc(window.App.ui.nombreVisible ? window.App.ui.nombreVisible(ev.medico_nombre || ev.medico_name || ev.medico_id || '') : (ev.medico_nombre || ev.medico_id || ''))}</div>
+                <div class="text-[11px] text-slate-500">${esc(ev.mercado || 'General')}${ev.cuadrante ? ' · ' + esc(ev.cuadrante) : ''} · guardada ${esc(haceCuanto(item.encolada_en))}</div></li>`;
+        }).join('')}</ul>`
+        : '<p class="text-sm text-slate-600">✅ No hay nada por subir: todo está en el servidor.</p>')
+        + (ultima ? `<p class="text-[11px] text-slate-500 mt-3">Última subida desde este dispositivo: ${esc(haceCuanto(ultima))}.</p>` : '');
+};
+window.App.offline.verPendientes = function() {
+    window.App.offline.pintarPendientes();
+    document.getElementById('pendientesModal').classList.remove('hidden');
+};
+window.App.offline.cerrarPendientes = function() { document.getElementById('pendientesModal').classList.add('hidden'); };
+// Pide al navegador que no borre lo guardado en el dispositivo (datos y evaluaciones por subir) si le falta espacio
+window.App.offline.protegerAlmacen = async function() {
+    try {
+        if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist();
+    } catch (e) { /* el navegador no lo permite: se sigue igual */ }
+};
+
 function normalizarNombre(n) {
     return String(n || '').trim().toUpperCase();
 }
@@ -124,6 +172,11 @@ window.App.offline.actualizarIndicadores = function() {
     const sinRed = !navigator.onLine;
     const indicador = document.getElementById('offlineIndicator');
     if (indicador) { indicador.classList.toggle('hidden', !sinRed); indicador.classList.toggle('flex', sinRed); }
+    const lbl = document.getElementById('lblSinConexion');
+    if (lbl) {
+        const guardadas = st.currentUserRole === 'guest' ? 0 : (st.isAdmin ? st.OFFLINE_QUEUE.length : window.App.offline.pendientesPropias().length);
+        lbl.textContent = guardadas ? `Sin conexión · ${guardadas} guardada${guardadas === 1 ? '' : 's'} aquí` : 'Sin conexión';
+    }
     const chip = document.getElementById('chipPendientes');
     if (!chip) return;
     const n = st.currentUserRole === 'guest' ? 0 : (st.isAdmin ? st.OFFLINE_QUEUE.length : window.App.offline.pendientesPropias().length);

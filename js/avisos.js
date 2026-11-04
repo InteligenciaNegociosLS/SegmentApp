@@ -91,7 +91,14 @@ window.App = window.App || {};
             texto: `${g.n === 1 ? 'Una evaluación' : fmtV(g.n) + ' evaluaciones'} de <b>${escV(nomV(g.vm))}</b> no ${g.n === 1 ? 'coincide' : 'coinciden'} con CloseUp${g.graves ? ` (${g.graves === 1 ? 'una muy distinta' : fmtV(g.graves) + ' muy distintas'})` : ''}`
         }));
 
-        // 5) Solo el admin: recordatorio de carga (la versión de hoy ya tiene sus días)
+        // 5) Los lunes: el resumen de la semana está listo para compartir (Fase 12G)
+        const lunes = new Date(ahora); lunes.setHours(8, 0, 0, 0);
+        lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7));   // el lunes de esta semana, 8:00
+        if (ahora < lunes.getTime()) lunes.setDate(lunes.getDate() - 7);   // lunes antes de las 8: el de la semana pasada
+        if (e.vms.length) avisos.push({ tipo: 'resumen', t: lunes.getTime(), icono: 'summarize', color: 'bg-blue-50 text-blue-800',
+            texto: 'El <b>resumen de la semana</b> está listo para compartir con tu equipo por WhatsApp. Tócalo para verlo.' });
+
+        // 6) Solo el admin: recordatorio de carga (la versión de hoy ya tiene sus días)
         window.App.avisos.recordatorios(ahora).forEach(a => avisos.push(a));
 
         avisos.sort((a, b) => (b.fijo ? 1 : 0) - (a.fijo ? 1 : 0) || b.t - a.t);
@@ -199,6 +206,7 @@ window.App = window.App || {};
         window.App.avisos.cerrar();
         if (!a) return;
         if (a.tipo === 'recordatorio') { window.App.carga.abrirPanel('nueva'); return; }
+        if (a.tipo === 'resumen') { window.App.ux.irA('equipo'); window.App.equipo.abrirResumen(); return; }
         if (a.tipo === 'espacio') { window.App.ux.irA('ajustes'); window.App.ajustes.irA && window.App.ajustes.irA('ajSalud'); return; }
         window.App.ux.irA('equipo');
         if (a.tipo === 'alerta') { window.App.equipo.verVista('alertas'); return; }

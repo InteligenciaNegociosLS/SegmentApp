@@ -321,6 +321,8 @@ window.App.auth.checkAuthentication = async function() {
    LOGIN EXITOSO — configura UI según el rol
 ============================================================ */
 window.App.auth.loginSuccess = function(role, name) {
+    // Que el navegador no borre los datos guardados en el dispositivo (para trabajar sin internet)
+    if (window.App.offline && window.App.offline.protegerAlmacen) window.App.offline.protegerAlmacen();
     const st = window.App.state;
     st.currentUserRole = role;
     st.currentVisitadorName = name;
