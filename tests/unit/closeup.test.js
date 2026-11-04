@@ -96,6 +96,27 @@ describe('Varios mercados juntos: consolidado e informe', () => {
         expect(t).toContain('no están en el catálogo');
     });
 
+    it('médico repetido en el mismo mercado y producto: queda la fila de más recetas y se ve en qué se diferenciaban', () => {
+        const otraDireccion = fila('SEIJAS G FRANCYS E', '107041', 'CAR', 'NEFROTAL RWE', 90).replace('CTRA 17 CON CLL 12', 'AV BOLIVAR LOCAL 3');
+        const r = App.closeup.consolidar([{ nombre: 'ARAII MCDO.csv', texto: archivo([fila('SEIJAS G FRANCYS E', '107041', 'CAR', 'NEFROTAL RWE', 176), otraDireccion,
+            fila('SEIJAS G FRANCYS E', '107041', 'CAR', 'CANDETIQUE PHQ', 1)]) }], ctx());
+        const nefrotal = r.leido.filas.filter(f => f[3] === 'NEFROTAL RWE');
+        expect(nefrotal).toHaveLength(1);                 // único por médico + mercado + producto
+        expect(nefrotal[0][4]).toBe('176');                // el de más recetas
+        expect(nefrotal[0][6]).toBe('CTRA 17 CON CLL 12');
+        expect(r.porMercado[0]).toMatchObject({ filas: 2, rx: 177 });
+        expect(r.unificados).toHaveLength(1);
+        expect(r.unificados[0]).toMatchObject({ medico: 'SEIJAS G FRANCYS E', producto: 'NEFROTAL RWE', rx: [176, 90], rxQueda: 176 });
+        expect(r.unificados[0].difieren.map(d => d.col)).toEqual(['Px_Product', 'Domicilio']);
+        expect(r.alertas.find(a => /venían repetidos/.test(a.texto)).texto).toContain('Se diferenciaban en: Px_Product (1), Domicilio (1)');
+        // Ya no queda el aviso de la revisión
+        expect(App.carga.validarRecetas(r.leido).avisos.some(a => /repiten médico/.test(a))).toBe(false);
+        // Y el informe muestra el detalle
+        const html = App.carga.bloqueUnificados(r);
+        expect(html).toContain('Repetidos unificados · 1');
+        expect(html).toContain('AV BOLIVAR LOCAL 3');
+    });
+
     it('el mismo mercado en dos archivos o un archivo que no es de CloseUp: error claro', () => {
         const r = App.closeup.consolidar([{ nombre: 'tanda 1.csv', texto: ARAII }, { nombre: 'tanda 2.csv', texto: ARAII },
             { nombre: 'otra cosa.csv', texto: 'a;b;c\n1;2;3' }], ctx());
