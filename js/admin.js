@@ -197,13 +197,70 @@ window.App.admin.renderProductCheckboxes = function() {
     const container = document.getElementById('productChecklist');
     const allProds = st.RAW_DATA.length > 0 ? [...new Set(st.RAW_DATA.map(d => d.prod).filter(x => x))] : [];
     const combined = [...new Set([...allProds, ...st.PHQ_PRODUCTS])].map(p => p.toUpperCase()).sort();
+    const esc = (v) => window.App.ui.escapeHtml(v);
     container.innerHTML = combined.map(p => `
-        <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer transition shadow-sm">
-            <input type="checkbox" value="${p}" ${st.PHQ_PRODUCTS.includes(p) ? 'checked' : ''} class="phq-prod-cb accent-blue-600 w-5 h-5 rounded">
-            <span class="text-sm font-semibold text-slate-700 truncate" title="${p}">${p}</span>
+        <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer transition shadow-sm" data-producto="${esc(p)}">
+            <input type="checkbox" value="${esc(p)}" ${st.PHQ_PRODUCTS.includes(p) ? 'checked' : ''} class="phq-prod-cb accent-blue-600 w-5 h-5 rounded">
+            <span class="text-sm font-semibold text-slate-700 truncate" title="${esc(p)}">${esc(p)}</span>
         </label>
     `).join('');
+    window.App.admin.pintarSufijos();
+    window.App.admin.filtrarProductos();
+    window.App.admin.contarProductos();
 };
+
+/* ---------- Fase 12E: cuántos van marcados, buscar y marcar por sufijo ("… PHQ", "… LST") ---------- */
+const casillasProductos = () => Array.from(document.querySelectorAll('.phq-prod-cb'));
+const terminaEn = (producto, sufijos) => sufijos.some(s => new RegExp(`(^|\\s)${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i').test(String(producto).trim()));
+window.App.admin.contarProductos = function() {
+    const todas = casillasProductos();
+    const n = todas.filter(c => c.checked).length;
+    const zona = document.getElementById('productCuenta');
+    if (zona) zona.textContent = `${window.App.ui.formatNumber(n, 0)} de ${window.App.ui.formatNumber(todas.length, 0)} seleccionados`;
+};
+window.App.admin.filtrarProductos = function() {
+    const q = String((document.getElementById('productBuscar') || {}).value || '').trim().toUpperCase();
+    document.querySelectorAll('#productChecklist [data-producto]').forEach(l => l.classList.toggle('hidden', !!q && !l.dataset.producto.includes(q)));
+};
+window.App.admin.pintarSufijos = function() {
+    const zona = document.getElementById('productSufijos');
+    if (!zona) return;
+    const esc = (v) => window.App.ui.escapeHtml(v);
+    const sufijos = window.App.state.LABS_PROPIOS || [];
+    const coinciden = casillasProductos().filter(c => terminaEn(c.value, sufijos));
+    const faltan = coinciden.filter(c => !c.checked).length;
+    const puede = window.App.state.rolReal === 'admin';
+    zona.innerHTML = `<div class="rounded-2xl bg-green-50 p-3">
+        <div class="text-xs font-bold text-slate-800 mb-1">Sufijos de mis productos</div>
+        <p class="text-[11px] text-slate-600 mb-2">Los productos que terminan en estos sufijos son de La Santé (ej. "DESLER <b>PHQ</b>"). Es la misma lista de Ajustes → Catálogos → Mis laboratorios.</p>
+        <div class="flex flex-wrap items-center gap-2">${sufijos.map(v => `<span class="chip !h-8"><span>${esc(v)}</span>${puede ? `<button type="button" class="-mr-1 w-6 h-6 rounded-full inline-flex items-center justify-center" aria-label="Quitar ${esc(v)}" onclick="App.admin.quitarSufijo(${esc(JSON.stringify(v))})"><span class="material-symbols-outlined text-[16px]">close</span></button>` : ''}</span>`).join('')}
+            ${puede ? `<span class="inline-flex gap-1"><input type="text" class="campo-mini !w-24" id="productSufijoNuevo" placeholder="Ej. PHQ" aria-label="Nuevo sufijo" onkeypress="if(event.key==='Enter') App.admin.agregarSufijo()">
+            <button type="button" class="boton-icono" aria-label="Agregar sufijo" onclick="App.admin.agregarSufijo()"><span class="material-symbols-outlined">add</span></button></span>` : ''}</div>
+        <button type="button" class="boton-tonal !h-9 !px-3 !text-xs mt-2" ${faltan ? '' : 'disabled'} onclick="App.admin.marcarPorSufijo()"><span class="material-symbols-outlined text-[16px]">done_all</span>
+            ${faltan ? `Marcar los ${window.App.ui.formatNumber(faltan, 0)} que terminan en ${esc(sufijos.join(', '))}` : `Ya están marcados los ${window.App.ui.formatNumber(coinciden.length, 0)} que terminan en ${esc(sufijos.join(', ') || '—')}`}</button>
+    </div>`;
+};
+window.App.admin.marcarPorSufijo = function() {
+    const sufijos = window.App.state.LABS_PROPIOS || [];
+    const n = casillasProductos().filter(c => !c.checked && terminaEn(c.value, sufijos)).map(c => { c.checked = true; return c; }).length;
+    window.App.admin.contarProductos();
+    window.App.admin.pintarSufijos();
+    window.App.ui.showToast(`${n} producto(s) marcados. Pulsa "Guardar Configuración" para aplicarlo.`);
+};
+const guardarSufijos = async (lista) => {
+    try {
+        await window.App.sb.guardarConfiguracion('laboratorios_propios', lista);
+        window.App.state.LABS_PROPIOS = lista;
+        window.App.admin.pintarSufijos();
+    } catch (e) { window.App.ui.showToast('No se pudo guardar. Revisa tu conexión e intenta de nuevo.'); }
+};
+window.App.admin.agregarSufijo = function() {
+    const v = String((document.getElementById('productSufijoNuevo') || {}).value || '').trim().toUpperCase();
+    const lista = window.App.state.LABS_PROPIOS || [];
+    if (!v || lista.includes(v)) return;
+    return guardarSufijos([...lista, v]);
+};
+window.App.admin.quitarSufijo = function(v) { return guardarSufijos((window.App.state.LABS_PROPIOS || []).filter(x => x !== v)); };
 
 window.App.admin.saveProductsConfig = async function() {
     const lista = Array.from(document.querySelectorAll('.phq-prod-cb:checked')).map(cb => cb.value.toUpperCase());

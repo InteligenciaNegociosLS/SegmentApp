@@ -277,9 +277,11 @@ window.App.ajustes.renderSalud = async function() {
         fila(e.sinFichero ? 'info' : 'ok', `${fmtA(e.sinFichero)} médicos con recetas no están en el fichero`, 'Están en CloseUp pero ningún visitador los tiene asignados.'),
         fila('info', `${fmtA(Math.max(0, (e.fichados || 0) - (e.conRx || 0)))} médicos del fichero sin recetas en CloseUp`, 'Con los filtros elegidos ahora (mercados, productos).'),
         fila(cruces ? 'aviso' : 'ok', `${fmtA(cruces)} evaluaciones marcadas como "cruce errado"`, `De ${fmtA(evals.length)} evaluaciones activas. El médico de CloseUp no coincide con el del fichero.`),
-        '<li id="ajSaludUsuarios" class="py-3 text-xs text-slate-500">Revisando qué visitadores tienen usuario…</li>'
+        '<li id="ajSaludUsuarios" class="py-3 text-xs text-slate-500">Revisando qué visitadores tienen usuario…</li>',
+        '<li id="ajSaludEspacio" class="py-3 text-xs text-slate-500">Revisando el espacio usado en Supabase…</li>'
     ];
     zona.innerHTML = filas.join('');
+    window.App.ajustes.renderEspacio();
     try {
         const lista = await window.App.sb.visitadoresConUsuario();
         const activos = lista.filter(x => x.activo);
@@ -291,6 +293,35 @@ window.App.ajustes.renderSalud = async function() {
         const li = document.getElementById('ajSaludUsuarios');
         if (li) li.textContent = 'No se pudo revisar los usuarios (¿sin conexión?).';
     }
+};
+
+// Espacio usado en Supabase (migración 20): base de datos y archivos guardados, frente al plan gratis
+const mbA = (b) => `${fmtA(Math.round((b || 0) / 1048576))} MB`;
+window.App.ajustes.renderEspacio = async function() {
+    const li = document.getElementById('ajSaludEspacio');
+    if (!li) return;
+    let e;
+    try { e = await window.App.sb.espacio(); }
+    catch (err) {
+        const m = String((err && err.original && err.original.message) || (err && err.message) || '');
+        li.textContent = /admin_espacio|does not exist|could not find/i.test(m) ? 'Espacio usado: falta aplicar la migración 20.' : 'No se pudo revisar el espacio usado (¿sin conexión?).';
+        return;
+    }
+    window.App.avisos._espacio = e;
+    const L = window.App.avisos.LIMITES, u = window.App.avisos.usoEspacio(e);
+    const barra = (pct, titulo, usado, limite) => {
+        const color = pct >= 95 ? 'bg-rose-600' : pct >= 80 ? 'bg-amber-500' : 'bg-green-600';
+        return `<div class="mt-2"><div class="flex justify-between text-xs text-slate-700"><span>${titulo}</span><span><b>${mbA(usado)}</b> de ${mbA(limite)} · ${Math.round(pct)}%</span></div>
+            <div class="h-2 rounded-full bg-slate-100 overflow-hidden mt-1" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="${titulo}">
+            <div class="h-full ${color} rounded-full" style="width:${Math.min(100, pct).toFixed(1)}%"></div></div></div>`;
+    };
+    const estado = u.mayor >= 80 ? ['warning', 'text-amber-600'] : ['check_circle', 'text-green-700'];
+    li.outerHTML = `<li class="flex gap-3 py-3" id="ajSaludEspacio"><span class="material-symbols-outlined ${estado[1]}">${estado[0]}</span>
+        <div class="min-w-0 flex-1"><div class="text-sm font-semibold text-slate-800">Espacio en Supabase (plan gratis)</div>
+            ${barra(u.base, 'Base de datos', e.base_bytes, L.base)}
+            ${barra(u.archivos, `Archivos guardados (${fmtA(e.archivos)})`, e.archivos_bytes, L.archivos)}
+            <div class="text-[11px] text-slate-500 mt-2">Lo que más ocupa: ${(e.tablas || []).slice(0, 3).map(t => `${escA(t.nombre)} ${mbA(t.bytes)}`).join(' · ')}.
+                ${u.mayor >= 80 ? '<b class="text-amber-800">Está cerca del límite: avísame para archivar versiones viejas (sin borrar nada).</b>' : 'Hay espacio de sobra.'}</div></div></li>`;
 };
 
 /* ============================================================
@@ -364,7 +395,7 @@ function aplicarVista() {
 /* ============================================================
    BITÁCORA DE CAMBIOS (migración 11)
 ============================================================ */
-const NOMBRES_CONFIG = { umbrales_matriz: 'los umbrales de la matriz', umbrales_encuesta: 'los puntajes de la encuesta', ponderacion_encuesta: 'la ponderación de la encuesta', productos_phq: 'los productos del laboratorio', equipos_otc: 'los equipos OTC', nombres_mercado: 'los nombres de mercado', filtros_closeup: 'los filtros de CloseUp', laboratorios_propios: 'mis laboratorios' };
+const NOMBRES_CONFIG = { umbrales_matriz: 'los umbrales de la matriz', umbrales_encuesta: 'los puntajes de la encuesta', ponderacion_encuesta: 'la ponderación de la encuesta', productos_phq: 'los productos del laboratorio', equipos_otc: 'los equipos OTC', nombres_mercado: 'los nombres de mercado', filtros_closeup: 'los filtros de CloseUp', laboratorios_propios: 'mis laboratorios', recordatorio_cargas: 'el recordatorio de carga', instructivos_descarga: 'cómo descargar los datos' };
 const ETIQUETAS_UMBRAL = { TH_LOY_LOW: 'Adopción baja hasta', TH_LOY_HIGH: 'Adopción alta desde', TH_POT_LOW: 'Potencial A hasta', TH_POT_HIGH: 'Potencial B hasta' };
 
 function detalleCambio(b) {

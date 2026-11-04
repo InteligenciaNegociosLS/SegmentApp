@@ -259,6 +259,18 @@ window.App.auth.entrar = async function(user, { avisar = false } = {}) {
             try { ocultos = JSON.parse(localStorage.getItem(claveOcultos) || '[]'); } catch (e2) { ocultos = []; }
         }
         st.REPS_OCULTOS = ocultos.length ? new Set(ocultos) : null;
+        // Los que tienen acceso pero no cuentan en las métricas (sin la migración 21: ninguno)
+        const claveFuera = 'SEGMENTAPP_FUERA_METRICAS_' + perfil.uid;
+        let fuera = [];
+        try {
+            fuera = await window.App.sb.visitadoresFueraMetricas();
+            try { localStorage.setItem(claveFuera, JSON.stringify(fuera)); } catch (e) { /* sin almacenamiento */ }
+        } catch (e) {
+            try { fuera = JSON.parse(localStorage.getItem(claveFuera) || '[]'); } catch (e2) { fuera = []; }
+        }
+        st.REPS_FUERA_METRICAS = fuera.length ? new Set(fuera) : null;
+    } else {
+        st.REPS_FUERA_METRICAS = null;
     }
 
     const req = document.getElementById('loginRequiredState');

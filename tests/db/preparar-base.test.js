@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
+import { spawnSync } from 'node:child_process';
 import { BASE_SUPABASE, crearBase } from './supabase-simulado.js';
 import { aplicarMigraciones, listarMigraciones } from '../../scripts/migracion/migraciones.mjs';
 
@@ -91,5 +92,29 @@ describe('Revisión final de seguridad', () => {
             expect(filas, `anónimo lee ${t}`).toBe(0);
         }
         await db.exec('reset role');
+    });
+});
+
+describe('Fase 12E: aplicar en producción desde GitHub (sin nadie que escriba)', () => {
+    const correr = (extra) => spawnSync(process.execPath, ['--input-type=module', '-e',
+        `import { destinoSeguro } from './scripts/migracion/comun.mjs'; const r = await destinoSeguro(); console.log('OK', r.ref);`],
+        { env: { PATH: process.env.PATH, DESTINO: 'produccion', SUPABASE_URL: 'https://abcd.supabase.co',
+            SUPABASE_DB_URL: 'postgresql://postgres.abcd:x@aws-0.pooler.supabase.com:5432/postgres', ...extra }, encoding: 'utf8', input: '' });
+    it('con CONFIRMACION=MIGRAR PRODUCCION sigue sin preguntar', () => {
+        const r = correr({ CONFIRMACION: 'MIGRAR PRODUCCION' });
+        expect(r.status).toBe(0);
+        expect(r.stdout).toContain('confirmado por el trabajo automático');
+        expect(r.stdout).toContain('OK abcd');
+    });
+    it('con otra palabra se detiene sin cambiar nada', () => {
+        const r = correr({ CONFIRMACION: 'si' });
+        expect(r.status).toBe(1);
+        expect(r.stderr).toContain('No se hizo ningún cambio');
+    });
+    it('sin CONFIRMACION pregunta como siempre (y sin respuesta, cancela)', () => {
+        const r = correr({});
+        expect(r.status).not.toBe(0);
+        expect(r.stdout).not.toContain('OK abcd');
+        expect(r.stdout).toContain('Para continuar escribe exactamente');
     });
 });

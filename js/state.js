@@ -55,7 +55,11 @@ window.App.state = {
     soloLectura: false,           // gd y gte_nacional: ven el equipo pero no editan
     visitadorId: null,            // id del visitador (solo vm)
     REPS_PERMITIDOS: null,        // Set de visitadores visibles (null = todos)
+    REPS_FUERA_METRICAS: null,    // Set de visitadores con acceso que no cuentan en las métricas de GD ni nacionales (Fase 12E)
     REPS_OCULTOS: null,           // Set de visitadores desactivados que no se muestran (Fase 11)
+    RECORDATORIO_CARGAS: { recetas: 90, fichero: 90 },   // cada cuántos días recordar al admin cargar datos (configuración)
+    LABS_PROPIOS: ['PHQ', 'LST'],  // sufijos / laboratorios de La Santé (configuración laboratorios_propios)
+    NOMBRES_MERCADO: null,        // tabla de nombres de mercado (alias viejo → nombre de hoy), de la configuración
     EQUIPOS_OTC: null,            // Códigos de "Equipo" del fichero que son línea OTC (configuración)
 
     // --- Versiones de datos ---

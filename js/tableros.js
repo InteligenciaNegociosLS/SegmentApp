@@ -63,14 +63,15 @@
     window.App.tableros.calcular = function() {
         const st = window.App.state;
         const d = window.App.data;
-        const firma = [st.PROCESSED_DATA, st._versionEvaluaciones, st.ALL_EVALUATIONS.length, st.FICHERO_MAP, st.TH_LOY_LOW, st.TH_LOY_HIGH, st.FILTER_STATE.Product, st.REPS_PERMITIDOS];
+        const firma = [st.PROCESSED_DATA, st._versionEvaluaciones, st.ALL_EVALUATIONS.length, st.FICHERO_MAP, st.TH_LOY_LOW, st.TH_LOY_HIGH, st.FILTER_STATE.Product, st.REPS_PERMITIDOS, st.REPS_FUERA_METRICAS];
         if (memoTab && memoTab.firma.every((v, i) => v === firma[i])) return memoTab.datos;
 
         const docs = st.PROCESSED_DATA || [];
         // Médicos ÚNICOS del fichero (CRM) del alcance de la persona: una matrícula = un médico,
         // aunque aparezca en varias filas, con varios visitadores o varias veces en CloseUp.
         // Es el mismo número que "Médicos en fichero" de Equipo.
-        const permitido = (rep) => !st.REPS_PERMITIDOS || st.REPS_PERMITIDOS.has(rep);
+        // Los visitadores "fuera de métricas" (Fase 12E) no suman en la cobertura del GD ni nacional
+        const permitido = (rep) => (!st.REPS_PERMITIDOS || st.REPS_PERMITIDOS.has(rep)) && d.cuentaEnMetricas(rep);
         const clavesFichero = new Set();
         st.FICHERO_MAP.forEach((filas, clave) => {
             if (filas.some(r => { const k = d.getFicheroRepKey(r); return k && r[k] && permitido(String(r[k]).trim().toUpperCase()); })) clavesFichero.add(clave);

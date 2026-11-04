@@ -82,3 +82,61 @@ describe('Avisos', () => {
         expect(App.equipo.vista).toBe('alertas');
     });
 });
+
+describe('Fase 12E: recordatorio de carga (solo admin)', () => {
+    const DIA = 86400000;
+    const vigente = (tipo, dias) => ({ id: 'v-' + tipo, nombre: tipo === 'recetas' ? 'CloseUp 06/2026' : 'Fichero junio', tipo, es_vigente: true, estado: 'publicado',
+        fecha: '2026-06-30', publicado_en: new Date(Date.now() - dias * DIA).toISOString() });
+
+    it('a los 90 días avisa que toca cargar CloseUp; va arriba y lleva a Cargar datos', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        App.state.VERSIONES = [vigente('recetas', 95), vigente('fichero', 20)];
+        const r = App.avisos.recordatorios();
+        expect(r).toHaveLength(1);
+        expect(r[0]).toMatchObject({ tipo: 'recordatorio', fuente: 'recetas', fijo: true });
+        expect(r[0].texto).toContain('Toca cargar <b>CloseUp</b>');
+        expect(r[0].texto).toContain('hace 95 días');
+        App.avisos.generar();
+        expect(App.avisos.lista[0].tipo).toBe('recordatorio');
+        App.avisos.ir(0);
+        expect(document.getElementById('cargaDatosModal').classList.contains('hidden')).toBe(false);
+    });
+
+    it('se puede cambiar o apagar (0 = nunca); el GD no lo recibe', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        App.state.VERSIONES = [vigente('recetas', 40)];
+        expect(App.avisos.recordatorios()).toHaveLength(0);
+        await App.catalogos.guardarRecordatorio('closeup', '30');
+        expect(baseSimulada(App).configuracion.find(c => c.clave === 'recordatorio_cargas').valor).toEqual({ recetas: 30, fichero: 90 });
+        expect(App.avisos.recordatorios()).toHaveLength(1);
+        await App.catalogos.guardarRecordatorio('closeup', '0');
+        expect(App.avisos.recordatorios()).toHaveLength(0);
+        await App.auth.logoutSession();
+        await ingresar('gd@lasante.com', '123456');
+        App.state.VERSIONES = [vigente('recetas', 400)];
+        expect(App.avisos.recordatorios()).toHaveLength(0);
+    });
+});
+
+describe('Fase 12E: espacio usado en Supabase (solo admin)', () => {
+    it('Salud de los datos muestra la base y los archivos frente al plan gratis', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.ajustes.renderSalud();
+        await new Promise(r => setTimeout(r, 0));
+        await App.ajustes.renderEspacio();
+        const li = document.getElementById('ajSaludEspacio');
+        expect(li.textContent).toContain('Espacio en Supabase');
+        expect(li.textContent).toContain('120 MB de 500 MB · 24%');
+        expect(li.textContent).toContain('Hay espacio de sobra');
+    });
+
+    it('al pasar del 80% avisa en la campanita y lleva a Salud de los datos', async () => {
+        baseSimulada(App).espacio = { base_bytes: 450 * 1048576, archivos_bytes: 10, archivos: 1, tablas: [], versiones: [] };
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.avisos.alEntrar();
+        await new Promise(r => setTimeout(r, 0));
+        const a = App.avisos.lista.find(x => x.tipo === 'espacio');
+        expect(a.texto).toContain('la base de datos (90%)');
+        expect(App.avisos.lista[0].fijo).toBe(true);
+    });
+});

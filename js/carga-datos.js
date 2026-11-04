@@ -432,6 +432,10 @@ window.App.carga.informeCloseUp = function(res) {
         <div class="text-sm font-bold text-slate-800 mb-1">Informe de CloseUp · edición ${esc(res.edicion || '—')}</div>
         <p class="text-xs text-slate-700 mb-3">${fmt(r.archivos)} mercados · ${fmt(r.filas)} filas · <b>${fmt(r.rx)}</b> recetas${cambio(r.rx, r.rxAntes)} · La Santé <b>${pct(r.share)}</b>${r.shareAntes != null ? ` (hoy ${pct(r.shareAntes)})` : ''}${res.repetidas ? ` · ${fmt(res.repetidas)} filas repetidas quitadas` : ''}</p>
         ${alertas ? `<ul class="text-xs space-y-1 mb-3">${alertas}</ul>` : '<p class="text-xs text-green-800 mb-3">✅ Sin alertas.</p>'}
+        ${(res.faltan || []).length && !res.sinNombre.length ? `<div class="mb-3 rounded-xl bg-white border border-indigo-200 p-3">
+            <p class="text-xs text-slate-700"><b>¿Solo estás corrigiendo ${res.porMercado.length === 1 ? 'este mercado' : 'estos mercados'}?</b> No hace falta subir los demás:
+                la app toma los otros ${fmt(res.faltan.length)} mercado(s) de la versión de hoy, tal cual, y arma una versión nueva completa. La de hoy queda guardada.</p>
+            <button type="button" class="boton-tonal !h-9 !px-3 !text-xs mt-2" onclick="App.carga.completarConHoy()"><span class="material-symbols-outlined text-[16px]">library_add</span> Completar con los ${fmt(res.faltan.length)} mercados de hoy</button></div>` : ''}
         ${window.App.carga.bloqueNombresMercado(res)}
         <p class="text-[11px] text-slate-600 mb-2">${fmt((res.archivosLeidos || []).length)} archivo(s): ${fmt((res.archivosLeidos || []).reduce((s, a) => s + a.leidas, 0))} filas leídas ·
             ${fmt((res.archivosLeidos || []).reduce((s, a) => s + a.quitadas.matricula + a.quitadas.especialidad + a.quitadas.nombreEspecialidad, 0))} quitadas por los filtros.</p>
@@ -486,6 +490,35 @@ window.App.carga.guardarNombresMercado = async function() {
     }
     window.App.ui.showToast('Nombres guardados. Revisando de nuevo…');
     await window.App.carga.intentarCloseUp(c.elegidos);
+};
+
+// Corregir solo algunos mercados: los demás salen de la versión de hoy (Fase 12E)
+window.App.carga.completarConHoy = async function() {
+    const c = window.App.carga._estado.closeup;
+    const st = window.App.state;
+    if (!c) return;
+    const hoy = (st.VERSIONES || []).find(v => v.tipo === 'recetas' && v.es_vigente);
+    if (!hoy || !hoy.archivo) { window.App.ui.showToast('No hay una versión de recetas de hoy para completar.'); return; }
+    window.App.ui.showToast('Trayendo los mercados de la versión de hoy…');
+    let json;
+    try { json = await window.App.data.fetchFileAsJson(await window.App.sb.urlArchivo(hoy.archivo), 'la versión de hoy'); }
+    catch (e) { window.App.ui.showToast('No se pudo traer la versión de hoy. Revisa tu conexión.'); return; }
+    const cols = window.App.carga.COLUMNAS_RECETAS;
+    const clave = (k) => String(k).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    const filasHoy = (json || []).map(r => {
+        const porClave = new Map(Object.keys(r).map(k => [clave(k), r[k]]));
+        const vals = Object.values(r);
+        return cols.map((col, i) => porClave.has(clave(col)) ? porClave.get(clave(col)) : vals[i]);
+    });
+    const res = window.App.closeup.completarConHoy(c.res, filasHoy, window.App.data.isPhq);
+    if (!res.completado) { window.App.ui.showToast('La versión de hoy no tiene otros mercados para agregar.'); return; }
+    const v = window.App.carga.validarRecetas(res.leido);
+    if (res.errores.length) { v.errores = [...res.errores.map(m => ({ fila: '—', mensaje: m })), ...v.errores]; v.ok = false; }
+    c.res = res;
+    window.App.carga._estado.validacion = v;
+    window.App.carga.renderRevision(v, 'recetas', `CloseUp: ${fmt(res.porMercado.length - res.completado)} mercado(s) nuevos + ${fmt(res.completado)} de la versión de hoy`);
+    document.getElementById('cargaResultado').insertAdjacentHTML('afterbegin', window.App.carga.informeCloseUp(res));
+    window.App.ui.showToast(`Listo: se agregaron ${fmt(res.completado)} mercados de la versión de hoy.`);
 };
 
 window.App.carga.descargarConsolidado = function() {

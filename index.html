@@ -610,12 +610,14 @@
                     </div>
                     <div>
                         <div class="text-sm font-bold text-slate-800">Potencial <span class="font-medium text-slate-500">· volumen de recetas (los que más recetan)</span></div>
-                        <div class="umbral-barra mt-3" aria-hidden="true"><span class="seg-a" id="segPotA"></span><span class="seg-b" id="segPotB"></span><span class="seg-c" id="segPotC"></span></div>
-                        <div class="flex justify-between text-[11px] font-semibold text-slate-500 mt-1"><span>Alto (A)</span><span>Medio (B)</span><span>Bajo (C)</span></div>
-                        <label class="umbral-control mt-4"><span>A: los que suman el primer <b id="lblPotLow">33%</b></span>
-                            <input type="range" min="10" max="50" value="33" id="sliderPotLow" oninput="App.ajustes.alMoverUmbral()"></label>
-                        <label class="umbral-control mt-3"><span>B: hasta el <b id="lblPotHigh">66%</b></span>
-                            <input type="range" min="51" max="90" value="66" id="sliderPotHigh" oninput="App.ajustes.alMoverUmbral()"></label>
+                        <!-- Igual que Adopción: Bajo a la izquierda y Alto a la derecha. Los controles van de derecha a
+                             izquierda porque cuentan desde los que más recetan (el primer 33% de las recetas = A). -->
+                        <div class="umbral-barra mt-3" aria-hidden="true"><span class="seg-c" id="segPotC"></span><span class="seg-b" id="segPotB"></span><span class="seg-a" id="segPotA"></span></div>
+                        <div class="flex justify-between text-[11px] font-semibold text-slate-500 mt-1"><span>Bajo (C)</span><span>Medio (B)</span><span>Alto (A)</span></div>
+                        <label class="umbral-control mt-4"><span>A: los que más recetan, hasta sumar el <b id="lblPotLow">33%</b> de las recetas</span>
+                            <input type="range" min="10" max="50" value="33" id="sliderPotLow" dir="rtl" oninput="App.ajustes.alMoverUmbral()"></label>
+                        <label class="umbral-control mt-3"><span>B: los siguientes, hasta el <b id="lblPotHigh">66%</b> (el resto es C)</span>
+                            <input type="range" min="51" max="90" value="66" id="sliderPotHigh" dir="rtl" oninput="App.ajustes.alMoverUmbral()"></label>
                     </div>
                 </div>
                 <div id="ajVistaPrevia" class="mt-6 rounded-2xl bg-slate-50 p-4" aria-live="polite"></div>
@@ -682,6 +684,7 @@
                 </div>
                 <p class="text-[11px] text-slate-500 -mt-1 mb-2">Los dos botones usan la lista que ves: busca o elige un rol para hacerlo solo con algunos.</p>
                 <ul id="ajUsuariosLista" class="divide-y divide-slate-100"></ul>
+                <div id="ajUsuariosPaginas"></div>
             </article>
 
             <!-- Catálogos de CloseUp y filtros (Fase 12B, migración 17) -->
@@ -989,8 +992,13 @@
                 <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
                 <div class="relative flex justify-center text-[10px] font-bold uppercase tracking-widest"><span class="bg-white px-3 text-slate-400">Selección Manual</span></div>
             </div>
+            <div id="productSufijos" class="mb-4"></div>
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+                <input type="search" id="productBuscar" class="campo-mini flex-1 min-w-[140px]" placeholder="Buscar producto…" aria-label="Buscar producto" oninput="App.admin.filtrarProductos()">
+                <span id="productCuenta" class="text-xs font-bold text-blue-800 bg-blue-50 rounded-full px-3 py-1.5" aria-live="polite"></span>
+            </div>
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 max-h-64 overflow-y-auto">
-                <div id="productChecklist" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                <div id="productChecklist" class="grid grid-cols-1 sm:grid-cols-2 gap-2" onchange="App.admin.contarProductos(); App.admin.pintarSufijos()"></div>
             </div>
         </div>
         <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">

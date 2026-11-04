@@ -187,23 +187,54 @@
                 if (a && a.filas > 50 && m.filas < a.filas * 0.7) alertas.push({ tipo: 'aviso', texto: `"${m.mercado}" trae ${Math.round((1 - m.filas / a.filas) * 100)}% menos filas que la carga anterior (${m.filas} vs ${a.filas}). ¿Archivo incompleto?` });
                 if (!a) alertas.push({ tipo: 'info', texto: `Mercado nuevo respecto a la carga anterior: "${m.mercado}".` });
             });
-            const faltan = [...anterior.porMercado.keys()].filter(k => !mercados.has(k));
+            var faltan = [...anterior.porMercado.keys()].filter(k => !mercados.has(k));
             if (faltan.length) alertas.push({ tipo: 'aviso', texto: `Faltan ${faltan.length} mercado(s) que estaban en la carga anterior${faltan.length <= 3 ? ': ' + faltan.join(', ') : ''}.`, lista: faltan.sort() });
             const propiosAhora = new Set(filas.filter(f => esPropio(f[3])).map(f => f[3]));
             const propiosAusentes = [...(anterior.productosPropios || [])].filter(p => !propiosAhora.has(p));
             if (propiosAusentes.length) alertas.push({ tipo: 'aviso', texto: `${propiosAusentes.length} producto(s) de La Santé que estaban y ya no aparecen${propiosAusentes.length <= 3 ? ': ' + propiosAusentes.join(', ') : ''}.`, lista: propiosAusentes.sort() });
         }
+        // Nomenclatura: todos los mercados se llaman "Mdo + producto" (decisión del dueño, Fase 12D-2)
+        const fueraDeRegla = porMercado.map(m => m.mercado).filter(m => !/^Mdo\s+\S/.test(m));
+        if (fueraDeRegla.length && !sinNombre.length) alertas.push({ tipo: 'info', texto: `${fueraDeRegla.length} mercado(s) no siguen la regla "Mdo + producto"${fueraDeRegla.length <= 3 ? ': ' + fueraDeRegla.join(', ') : ''}. Corrígelos en "Nombres de mercado" si hace falta.`, lista: fueraDeRegla.sort() });
         if (sinCatalogo.productos.size) alertas.push({ tipo: 'aviso', texto: `${sinCatalogo.productos.size} producto(s) no están en el catálogo (quedan sin molécula, clase ni laboratorio). Agrégalos en Ajustes → Catálogos → Productos.`, lista: [...sinCatalogo.productos].sort() });
         if (sinCatalogo.especialidades.size) alertas.push({ tipo: 'aviso', texto: `${sinCatalogo.especialidades.size} código(s) de especialidad no están en el catálogo (se deja el código).`, lista: [...sinCatalogo.especialidades].sort() });
         if (sinCatalogo.laboratorios.size) alertas.push({ tipo: 'info', texto: `${sinCatalogo.laboratorios.size} laboratorio(s) sin nombre en el catálogo (se deja la abreviatura).`, lista: [...sinCatalogo.laboratorios].sort() });
 
         const edicion = [...ediciones].sort().pop() || '';
         return {
-            errores, alertas, porMercado, archivosLeidos, nombres, sinNombre, repetidas, edicion, sinCatalogo,
+            errores, alertas, porMercado, archivosLeidos, nombres, sinNombre, repetidas, edicion, sinCatalogo, faltan: typeof faltan !== 'undefined' ? faltan : [],
             leido: { encabezados: window.App.carga.COLUMNAS_RECETAS.slice(), filas: filas.map(f => f.map(v => String(v))) },
             resumen: { archivos: porMercado.length, filas: filas.length, rx: totalRx, rxPropio, share: totalRx ? rxPropio / totalRx * 100 : 0,
                 shareAntes: anterior && anterior.rx ? anterior.rxPropio / anterior.rx * 100 : null, rxAntes: anterior ? anterior.rx : null }
         };
+    };
+
+    /* ---------- Corregir solo algunos mercados (Fase 12E) ----------
+       Se suben solo los archivos corregidos y los demás mercados se toman, tal cual, de la versión de hoy.
+       filasHoy: filas de la versión de hoy en el orden de COLUMNAS_RECETAS. */
+    CU.completarConHoy = function(res, filasHoy, esPropio = () => false) {
+        const nuevos = new Set(res.porMercado.map(m => m.mercado));
+        const deHoy = new Map();
+        const agregadas = [];
+        (filasHoy || []).forEach(f => {
+            const mercado = window.App.data.mercadoDeHoy(f[2]);
+            if (!mercado || nuevos.has(mercado)) return;
+            const fila = f.map(v => String(v == null ? '' : v));
+            fila[2] = mercado;
+            agregadas.push(fila);
+            const m = deHoy.get(mercado) || { mercado, archivo: 'versión de hoy (sin cambios)', filas: 0, rx: 0, deHoy: true, crudos: [] };
+            m.filas++; m.rx += parseInt(fila[4], 10) || 0; deHoy.set(mercado, m);
+        });
+        if (!agregadas.length) return { ...res, completado: 0 };
+        const filas = res.leido.filas.concat(agregadas);
+        const rx = filas.reduce((s, f) => s + (parseInt(f[4], 10) || 0), 0);
+        const rxPropio = filas.reduce((s, f) => s + (esPropio(f[3]) ? parseInt(f[4], 10) || 0 : 0), 0);
+        const porMercado = res.porMercado.concat([...deHoy.values()]).sort((a, b) => a.mercado.localeCompare(b.mercado));
+        const alertas = res.alertas.filter(a => !/^Faltan \d+ mercado/.test(a.texto)).concat([{ tipo: 'info',
+            texto: `Se completó con ${deHoy.size} mercado(s) de la versión de hoy, sin cambios. Solo cambian los que subiste: ${[...nuevos].sort().join(', ')}.` }]);
+        return { ...res, porMercado, alertas, faltan: [], completado: deHoy.size,
+            leido: { encabezados: res.leido.encabezados, filas },
+            resumen: { ...res.resumen, archivos: porMercado.length, filas: filas.length, rx, rxPropio, share: rx ? rxPropio / rx * 100 : 0 } };
     };
 
     // Fecha de corte a partir de la edición "09/2026" → "2026-09-30"

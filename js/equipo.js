@@ -29,7 +29,6 @@
     const NIVEL = { A: 0, B: 1, C: 2 };
     const CELDAS_E = ['A_C', 'A_B', 'A_A', 'B_C', 'B_B', 'B_A', 'C_C', 'C_B', 'C_A'];
     const SIGNO_E = { A: '+', B: '', C: '-' };
-    const POR_PAGINA = 20;
 
     const esNacional = () => ['admin', 'gte_nacional'].includes(window.App.ux ? window.App.ux.rolVisible() : window.App.state.rolReal);
     // Línea del visitador (OTC o Pharmetique) según la columna "Equipo" del fichero
@@ -62,7 +61,7 @@
         const comp = window.App.comparar && window.App.comparar.estado;
         const previos = comp && comp.previos;
         const firma = [st.PROCESSED_DATA, st._versionEvaluaciones, st.ALL_EVALUATIONS, st.ALL_EVALUATIONS.length, st.FICHERO_MAP,
-            st.REPS_PERMITIDOS, previos, window.App.equipo.cruce, window.App.equipo.linea, st.EQUIPOS_OTC];
+            st.REPS_PERMITIDOS, previos, window.App.equipo.cruce, window.App.equipo.linea, st.EQUIPOS_OTC, st.REPS_FUERA_METRICAS];
         if (memoEquipo && memoEquipo.firma.every((v, i) => v === firma[i])) return memoEquipo.datos;
 
         // Línea de cada visitador (de su fichero) y filtro por línea
@@ -147,12 +146,14 @@
             share: v.rx ? v.phq / v.rx * 100 : 0,
             shareAntes: v.rxAntes ? v.phqAntes / v.rxAntes * 100 : null,
             calidad: v.comparables ? v.coinciden / v.comparables * 100 : null,
-            dias: v.ultima ? Math.floor((ahora - v.ultima) / DIA) : null
+            dias: v.ultima ? Math.floor((ahora - v.ultima) / DIA) : null,
+            fueraMetricas: !d.cuentaEnMetricas(v.nombre)
         }));
 
         // 4) Distritos (suma de sus VM)
+        // Los que no cuentan en las métricas (Fase 12E) no suman al distrito
         const distritos = new Map();
-        lista.forEach(v => {
+        lista.filter(v => !v.fueraMetricas).forEach(v => {
             let g = distritos.get(v.gerente);
             if (!g) { g = { nombre: v.gerente, vms: 0, medicos: new Set(), hechos: new Set(), encuestas: 0, semana: 0, rx: 0, phq: 0, gap: 0, coinciden: 0, comparables: 0, terminaron: 0, inactivos: 0 }; distritos.set(v.gerente, g); }
             // Un médico que atienden dos visitadores del distrito cuenta una sola vez
@@ -205,7 +206,9 @@
             : `Tu distrito · ${fmtE(e.vms.length)} visitadores`);
 
         // Resumen
-        const vms = delDistrito(e.vms);
+        const todosVms = delDistrito(e.vms);
+        const vms = todosVms.filter(v => !v.fueraMetricas);
+        const fueraM = todosVms.length - vms.length;
         // Médicos distintos (los compartidos entre visitadores cuentan una vez)
         const unicos = new Set(), hechos = new Set();
         vms.forEach(v => { v.fichero.forEach(m => unicos.add(m)); v.evaluados.forEach(m => hechos.add(m)); });
@@ -217,7 +220,7 @@
         const kpi = (icono, titulo, valor, extra, clase) => `<div class="kpi-card ${clase} p-4"><p class="text-xs font-semibold flex items-center gap-1.5 opacity-90"><span class="material-symbols-outlined text-[18px]">${icono}</span>${titulo}</p>
             <p class="text-2xl font-display font-extrabold mt-1">${valor}</p><p class="text-[11px] mt-0.5 opacity-80">${extra}</p></div>`;
         document.getElementById('equipoResumen').innerHTML = [
-            kpi('groups', 'Visitadores', fmtE(vms.length), [nacional && window.App.equipo.distrito === 'todos' ? `${fmtE(e.distritos.length)} distritos` : '', terminaron ? `${fmtE(terminaron)} terminaron` : ''].filter(Boolean).join(' · '), 'bg-white border border-slate-200 text-slate-800'),
+            kpi('groups', 'Visitadores', fmtE(vms.length), [nacional && window.App.equipo.distrito === 'todos' ? `${fmtE(e.distritos.length)} distritos` : '', terminaron ? `${fmtE(terminaron)} terminaron` : '', fueraM ? `${fmtE(fueraM)} no cuentan` : ''].filter(Boolean).join(' · '), 'bg-white border border-slate-200 text-slate-800'),
             kpi('stethoscope', 'Médicos en fichero', fmtE(fichero), 'de sus visitadores', 'bg-white border border-slate-200 text-slate-800'),
             kpi('task_alt', 'Médicos evaluados', fmtE(evaluados), `cobertura ${fmtE(fichero ? evaluados / fichero * 100 : 0, 1)}%`, 'bg-blue-50 text-blue-900'),
             kpi('assignment', 'Evaluaciones', fmtE(encuestas), `${fmtE(semana)} esta semana`, 'bg-green-50 text-green-900'),
@@ -235,7 +238,7 @@
 
         // Pestañas
         const nombres = { distritos: ['map', 'Distritos'], visitadores: ['person', 'Visitadores'], prioridades: ['priority_high', 'Prioridades'], alertas: ['warning', 'Alertas'] };
-        const cuenta = { distritos: delDistrito(e.distritos, 'nombre').length, visitadores: vms.length, prioridades: window.App.equipo.prioridades(e).length, alertas: delDistrito(e.alertas).length };
+        const cuenta = { distritos: delDistrito(e.distritos, 'nombre').length, visitadores: todosVms.length, prioridades: window.App.equipo.prioridades(e).length, alertas: delDistrito(e.alertas).length };
         document.getElementById('equipoPestanas').innerHTML = vistas.map(v => `<button type="button" role="tab" data-vista="${v}" class="chip" aria-pressed="${window.App.equipo.vista === v}" aria-selected="${window.App.equipo.vista === v}" onclick="App.equipo.verVista('${v}')">
             ${window.App.equipo.vista === v ? '' : `<span class="material-symbols-outlined text-[18px]">${nombres[v][0]}</span>`}${nombres[v][1]}<span class="cuenta">${fmtE(cuenta[v])}</span></button>`).join('');
 
@@ -270,13 +273,26 @@
         window.App.equipo.cruce = v;
         window.App.equipo.render();
     };
-    window.App.equipo.verMas = function(tipo) {
-        window.App.equipo.mostrar[tipo] = (window.App.equipo.mostrar[tipo] || POR_PAGINA) + POR_PAGINA;
-        window.App.equipo.render();
+    // Listas largas: de 10 en 10, con Anterior / Siguiente (Fase 12E). "mostrar" guarda la página de cada lista.
+    const paginaDe = (tipo, lista) => window.App.ui.paginar(lista, window.App.equipo.mostrar[tipo] || 1);
+    const controles = (tipo, pag, total) => window.App.ui.paginacion({ pagina: pag.pagina, paginas: pag.paginas, total, accion: `App.equipo.pagina_${tipo}` });
+    ['visitadores', 'prioridades', 'alertas'].forEach(tipo => {
+        window.App.equipo['pagina_' + tipo] = function(p) {
+            window.App.equipo.mostrar[tipo] = p;
+            window.App.equipo.render();
+            const zona = document.getElementById('equipoPestanas');
+            if (zona && zona.scrollIntoView) zona.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        };
+    });
+    window.App.equipo.verMas = function(tipo) { window.App.equipo['pagina_' + tipo]((window.App.equipo.mostrar[tipo] || 1) + 1); };
+    // Lleva a la página donde está un visitador (desde la campanita)
+    window.App.equipo.irAVisitador = function(nombre) {
+        const e = window.App.equipo.estadisticas();
+        const orden = ORDENES[window.App.equipo.orden] ? ORDENES[window.App.equipo.orden][1] : ORDENES.cobertura[1];
+        const lista = delDistrito(e.vms).slice().sort((a, b) => (a.fueraMetricas ? 1 : 0) - (b.fueraMetricas ? 1 : 0) || orden(a, b));
+        const i = lista.findIndex(v => v.nombre === nombre);
+        if (i >= 0) { window.App.equipo.mostrar.visitadores = Math.floor(i / window.App.ui.POR_PAGINA) + 1; window.App.equipo.render(); }
     };
-    const cuantos = (tipo) => window.App.equipo.mostrar[tipo] || POR_PAGINA;
-    const botonMas = (tipo, total) => total > cuantos(tipo)
-        ? `<button class="w-full mt-3 h-11 rounded-full text-sm font-bold text-blue-700 border border-slate-300" onclick="App.equipo.verMas('${tipo}')">Ver ${POR_PAGINA} más (quedan ${fmtE(total - cuantos(tipo))})</button>` : '';
 
     // Barra de avance con color según cuánto falta
     const colorAvance = (pct) => pct >= 100 ? 'bg-green-600' : (pct >= 67 ? 'bg-green-500' : (pct >= 34 ? 'bg-amber-400' : 'bg-rose-400'));
@@ -339,7 +355,9 @@
     function renderVisitadores(e) {
         const st = window.App.state;
         if (!ORDENES[window.App.equipo.orden]) window.App.equipo.orden = 'cobertura';
-        const lista = delDistrito(e.vms).slice().sort(ORDENES[window.App.equipo.orden][1]);
+        // Los que no cuentan en las métricas van al final, marcados
+        const ordenar = (a, b) => (a.fueraMetricas ? 1 : 0) - (b.fueraMetricas ? 1 : 0) || ORDENES[window.App.equipo.orden][1](a, b);
+        const lista = delDistrito(e.vms).slice().sort(ordenar);
         const orden = `<p class="text-sm text-slate-600 bg-blue-50 rounded-2xl p-3 mb-3">Cada visitador con su <b>cobertura</b>: cuántos médicos de su fichero ya evaluó. Toca uno para ver su detalle y sus últimas evaluaciones.</p>
             <div class="flex flex-wrap items-center gap-2 mb-3"><span class="text-xs font-semibold text-slate-500">Ordenar por</span>${Object.entries(ORDENES).map(([k, [t]]) =>
             `<button type="button" class="chip !h-8" aria-pressed="${window.App.equipo.orden === k}" onclick="App.equipo.ordenar('${k}')">${t}</button>`).join('')}
@@ -349,7 +367,9 @@
                     ${[['todos', 'Todas'], ['validos', 'Sin cruce errado'], ['cruce', 'Solo cruce errado']].map(([v, t]) => `<option value="${v}" ${window.App.equipo.cruce === v ? 'selected' : ''}>${t}</option>`).join('')}
                 </select></label></div>`;
         if (!lista.length) return orden + vacio('No hay visitadores con estos filtros.');
-        const tarjetas = lista.slice(0, cuantos('visitadores')).map((v, i) => {
+        const pag = paginaDe('visitadores', lista);
+        const tarjetas = pag.items.map((v, j) => {
+            const i = pag.desde + j;
             const iniciales = v.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('');
             const completo = v.fichero.size && v.pct >= 100;
             return `<article class="bg-white rounded-3xl border border-slate-200 overflow-hidden" id="vm_${i}">
@@ -368,12 +388,13 @@
                         ${pastillaUltima(v.dias)}
                         ${pastillaCalidad(v.calidad, v.comparables)}
                         ${v.linea && esNacional() ? pastilla('category', v.linea) : ''}
+                        ${v.fueraMetricas ? pastilla('query_stats', 'No cuenta en las métricas', 'bg-slate-200 text-slate-700', 'Tiene acceso, pero no suma en los números del distrito ni nacionales') : ''}
                     </div>
                 </button>
                 <div class="hidden border-t border-slate-100 p-4" data-detalle></div>
             </article>`;
         }).join('');
-        return orden + `<div class="grid lg:grid-cols-2 gap-3 items-start">${tarjetas}</div>` + botonMas('visitadores', lista.length);
+        return orden + `<div class="grid lg:grid-cols-2 gap-3 items-start">${tarjetas}</div>` + controles('visitadores', pag, lista.length);
     }
 
     window.App.equipo.abrirVm = function(i, nombre) {
@@ -487,14 +508,15 @@
         const lista = window.App.equipo.prioridades(e);
         if (!lista.length) return vacio('¡Todos los médicos con recetas ya están evaluados! 🎉');
         const ayuda = `<p class="text-sm text-slate-600 bg-blue-50 rounded-2xl p-3 mb-3">Médicos <b>sin evaluar</b> ordenados por sus recetas: los primeros son los que más mueven el mercado.</p>`;
-        return ayuda + `<ul class="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">${lista.slice(0, cuantos('prioridades')).map((doc, i) => `
+        const pagP = paginaDe('prioridades', lista);
+        return ayuda + `<ul class="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">${pagP.items.map((doc, j) => `
             <li><button type="button" class="w-full text-left flex items-center gap-3 p-3 sm:p-4" onclick="App.ficha.abrir(${argE(doc.id)})">
-                <span class="w-8 text-center text-xs font-bold text-slate-500 shrink-0">${i + 1}</span>
+                <span class="w-8 text-center text-xs font-bold text-slate-500 shrink-0">${pagP.desde + j + 1}</span>
                 <span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(doc.closeupLabel)} !h-10 !min-w-[44px] !rounded-xl text-sm shrink-0">${escE(doc.closeupLabel)}</span>
                 <span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-slate-800 truncate">${escE(nomE(doc.name))}</span>
                     <span class="block text-[11px] text-slate-500 truncate">${escE(repsDeFilas(doc.ficheroData).map(nomE).join(', '))} · ${escE(doc.spec || '')}</span></span>
                 <span class="text-right shrink-0"><span class="block text-sm font-bold text-slate-800">${fmtE(doc.totalRx)} Rx</span><span class="block text-[11px] text-slate-500">La Santé ${fmtE(doc.share, 1)}%</span></span>
-            </button></li>`).join('')}</ul>` + botonMas('prioridades', lista.length);
+            </button></li>`).join('')}</ul>` + controles('prioridades', pagP, lista.length);
     }
 
     /* ---------- Alertas ---------- */
@@ -510,7 +532,8 @@
                 <button class="chip" aria-pressed="${filtro === 'graves'}" onclick="App.equipo.filtroAlertas='graves'; App.equipo.mostrar={}; App.equipo.render()">Muy distintas (A ↔ C) <span class="cuenta">${fmtE(graves)}</span></button>
             </div>`;
         if (!lista.length) return ayuda + vacio('No hay diferencias entre las evaluaciones y CloseUp. ✅');
-        return ayuda + `<ul class="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">${lista.slice(0, cuantos('alertas')).map(a => `
+        const pagA = paginaDe('alertas', lista);
+        return ayuda + `<ul class="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">${pagA.items.map(a => `
             <li><button type="button" class="w-full text-left flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4" onclick="App.ficha.abrir(${argE(a.doc.id)})">
                 <span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-slate-800 truncate">${escE(nomE(a.doc.name))}</span>
                     <span class="block text-[11px] text-slate-500 truncate">Evaluado por <b>${escE(nomE(a.vm))}</b> en ${escE(a.ev.mercado || 'General')}${esNacional() ? ' · ' + escE(a.gerente) : ''}</span></span>
@@ -520,7 +543,7 @@
                     <span class="flex flex-col items-center"><span class="text-[10px] text-slate-500">Visitador</span><span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(a.ev.cuadrante)}">${escE(a.ev.cuadrante)}</span></span>
                     ${a.distancia === 2 ? '<span class="rounded-full bg-rose-50 text-rose-800 px-2 py-0.5 text-[10px] font-bold">Muy distinta</span>' : ''}
                 </span>
-            </button></li>`).join('')}</ul>` + botonMas('alertas', lista.length);
+            </button></li>`).join('')}</ul>` + controles('alertas', pagA, lista.length);
     }
 
     function vacio(texto) {

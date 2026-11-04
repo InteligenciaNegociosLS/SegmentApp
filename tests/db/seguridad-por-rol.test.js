@@ -578,3 +578,33 @@ describe('Renombrar mercados (migración 19)', () => {
         expect(await falla(U.admin, 'select public.admin_deshacer_renombre($1)', [primero])).toBe(true);
     });
 });
+
+describe('Espacio usado (migración 20)', () => {
+    it('el admin ve el tamaño de la base, de los archivos y de las tablas; nadie más', async () => {
+        await db.query(`insert into storage.buckets (id, name) values ('espacio', 'espacio') on conflict do nothing`);
+        await db.query(`insert into storage.objects (bucket_id, name, metadata) values ('espacio', 'a.gz', '{"size": 1000}'), ('espacio', 'b.gz', '{"size": 2500}')`);
+        const e = (await filas(U.admin, 'select public.admin_espacio() as e'))[0].e;
+        expect(e.base_bytes).toBeGreaterThan(0);
+        expect(e.archivos_bytes).toBeGreaterThanOrEqual(3500);
+        expect(e.tablas.length).toBeGreaterThan(0);
+        expect(e.tablas[0]).toHaveProperty('bytes');
+        expect(e.versiones.some(v => v.tipo === 'recetas')).toBe(true);
+        expect(await falla(U.gd1, 'select public.admin_espacio()')).toBe(true);
+        expect(await falla(U.vm1, 'select public.admin_espacio()')).toBe(true);
+    });
+});
+
+describe('Visitadores fuera de métricas (migración 21)', () => {
+    it('el admin marca a un visitador como "no cuenta"; sigue activo; queda en la bitácora; nadie más puede', async () => {
+        const r = (await filas(U.admin, 'select public.admin_metricas_visitador($1, false) as r', ['neivis parra']))[0].r;
+        expect(r).toEqual({ ok: true, visitador: 'NEIVIS PARRA', en_metricas: false });
+        expect((await db.query(`select activo, en_metricas from public.visitadores where nombre_sector = 'NEIVIS PARRA'`)).rows[0]).toEqual({ activo: true, en_metricas: false });
+        expect((await filas(U.admin, `select clave from public.bitacora where accion = 'metricas_visitador'`)).map(x => x.clave)).toContain('NEIVIS PARRA');
+        // El GD lo puede leer (para no contarlo) pero no cambiarlo
+        expect((await filas(U.gd1, `select nombre_sector from public.visitadores where en_metricas = false`)).map(x => x.nombre_sector)).toContain('NEIVIS PARRA');
+        expect(await falla(U.gd1, 'select public.admin_metricas_visitador($1, true)', ['NEIVIS PARRA'])).toBe(true);
+        expect(await falla(U.admin, 'select public.admin_metricas_visitador($1, true)', ['NO EXISTE'])).toBe(true);
+        await como(db, U.admin, 'select public.admin_metricas_visitador($1, true)', ['NEIVIS PARRA']);
+        expect((await db.query(`select en_metricas from public.visitadores where nombre_sector = 'NEIVIS PARRA'`)).rows[0].en_metricas).toBe(true);
+    });
+});

@@ -55,6 +55,7 @@ export const BASE_SUPABASE = `
         bucket_id text references storage.buckets (id),
         name text not null,
         owner uuid default auth.uid(),
+        metadata jsonb,
         unique (bucket_id, name)
     );
     alter table storage.objects enable row level security;
