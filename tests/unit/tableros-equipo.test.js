@@ -197,3 +197,14 @@ describe('Fase 11b: permisos y pantalla', () => {
         expect(pct('barRest')).toBeGreaterThanOrEqual(0);
     });
 });
+
+describe('Fase 12D-2: la barra de navegación responde al instante', () => {
+    it('al tocar, el botón se marca enseguida y la pantalla cambia en el siguiente cuadro', async () => {
+        await admin();
+        App.ux.irA('inicio', { historial: false });
+        App.ux.irA('equipo', { tocado: true });
+        expect(document.querySelector('#navInferior [data-seccion="equipo"], #navRiel [data-seccion="equipo"]').getAttribute('aria-current')).toBe('true');
+        await new Promise(r => setTimeout(r, 60));
+        expect(App.state.PANTALLA).toBe('equipo');
+    });
+});

@@ -513,3 +513,68 @@ describe('Accesos y catálogos (migración 18)', () => {
         expect(await falla(U.gd1, 'select public.admin_guardar_clases($1)', ['[]'])).toBe(true);
     });
 });
+
+describe('Renombrar mercados (migración 19)', () => {
+    const renombrar = (quien, cambios) => como(db, quien, 'select public.admin_renombrar_mercados($1) as r', [JSON.stringify(cambios)]);
+    const enUso = async () => (await filas(U.admin, 'select public.admin_mercados_en_uso() as m'))[0].m;
+    const tabla = async () => (await db.query(`select valor from public.configuracion where clave = 'nombres_mercado'`)).rows[0]?.valor;
+    let sOtra;
+
+    beforeAll(async () => {
+        await db.query(`insert into public.configuracion (clave, valor) values ('nombres_mercado', '{"DESLER": "DESLER MERCADO"}')
+                        on conflict (clave) do update set valor = excluded.valor`);
+        sOtra = (await db.query(`insert into public.data_snapshots (nombre, tipo, fecha, estado) values ('Datos marzo','recetas','2026-03-31','borrador') returning id`)).rows[0].id;
+        const otro = (await db.query(`insert into public.cat_mercados (nombre) values ('OTRO MDO') returning id`)).rows[0].id;
+        const med = (await db.query(`select id from public.cat_medicos where matricula = '100'`)).rows[0].id;
+        await db.query(`insert into public.recetas (snapshot_id, fila, medico_id, mercado_id, producto_id, rx) values ($1, 1, $2, $3, 1, 5)`, [sOtra, med, otro]);
+        await db.query(`insert into public.evaluaciones (visitador_id, matricula, mercado, cuadrante) values ($1, '100', 'OTRO MDO', 'C'), ($2, '200', 'OTRO MDO', 'A')`, [ids.v1, ids.v2]);
+    });
+
+    it('lista los mercados con sus versiones y evaluaciones (solo el admin)', async () => {
+        const m = await enUso();
+        const activas = (await db.query(`select count(*)::int as n from public.evaluaciones where mercado = 'DESLER MERCADO' and eliminado_en is null`)).rows[0].n;
+        expect(m.find(x => x.nombre === 'DESLER MERCADO')).toEqual({ nombre: 'DESLER MERCADO', versiones: 2, en_vigente: true, evaluaciones: activas });
+        expect(m.find(x => x.nombre === 'OTRO MDO')).toMatchObject({ versiones: 1, en_vigente: false, evaluaciones: 2 });
+        expect(await falla(U.gd1, 'select public.admin_mercados_en_uso()')).toBe(true);
+    });
+
+    it('renombra en todas las versiones y en las evaluaciones, con historial, alias y bitácora', async () => {
+        const historialAntes = (await db.query('select count(*)::int as n from public.evaluaciones_historial')).rows[0].n;
+        const todas = (await db.query(`select count(*)::int as n from public.evaluaciones where mercado = 'DESLER MERCADO'`)).rows[0].n;
+        const r = (await renombrar(U.admin, [{ viejo: 'DESLER MERCADO', nuevo: ' Mdo  Desler ' }])).rows[0].r;
+        expect(r.resultados[0]).toMatchObject({ viejo: 'DESLER MERCADO', nuevo: 'Mdo Desler', fusion: false, evaluaciones: todas, sin_cambiar: 0 });
+        expect((await db.query(`select nombre from public.cat_mercados where id = 1`)).rows[0].nombre).toBe('Mdo Desler');
+        expect((await db.query(`select count(*)::int as n from public.evaluaciones where mercado = 'Mdo Desler'`)).rows[0].n).toBe(todas);
+        expect((await db.query('select count(*)::int as n from public.evaluaciones_historial')).rows[0].n).toBe(historialAntes + todas);
+        expect(await tabla()).toEqual({ DESLER: 'Mdo Desler', 'DESLER MERCADO': 'Mdo Desler' });
+        expect((await filas(U.admin, `select accion from public.bitacora where accion = 'renombrar_mercado'`))).toHaveLength(1);
+        expect(await falla(U.vm1, 'select public.admin_renombrar_mercados($1)', [JSON.stringify([{ viejo: 'Mdo Desler', nuevo: 'X' }])])).toBe(true);
+        expect(await falla(U.admin, 'select public.admin_renombrar_mercados($1)', [JSON.stringify([{ viejo: 'NO EXISTE', nuevo: 'X' }])])).toBe(true);
+    });
+
+    it('si el nombre nuevo ya existe, junta las versiones viejas con él (sin pisar evaluaciones)', async () => {
+        const r = (await renombrar(U.admin, [{ viejo: 'OTRO MDO', nuevo: 'Mdo Desler' }])).rows[0].r;
+        expect(r.resultados[0]).toMatchObject({ fusion: true, evaluaciones: 1, sin_cambiar: 1 });
+        expect((await db.query(`select mercado_id from public.recetas where snapshot_id = $1`, [sOtra])).rows[0].mercado_id).toBe(1);
+        expect((await db.query(`select count(*)::int as n from public.cat_mercados where nombre = 'OTRO MDO'`)).rows[0].n).toBe(1);   // no se borra
+        // Dos mercados en la misma versión no se juntan (y no cambia nada)
+        await db.query(`insert into public.cat_mercados (nombre) values ('TERCERO')`);
+        const t = (await db.query(`select id from public.cat_mercados where nombre = 'TERCERO'`)).rows[0].id;
+        await db.query(`insert into public.recetas (snapshot_id, fila, medico_id, mercado_id, producto_id, rx) select $1, 99, medico_id, $2, 1, 1 from public.recetas where snapshot_id = $1 limit 1`, [ids.sr1, t]);
+        expect(await falla(U.admin, 'select public.admin_renombrar_mercados($1)', [JSON.stringify([{ viejo: 'TERCERO', nuevo: 'Mdo Desler' }])])).toBe(true);
+        expect((await db.query(`select count(*)::int as n from public.recetas where mercado_id = $1`, [t])).rows[0].n).toBe(1);
+    });
+
+    it('deshacer devuelve todo como estaba (primero el más reciente)', async () => {
+        const [primero, segundo] = (await db.query('select id from public.mercados_renombres order by id')).rows.map(x => x.id);
+        expect(await falla(U.gd1, 'select public.admin_deshacer_renombre($1)', [segundo])).toBe(true);
+        await como(db, U.admin, 'select public.admin_deshacer_renombre($1)', [segundo]);
+        expect((await db.query(`select mk.nombre from public.recetas r join public.cat_mercados mk on mk.id = r.mercado_id where r.snapshot_id = $1`, [sOtra])).rows[0].nombre).toBe('OTRO MDO');
+        expect((await db.query(`select count(*)::int as n from public.evaluaciones where mercado = 'OTRO MDO' and eliminado_en is null`)).rows[0].n).toBe(2);
+        await como(db, U.admin, 'select public.admin_deshacer_renombre($1)', [primero]);
+        expect((await db.query(`select nombre from public.cat_mercados where id = 1`)).rows[0].nombre).toBe('DESLER MERCADO');
+        expect((await db.query(`select count(*)::int as n from public.evaluaciones where mercado = 'Mdo Desler'`)).rows[0].n).toBe(0);
+        expect(await tabla()).toEqual({ DESLER: 'DESLER MERCADO' });
+        expect(await falla(U.admin, 'select public.admin_deshacer_renombre($1)', [primero])).toBe(true);
+    });
+});

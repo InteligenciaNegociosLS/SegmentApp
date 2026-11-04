@@ -543,3 +543,25 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 - A Supabase llega **una sola versión** (igual que antes): no se sobrecarga.
 - Los archivos originales se guardan comprimidos (`closeup/<versión>/…`,
   registrados en `catalogo_versiones` con tipo `closeup`). Sin migración nueva.
+
+## Fase 12D-2 (04/11/2026)
+- **Descarga en tandas:** el mercado sale de la columna "Mercado"; tabla de
+  **nombres de mercado** (`configuracion.nombres_mercado`, se crea sola) con
+  sugerencias y confirmación obligatoria de los nuevos.
+- **Matriz en el teléfono:** sin barra de porcentaje; número arriba de "méd."
+  para que quepan 5 cifras.
+- **Barra de navegación:** el botón se marca al instante al tocarlo; la
+  pantalla cambia en el siguiente cuadro. Sin la espera del doble toque.
+- **iPad (ERR_SSL_PROTOCOL_ERROR):** no es de la app (funciona en otros
+  equipos); pasos para revisar la red del iPad en la respuesta al dueño.
+- **Nomenclatura de mercados (decisión del dueño):** todos se llaman
+  **"Mdo " + producto** ("ESOZ MERCADO A02B2" → "Mdo Esoz", "FLUDIL SOLO" →
+  "Mdo Fludil", "Bumetin Retard Mercado 2" → "Mdo Bumetin"). La app lo
+  sugiere (quita MERCADO, MDO, SOLO, números y códigos ATC) y el dueño revisa;
+  los casos puntuales los ajusta a mano. El nombre se guarda **tal como se
+  escribe** (ya no se pasa a mayúsculas); "MDO ESOZ" y "Mdo Esoz" se tratan
+  como el mismo.
+- **Renombrar los ya cargados** (migración 19): Ajustes → Catálogos →
+  Renombrar mercados. Cambia el nombre en todas las versiones y en las
+  evaluaciones (su versión anterior queda en el historial), actualiza la tabla
+  de nombres y deja el nombre viejo como alias. Cada cambio se puede deshacer.

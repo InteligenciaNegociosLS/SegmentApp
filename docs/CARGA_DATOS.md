@@ -155,3 +155,26 @@ Antes: descargar los mercados → Power Query (cruce con las tablas) → exporta
 
 Si eliges un solo archivo ya consolidado (con la columna Px_Product), la app
 lo carga como antes.
+
+## Descarga en tandas y nombres de mercado (Fase 12D-2)
+- El portal permite bajar **varios mercados en un solo archivo**. La app
+  separa los mercados por la columna **"Mercado"** del archivo (ya no por el
+  nombre del archivo). Puedes subir las 2 tandas juntas.
+- El portal escribe los mercados a su manera ("Esoz", "Bumetin Retard Mercado
+  2"). La **tabla de nombres de mercado** traduce cada uno al nombre que usa la
+  app, con la regla **Mdo + producto** ("Esoz" → "Mdo Esoz", "FLUDIL SOLO" →
+  "Mdo Fludil", "Bumetin Retard Mercado 2" → "Mdo Bumetin"):
+  - La primera vez, al revisar, la app muestra **"Nombres de mercado · N
+    nuevos por confirmar"** con la sugerencia ya escrita. Revisa, corrige si
+    hace falta y **Guardar nombres y revisar de nuevo**. Hasta confirmarlos no
+    deja subir. Se guarda tal como lo escribes (mayúsculas y minúsculas).
+  - Las siguientes veces se ponen solos. Se pueden corregir en **Ajustes →
+    Catálogos → Nombres de mercado**.
+- **Mercados que ya estaban cargados con el nombre viejo** ("ESOZ MERCADO
+  A02B2"): **Ajustes → Catálogos → Renombrar mercados ya cargados**. La app
+  sugiere el nombre nuevo de cada uno; marca los que quieras y **Renombrar los
+  marcados**. Cambia en todas las versiones y en las evaluaciones de los
+  visitadores (para que sigan enlazadas). En "Cambios hechos" cada uno tiene
+  **Deshacer**. Hazlo **antes** de la próxima carga de CloseUp.
+- Si un mismo mercado viene en las dos tandas, la app lo avisa para no sumarlo
+  dos veces.

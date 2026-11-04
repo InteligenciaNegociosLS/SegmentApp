@@ -110,6 +110,8 @@
             transform var(--md-motion-short) var(--md-ease-standard),
             opacity var(--md-motion-short) var(--md-ease-standard);
     }
+    /* Toques más rápidos en el teléfono: sin la espera del doble toque */
+    button, a[href], [role="button"], label.cursor-pointer { touch-action: manipulation; }
     @media (hover: hover) {
         .md-estado:hover,
         button:not(:disabled):hover,
@@ -459,6 +461,10 @@
     #navInferior { padding-bottom: env(safe-area-inset-bottom); }
     .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0 14px; font-size: 12px; font-weight: 600; color: var(--md-on-surface-variant); position: relative; }
     .nav-item .nav-icono { width: 56px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: background-color var(--md-motion-short) var(--md-ease-standard); }
+    /* Respuesta inmediata al tocar (sin la espera de 300 ms del doble toque) */
+    .nav-item { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .nav-item:active .nav-icono { background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); transform: scale(0.96); transition-duration: 60ms; }
+    .nav-item[aria-current="true"]:active .nav-icono { background: var(--md-primary-container); }
     .nav-item[aria-current="true"] { color: var(--md-on-surface); }
     .nav-item[aria-current="true"] .nav-icono { background: var(--md-primary-container); color: var(--md-on-primary-container); }
     .nav-insignia { position: absolute; top: 6px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9999px; background: var(--md-error); color: rgb(var(--c-white)); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
@@ -512,7 +518,11 @@
         .matrix-header-col { font-size: 10px; letter-spacing: 0.02em; padding-bottom: 4px; }
         .matrix-header-col .material-symbols-outlined { display: none; }
         .matrix-header-row { font-size: 9px; gap: 2px; }
-        .celda-cuenta { font-size: 0.95rem; }
+        /* Fase 12D-2: sin barra y con el número arriba de "méd.", para que quepan 5 cifras (24.214) */
+        .matrix-cell .celda-barra { display: none; }
+        .celda-cuenta { font-size: 0.95rem; flex-direction: column; gap: 0; line-height: 1.1; }
+        .celda-cuenta .material-symbols-outlined { display: none; }
+        .celda-cuenta > span:last-child { font-size: 10px; }
     }
 }
 

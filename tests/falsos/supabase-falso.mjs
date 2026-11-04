@@ -48,6 +48,8 @@ export function datosDePrueba() {
         ],
         // Catálogos de CloseUp (migración 17)
         catalogo_especialidades: [], catalogo_laboratorios: [], catalogo_productos: [], catalogo_clases: [], catalogo_versiones: [],
+        // Renombrar mercados (migración 19): { nombre, versiones, en_vigente, evaluaciones }
+        mercados: [], mercados_renombres: [],
         // Contenido de cada versión (para datos_equipo): { id: { encabezados, filas } }
         fuentes: {},
         // O el resultado ya calculado: { 'recetas|fichero|usuario': {...} }
@@ -304,6 +306,37 @@ export function createClient(url, clave, opciones = {}) {
             return { data: { ok: true, total: p_filas.length, nuevas, cambiadas, iguales: p_filas.length - nuevas - cambiadas }, error: null };
         },
         admin_guardar_clases({ p_filas }) { return rpcs.admin_guardar_catalogo({ p_tipo: 'clases', p_filas }); },
+        admin_mercados_en_uso() {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            return { data: bd.mercados.map(m => ({ ...m, evaluaciones: bd.evaluaciones.filter(e => e.mercado === m.nombre).length || m.evaluaciones || 0 })), error: null };
+        },
+        admin_renombrar_mercados({ p_cambios }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const resultados = p_cambios.map(({ viejo, nuevo }) => {
+                const m = bd.mercados.find(x => x.nombre === viejo);
+                if (m) m.nombre = nuevo;
+                const evals = bd.evaluaciones.filter(e => e.mercado === viejo);
+                evals.forEach(e => { e.mercado = nuevo; });
+                const t = bd.configuracion.find(c => c.clave === 'nombres_mercado') || (bd.configuracion.push({ clave: 'nombres_mercado', valor: {} }), bd.configuracion.at(-1));
+                Object.keys(t.valor).forEach(k => { if (t.valor[k] === viejo) t.valor[k] = nuevo; });
+                if (!(viejo.toUpperCase() in t.valor)) t.valor[viejo.toUpperCase()] = nuevo;
+                bd.mercados_renombres.push({ id: bd.mercados_renombres.length + 1, viejo, nuevo, fusion: false, evaluaciones: evals.map(e => e.id), sin_cambiar: 0, hecho_en: new Date().toISOString(), deshecho_en: null });
+                return { viejo, nuevo, fusion: false, evaluaciones: evals.length, sin_cambiar: 0 };
+            });
+            registrar(`rpc:admin_renombrar_mercados:${p_cambios.length}`);
+            return { data: { ok: true, resultados }, error: null };
+        },
+        admin_deshacer_renombre({ p_id }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const r = bd.mercados_renombres.find(x => x.id === p_id && !x.deshecho_en);
+            if (!r) return { data: null, error: { message: 'Ese cambio no existe o ya se deshizo.' } };
+            const m = bd.mercados.find(x => x.nombre === r.nuevo);
+            if (m) m.nombre = r.viejo;
+            bd.evaluaciones.filter(e => r.evaluaciones.includes(e.id)).forEach(e => { e.mercado = r.viejo; });
+            r.deshecho_en = new Date().toISOString();
+            registrar('rpc:admin_deshacer_renombre');
+            return { data: { ok: true }, error: null };
+        },
         admin_pendientes_acceso() {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
             const conAcceso = (id) => { const p = bd.perfiles.find(x => x.id === id); return !!(p && p.activo); };
