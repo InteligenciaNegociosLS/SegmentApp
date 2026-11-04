@@ -485,6 +485,32 @@ window.App.sb.crearUsuario = async function({ correo, nombre, rol, clave, visita
     if (error) throw fallo(error, 'Crear acceso');
     return data;
 };
+// Renombrar mercados ya cargados en todas las versiones y evaluaciones (migración 19)
+window.App.sb.mercadosEnUso = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_mercados_en_uso');
+    if (error) throw fallo(error, 'Mercados en uso');
+    return data || [];
+};
+window.App.sb.renombrarMercados = async function(cambios) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_renombrar_mercados', { p_cambios: cambios });
+    if (error) throw fallo(error, 'Renombrar mercados');
+    return data;
+};
+window.App.sb.renombresMercado = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.from('mercados_renombres').select('id, viejo, nuevo, fusion, evaluaciones, sin_cambiar, hecho_en, deshecho_en')
+        .order('id', { ascending: false }).limit(100);
+    if (error) throw fallo(error, 'Renombres de mercado');
+    return data || [];
+};
+window.App.sb.deshacerRenombre = async function(id) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_deshacer_renombre', { p_id: id });
+    if (error) throw fallo(error, 'Deshacer renombre');
+    return data;
+};
 window.App.sb.pendientesAcceso = async function() {
     const sb = await window.App.sb.cliente();
     const { data, error } = await sb.rpc('admin_pendientes_acceso');

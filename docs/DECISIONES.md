@@ -554,3 +554,14 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   pantalla cambia en el siguiente cuadro. Sin la espera del doble toque.
 - **iPad (ERR_SSL_PROTOCOL_ERROR):** no es de la app (funciona en otros
   equipos); pasos para revisar la red del iPad en la respuesta al dueño.
+- **Nomenclatura de mercados (decisión del dueño):** todos se llaman
+  **"Mdo " + producto** ("ESOZ MERCADO A02B2" → "Mdo Esoz", "FLUDIL SOLO" →
+  "Mdo Fludil", "Bumetin Retard Mercado 2" → "Mdo Bumetin"). La app lo
+  sugiere (quita MERCADO, MDO, SOLO, números y códigos ATC) y el dueño revisa;
+  los casos puntuales los ajusta a mano. El nombre se guarda **tal como se
+  escribe** (ya no se pasa a mayúsculas); "MDO ESOZ" y "Mdo Esoz" se tratan
+  como el mismo.
+- **Renombrar los ya cargados** (migración 19): Ajustes → Catálogos →
+  Renombrar mercados. Cambia el nombre en todas las versiones y en las
+  evaluaciones (su versión anterior queda en el historial), actualiza la tabla
+  de nombres y deja el nombre viejo como alias. Cada cambio se puede deshacer.

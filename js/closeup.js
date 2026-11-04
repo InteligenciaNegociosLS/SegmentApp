@@ -35,22 +35,30 @@
     CU.mercadoDeArchivo = (nombre) => nombreSinExtension(nombre).toUpperCase();
     // Nombre del mercado como viene en el portal ("Esoz", "Bumetin Retard Mercado 2") → clave para la tabla de nombres
     CU.claveMercado = (crudo) => limpio(crudo).toUpperCase();
-    // Nombre oficial: el de la tabla de nombres (Ajustes → Catálogos); si aún no tiene, el del portal en mayúsculas
+    // Nombre oficial: el de la tabla de nombres (Ajustes → Catálogos), tal como lo escribió el admin
+    // ("Mdo Esoz"); si aún no tiene, el del portal en mayúsculas
     CU.nombreMercado = (crudo, ctx) => {
         const k = CU.claveMercado(crudo);
         const tabla = (ctx && ctx.nombresMercado) || {};
-        return tabla[k] ? limpio(tabla[k]).toUpperCase() : k;
+        return tabla[k] ? limpio(tabla[k]) : k;
     };
-    // Sugerencia para un nombre nuevo: el mercado de la versión de hoy que más se le parece
-    CU.sugerirMercado = function(crudo, existentes) {
-        const palabras = CU.claveMercado(crudo).split(/[^A-Z0-9]+/).filter(w => w.length > 1);
-        let mejor = null, puntos = 0;
-        (existentes || []).forEach(e => {
-            const ew = String(e).toUpperCase().split(/[^A-Z0-9]+/);
-            const p = palabras.filter(w => ew.includes(w)).length + (ew[0] === palabras[0] ? 0.5 : 0);
-            if (p > puntos) { puntos = p; mejor = e; }
-        });
-        return puntos >= 1 ? mejor : null;
+    // Regla de La Santé para nombrar un mercado: "Mdo " + el producto (la primera palabra que no sea
+    // relleno ni código ATC). "ESOZ MERCADO A02B2" → "Mdo Esoz", "FLUDIL SOLO" → "Mdo Fludil",
+    // "Bumetin Retard Mercado 2" → "Mdo Bumetin". Los casos especiales los ajusta el admin a mano.
+    const RELLENO = new Set(['MDO', 'MDO.', 'MCDO', 'MCDO.', 'MERCADO', 'MERC', 'MKT', 'SOLO', 'DE', 'DEL', 'LA', 'EL', 'Y']);
+    const esCodigo = (w) => /^[A-Z]\d{2}[A-Z0-9]*$/.test(w) || /^\d+$/.test(w);
+    const tipoTitulo = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    CU.sugerirNombre = function(crudo) {
+        const palabras = CU.claveMercado(crudo).split(/[\s_\-\/]+/).map(w => w.replace(/[^A-Z0-9ÁÉÍÓÚÑÜ.]/g, '')).filter(Boolean);
+        const producto = palabras.find(w => !RELLENO.has(w) && !esCodigo(w));
+        return producto ? `Mdo ${tipoTitulo(producto.replace(/\.$/, ''))}` : limpio(crudo);
+    };
+    // El mismo nombre escrito con otras mayúsculas ("MDO ESOZ" y "Mdo Esoz") es un solo mercado:
+    // se usa la forma que ya existe
+    CU.unificarNombre = function(nombre, conocidos) {
+        const v = limpio(nombre);
+        const igual = (conocidos || []).find(c => limpio(c).toUpperCase() === v.toUpperCase());
+        return igual ? limpio(igual) : v;
     };
 
     // ¿Es un archivo crudo del portal? (encabezados "Matricula" y "Productos1" en las primeras filas)
@@ -163,7 +171,7 @@
         const tabla = ctx.nombresMercado || {};
         const existentes = anterior && anterior.porMercado ? [...anterior.porMercado.keys()] : [];
         const nombres = [...crudosVistos.entries()].map(([crudo, c]) => ({ crudo, filas: c.filas, oficial: tabla[crudo] || null,
-            sugerencia: tabla[crudo] ? null : (CU.sugerirMercado(crudo, existentes) || crudo) })).sort((a, b) => a.crudo.localeCompare(b.crudo));
+            sugerencia: tabla[crudo] ? null : CU.unificarNombre(CU.sugerirNombre(crudo), existentes.concat(Object.values(tabla))) })).sort((a, b) => a.crudo.localeCompare(b.crudo));
         const sinNombre = nombres.filter(n => !n.oficial);
 
         // Comparación con la versión anterior (la que usa hoy la app)
@@ -215,7 +223,7 @@
         let rx = 0, rxPropio = 0;
         const propios = new Set();
         datos.forEach(r => {
-            const m = String(r.market || '').toUpperCase();
+            const m = String(r.market || '');
             const x = porMercado.get(m) || { filas: 0, rx: 0 };
             x.filas++; x.rx += r.rx || 0; porMercado.set(m, x);
             rx += r.rx || 0;

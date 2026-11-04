@@ -449,7 +449,7 @@ window.App.carga.informeCloseUp = function(res) {
     </div>`;
 };
 
-// Tabla de nombres de mercado: el nombre del portal ("Esoz") → el nombre oficial ("ESOZ MERCADO A02B2").
+// Tabla de nombres de mercado: el nombre del portal ("Esoz") → el nombre oficial ("Mdo Esoz").
 // La primera vez se confirman los nuevos; después la app los pone sola.
 window.App.carga.bloqueNombresMercado = function(res) {
     const existentes = [...new Set([...(window.App.closeup.resumenAnterior() || { porMercado: new Map() }).porMercado.keys()])].sort();
@@ -458,8 +458,8 @@ window.App.carga.bloqueNombresMercado = function(res) {
     const nuevos = res.sinNombre.length;
     return `<details class="mb-3 rounded-xl bg-white border border-slate-200 p-3" ${nuevos ? 'open' : ''}>
         <summary class="text-xs font-bold ${nuevos ? 'text-amber-900' : 'text-indigo-800'} cursor-pointer">Nombres de mercado ${nuevos ? `· ${fmt(nuevos)} nuevo(s) por confirmar` : '· todos con nombre ✅'}</summary>
-        <p class="text-[11px] text-slate-600 mt-2">El portal escribe los mercados a su manera. Escribe (o elige de la lista) el nombre que usa la app. Se recuerda para las próximas cargas.
-            <b>Usa el mismo nombre de antes</b> para un mercado que ya existía: así sus evaluaciones siguen enlazadas.</p>
+        <p class="text-[11px] text-slate-600 mt-2">El portal escribe los mercados a su manera. La app sugiere <b>Mdo + producto</b> ("Mdo Esoz"); corrígelo si hace falta. Se recuerda para las próximas cargas.
+            Si un mercado ya existía con otro nombre, renómbralo primero en Ajustes → Catálogos → Renombrar mercados: así sus evaluaciones siguen enlazadas.</p>
         <datalist id="mercadosExistentes">${existentes.map(m => `<option value="${esc(m)}">`).join('')}</datalist>
         <div class="mt-2 space-y-1.5">${filas.map((n, i) => `<label class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs">
             <span class="sm:w-1/2 text-slate-700"><b>${esc(n.crudo)}</b> <span class="text-slate-500">· ${fmt(n.filas)} filas</span>${n.oficial ? '' : ' <span class="text-amber-700 font-bold">nuevo</span>'}</span>
@@ -472,9 +472,11 @@ window.App.carga.guardarNombresMercado = async function() {
     const c = window.App.carga._estado.closeup;
     if (!c) return;
     const tabla = { ...(c.nombresMercado || {}) };
+    // Se respeta cómo lo escribe el admin ("Mdo Esoz"); si ya existe con otras mayúsculas, se usa esa forma
+    const conocidos = [...(window.App.closeup.resumenAnterior() || { porMercado: new Map() }).porMercado.keys()];
     document.querySelectorAll('[data-mercado-crudo]').forEach(i => {
-        const v = String(i.value || '').replace(/\s+/g, ' ').trim().toUpperCase();
-        if (v) tabla[i.dataset.mercadoCrudo] = v;
+        const v = window.App.closeup.unificarNombre(i.value, conocidos.concat(Object.values(tabla)));
+        if (v) { tabla[i.dataset.mercadoCrudo] = v; conocidos.push(v); }
     });
     try {
         await window.App.sb.guardarConfiguracion('nombres_mercado', tabla);

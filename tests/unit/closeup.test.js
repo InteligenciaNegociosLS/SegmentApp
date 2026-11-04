@@ -150,15 +150,27 @@ describe('En "Cargar datos": de los archivos del portal a la versión', () => {
 describe('Fase 12D-2: descarga en tandas (varios mercados por archivo) y tabla de nombres', () => {
     const TANDA = archivo([fila('DR A', '1', 'CAR', 'NEFROTAL RWE', 10, 'Bumetin Retard Mercado 2'), fila('DR A', '1', 'CAR', 'CANDETIQUE PHQ', 2, 'Esoz'),
         fila('DR B', '2', 'CAR', 'NEFROTAL RWE', 5, 'FLUDIL SOLO')]);
-    it('un archivo con varios mercados se separa por la columna "Mercado"; los nuevos piden nombre', () => {
-        const anterior = { porMercado: new Map([['ESOZ MERCADO A02B2', { filas: 1, rx: 1 }], ['BUMETIN RETARD MERCADO A03F0', { filas: 1, rx: 1 }]]), rx: 2, rxPropio: 0, productosPropios: new Set() };
-        const r = App.closeup.consolidar([{ nombre: 'tanda 1.csv', texto: TANDA }], { ...ctx(), nombresMercado: { 'FLUDIL SOLO': 'FLUDIL MERCADO' } }, anterior);
-        expect(r.porMercado.map(m => m.mercado)).toEqual(['BUMETIN RETARD MERCADO 2', 'ESOZ', 'FLUDIL MERCADO']);
+    it('un archivo con varios mercados se separa por la columna "Mercado"; los nuevos piden nombre con la regla Mdo + producto', () => {
+        const anterior = { porMercado: new Map([['ESOZ MERCADO A02B2', { filas: 1, rx: 1 }], ['MDO BUMETIN', { filas: 1, rx: 1 }]]), rx: 2, rxPropio: 0, productosPropios: new Set() };
+        const r = App.closeup.consolidar([{ nombre: 'tanda 1.csv', texto: TANDA }], { ...ctx(), nombresMercado: { 'FLUDIL SOLO': 'Mdo Fludil' } }, anterior);
+        // El nombre oficial se respeta tal como se escribió (sin pasarlo a mayúsculas)
+        expect(r.porMercado.map(m => m.mercado)).toEqual(['BUMETIN RETARD MERCADO 2', 'ESOZ', 'Mdo Fludil']);
         expect(r.sinNombre.map(n => n.crudo)).toEqual(['BUMETIN RETARD MERCADO 2', 'ESOZ']);
-        // Sugerencia: el mercado de hoy que más se parece
-        expect(r.nombres.find(n => n.crudo === 'ESOZ').sugerencia).toBe('ESOZ MERCADO A02B2');
-        expect(r.nombres.find(n => n.crudo === 'BUMETIN RETARD MERCADO 2').sugerencia).toBe('BUMETIN RETARD MERCADO A03F0');
-        expect(r.nombres.find(n => n.crudo === 'FLUDIL SOLO').oficial).toBe('FLUDIL MERCADO');
+        // Sugerencia: "Mdo " + el producto; si ya existe con otras mayúsculas, se usa esa forma
+        expect(r.nombres.find(n => n.crudo === 'ESOZ').sugerencia).toBe('Mdo Esoz');
+        expect(r.nombres.find(n => n.crudo === 'BUMETIN RETARD MERCADO 2').sugerencia).toBe('MDO BUMETIN');
+        expect(r.nombres.find(n => n.crudo === 'FLUDIL SOLO').oficial).toBe('Mdo Fludil');
+    });
+
+    it('regla de nombres: Mdo + producto, sin relleno ni códigos ATC', () => {
+        const s = App.closeup.sugerirNombre;
+        expect(s('ESOZ MERCADO A02B2')).toBe('Mdo Esoz');
+        expect(s('FLUDIL SOLO')).toBe('Mdo Fludil');
+        expect(s('Bumetin Retard Mercado 2')).toBe('Mdo Bumetin');
+        expect(s('MDO. LIPITOR')).toBe('Mdo Lipitor');
+        expect(s('Mdo Esoz')).toBe('Mdo Esoz');
+        expect(App.closeup.unificarNombre(' mdo  esoz ', ['Mdo Esoz'])).toBe('Mdo Esoz');
+        expect(App.closeup.unificarNombre('Mdo Nuevo', ['Mdo Esoz'])).toBe('Mdo Nuevo');
     });
 
     it('en "Cargar datos": no deja subir hasta confirmar los nombres; al guardarlos se recuerdan', async () => {
@@ -170,14 +182,16 @@ describe('Fase 12D-2: descarga en tandas (varios mercados por archivo) y tabla d
         await App.carga.intentarCloseUp(archivos);
         expect(App.carga._estado.validacion.ok).toBe(false);
         expect(document.querySelectorAll('[data-mercado-crudo]')).toHaveLength(3);
-        document.querySelector('[data-mercado-crudo="ESOZ"]').value = 'esoz mercado a02b2';
+        expect(document.querySelector('[data-mercado-crudo="BUMETIN RETARD MERCADO 2"]').value).toBe('Mdo Bumetin');
+        document.querySelector('[data-mercado-crudo="ESOZ"]').value = '  Mdo   Esoz ';
         await App.carga.guardarNombresMercado();
         const { baseSimulada } = await import('./cargar-app.js');
         const tabla = baseSimulada(App).configuracion.find(c => c.clave === 'nombres_mercado').valor;
-        expect(tabla.ESOZ).toBe('ESOZ MERCADO A02B2');
+        expect(tabla.ESOZ).toBe('Mdo Esoz');
+        expect(tabla['FLUDIL SOLO']).toBe('Mdo Fludil');
         expect(Object.keys(tabla).sort()).toEqual(['BUMETIN RETARD MERCADO 2', 'ESOZ', 'FLUDIL SOLO']);
         // Revisado de nuevo con los nombres: ya se puede subir y el mercado es el oficial
         expect(App.carga._estado.validacion.ok).toBe(true);
-        expect(App.carga._estado.closeup.res.porMercado.map(m => m.mercado)).toContain('ESOZ MERCADO A02B2');
+        expect(App.carga._estado.closeup.res.porMercado.map(m => m.mercado)).toContain('Mdo Esoz');
     });
 });

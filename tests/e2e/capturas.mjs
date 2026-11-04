@@ -207,6 +207,18 @@ try {
             ['AZITROMICINA SAL SAL', 'SAL', '500MG', 'TABLETAS', 'AZITROMICINA', 'J01F0', 'S']], 'Productos.xls'));
         await foto('4l-admin-catalogo-revisar');
         await page.evaluate(() => App.catalogos.cerrar());
+        await page.evaluate(async () => {
+            App.sb.mercadosEnUso = async () => [
+                { nombre: 'BUMETIN RETARD MERCADO A03F0', versiones: 4, en_vigente: true, evaluaciones: 37 },
+                { nombre: 'ESOZ MERCADO A02B2', versiones: 4, en_vigente: true, evaluaciones: 112 },
+                { nombre: 'FLUDIL SOLO', versiones: 1, en_vigente: true, evaluaciones: 0 },
+                { nombre: 'Mdo Desler', versiones: 2, en_vigente: true, evaluaciones: 20 }];
+            App.sb.renombresMercado = async () => [];
+            const d = document.getElementById('catRenombrar');
+            d.open = true; await App.catalogos.cargarRenombrar(); d.scrollIntoView({ block: 'start' });
+        });
+        await page.waitForTimeout(300);
+        await foto('4l2-admin-renombrar-mercados');
         await page.evaluate(async () => { App.ajustes.irA('ajUsuarios'); await App.usuarios.cargarPendientes(); });
         await page.waitForTimeout(300);
         await foto('4m-admin-sin-acceso');

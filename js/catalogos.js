@@ -238,7 +238,7 @@
         const claves = Object.keys(tabla).sort();
         return `<details class="rounded-2xl border border-slate-200 p-4 mb-4" id="catNombresMercado">
             <summary class="text-base font-bold text-slate-800 cursor-pointer">Nombres de mercado <span class="text-xs font-semibold text-slate-500">(${fmt(claves.length)})</span></summary>
-            <p class="text-xs text-slate-600 mt-2">El portal de CloseUp escribe los mercados a su manera ("Esoz", "Bumetin Retard Mercado 2"). Aquí está el nombre que usa la app para cada uno. Los nuevos se confirman al cargar CloseUp.</p>
+            <p class="text-xs text-slate-600 mt-2">El portal de CloseUp escribe los mercados a su manera ("Esoz", "Bumetin Retard Mercado 2"). Aquí está el nombre que usa la app para cada uno (regla: Mdo + producto, ej. "Mdo Esoz"). Los nuevos se confirman al cargar CloseUp.</p>
             ${claves.length ? `<div class="mt-3 space-y-1.5">${claves.map(k => `<label class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs">
                 <span class="sm:w-1/2 font-semibold text-slate-700">${esc(k)}</span>
                 <input type="text" class="campo-mini !w-full sm:!w-1/2" data-nombre-mercado="${esc(k)}" value="${esc(tabla[k])}"></label>`).join('')}</div>
@@ -249,13 +249,107 @@
     C.guardarNombresMercado = async function() {
         const tabla = { ...(config.nombres_mercado || {}) };
         document.querySelectorAll('[data-nombre-mercado]').forEach(i => {
-            const v = limpio(i.value).toUpperCase();
+            const v = limpio(i.value);   // tal como lo escribe el admin ("Mdo Esoz")
             if (v) tabla[i.dataset.nombreMercado] = v;
         });
         try {
             await window.App.sb.guardarConfiguracion('nombres_mercado', tabla);
             config = { ...config, nombres_mercado: tabla };
             toast('Nombres de mercado guardados. Se usan desde la próxima carga de CloseUp.');
+        } catch (e) { toast(textoError(e)); }
+    };
+
+    /* ---------- Renombrar mercados ya cargados (migración 19) ---------- */
+    // Cambia el nombre en TODAS las versiones de recetas y en las evaluaciones guardadas
+    // ("ESOZ MERCADO A02B2" → "Mdo Esoz"). No borra nada y cada cambio se puede deshacer.
+    let renombre = { mercados: [], historial: [] };
+    const bloqueRenombrar = () => `<details class="rounded-2xl border border-slate-200 p-4 mb-4" id="catRenombrar" ontoggle="if(this.open) App.catalogos.cargarRenombrar()">
+        <summary class="text-base font-bold text-slate-800 cursor-pointer">Renombrar mercados ya cargados</summary>
+        <p class="text-xs text-slate-600 mt-2">Para unificar los nombres con la regla <b>Mdo + producto</b> ("ESOZ MERCADO A02B2" → "Mdo Esoz").
+            Cambia el nombre en <b>todas las versiones</b> de datos y en las <b>evaluaciones</b> de los visitadores, para que sigan enlazadas.
+            No se borra nada y cada cambio se puede deshacer.</p>
+        <div id="catRenombrarCuerpo" class="mt-3"><p class="text-xs text-slate-500">Cargando…</p></div>
+    </details>`;
+    const sigueLaRegla = (n) => /^Mdo\s+\S/.test(String(n || ''));
+    C.cargarRenombrar = async function() {
+        const zona = document.getElementById('catRenombrarCuerpo');
+        if (!zona) return;
+        try {
+            const [m, h] = await Promise.all([window.App.sb.mercadosEnUso(), window.App.sb.renombresMercado().catch(() => [])]);
+            renombre = { mercados: m || [], historial: h || [] };
+        } catch (e) {
+            const t = String((e && e.original && e.original.message) || (e && e.message) || '');
+            zona.innerHTML = `<p class="text-xs text-slate-500">${/admin_mercados_en_uso|does not exist|could not find/i.test(t)
+                ? 'Falta aplicar la migración 19 en Supabase (en Cloud Shell: node 0-preparar-base.mjs).' : esc(textoError(e))}</p>`;
+            return;
+        }
+        C.pintarRenombrar();
+    };
+    C.pintarRenombrar = function() {
+        const zona = document.getElementById('catRenombrarCuerpo');
+        if (!zona) return;
+        const { mercados, historial } = renombre;
+        const porCambiar = mercados.filter(m => !sigueLaRegla(m.nombre)).length;
+        const filas = mercados.map((m, i) => {
+            const ok = sigueLaRegla(m.nombre);
+            const sug = ok ? m.nombre : window.App.closeup.sugerirNombre(m.nombre);
+            return `<label class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs py-1 border-t border-slate-100">
+                <span class="sm:w-1/2 flex items-start gap-2"><input type="checkbox" class="mt-0.5" data-renombrar-marca="${i}" ${ok ? '' : 'checked'}>
+                    <span><b class="text-slate-800">${esc(m.nombre)}</b>${ok ? ' <span class="text-green-700">✓</span>' : ''}<br>
+                    <span class="text-slate-500">${fmt(m.versiones)} versión(es)${m.en_vigente ? ' · en la de hoy' : ''} · ${fmt(m.evaluaciones)} evaluación(es)</span></span></span>
+                <input type="text" class="campo-mini !w-full sm:!w-1/2" data-renombrar-nuevo="${i}" value="${esc(sug)}" aria-label="Nombre nuevo de ${esc(m.nombre)}"
+                    oninput="this.closest('label').querySelector('[data-renombrar-marca]').checked = true"></label>`;
+        }).join('');
+        const hist = historial.slice(0, 20).map(h => `<li class="flex items-center gap-2 py-1 text-xs ${h.deshecho_en ? 'text-slate-400 line-through' : 'text-slate-700'}">
+            <span class="min-w-0 flex-1">${esc(h.viejo)} → <b>${esc(h.nuevo)}</b>${h.fusion ? ' (se juntó)' : ''} · ${fmt((h.evaluaciones || []).length)} evaluación(es)
+                <span class="text-slate-400">· ${new Date(h.hecho_en).toLocaleDateString('es-VE')}</span></span>
+            ${h.deshecho_en ? '' : `<button type="button" class="boton-texto !h-8 !px-2" onclick="App.catalogos.deshacerRenombre(${Number(h.id)})"><span class="material-symbols-outlined text-[16px]">undo</span> Deshacer</button>`}</li>`).join('');
+        zona.innerHTML = mercados.length ? `
+            <p class="text-xs text-slate-700 mb-2">${porCambiar ? `<b>${fmt(porCambiar)}</b> mercado(s) no siguen la regla: la app sugiere el nombre; corrígelo si hace falta.` : 'Todos los mercados siguen la regla ✅'}</p>
+            <div class="max-h-[28rem] overflow-auto pr-1">${filas}</div>
+            <div class="flex justify-end mt-3"><button type="button" class="boton-lleno" onclick="App.catalogos.renombrarMarcados()"><span class="material-symbols-outlined text-[18px]">drive_file_rename_outline</span> Renombrar los marcados</button></div>
+            ${hist ? `<details class="mt-3"><summary class="text-xs font-bold text-blue-800 cursor-pointer">Cambios hechos</summary><ul class="mt-1">${hist}</ul></details>` : ''}`
+            : '<p class="text-xs text-slate-500">Todavía no hay mercados cargados.</p>';
+    };
+    C.cambiosMarcados = function() {
+        const cambios = [];
+        document.querySelectorAll('[data-renombrar-marca]').forEach(c => {
+            if (!c.checked) return;
+            const i = Number(c.dataset.renombrarMarca);
+            const viejo = renombre.mercados[i] && renombre.mercados[i].nombre;
+            const input = document.querySelector(`[data-renombrar-nuevo="${i}"]`);
+            const nuevo = limpio(input && input.value);
+            if (viejo && nuevo && nuevo !== viejo) cambios.push({ viejo, nuevo });
+        });
+        return cambios;
+    };
+    C.renombrarMarcados = async function() {
+        const cambios = C.cambiosMarcados();
+        if (!cambios.length) { toast('No hay cambios: marca los mercados y escribe su nombre nuevo.'); return; }
+        const muestra = cambios.slice(0, 6).map(c => `• ${c.viejo} → ${c.nuevo}`).join('\n') + (cambios.length > 6 ? `\n… y ${cambios.length - 6} más` : '');
+        if (!window.confirm(`¿Renombrar ${cambios.length} mercado(s)?\n\n${muestra}\n\nCambia en todas las versiones y en las evaluaciones. Se puede deshacer.`)) return;
+        try {
+            const r = await window.App.sb.renombrarMercados(cambios);
+            const evals = (r.resultados || []).reduce((s, x) => s + (x.evaluaciones || 0), 0);
+            const sin = (r.resultados || []).reduce((s, x) => s + (x.sin_cambiar || 0), 0);
+            const tabla = { ...(config.nombres_mercado || {}) };
+            cambios.forEach(c => {
+                Object.keys(tabla).forEach(k => { if (tabla[k] === c.viejo) tabla[k] = c.nuevo; });
+                if (!(c.viejo.toUpperCase() in tabla)) tabla[c.viejo.toUpperCase()] = c.nuevo;
+            });
+            config = { ...config, nombres_mercado: tabla };
+            toast(`Listo: ${cambios.length} mercado(s) renombrados y ${evals} evaluación(es) actualizadas${sin ? ` (${sin} ya tenían el nombre nuevo y no se tocaron)` : ''}. Recarga la app para verlos.`,
+                { accion: 'Recargar', alAccionar: () => window.location.reload(), duracion: 12000 });
+            await C.cargarRenombrar();
+        } catch (e) { toast(textoError(e)); }
+    };
+    C.deshacerRenombre = async function(id) {
+        const h = renombre.historial.find(x => x.id === id);
+        if (!h || !window.confirm(`¿Deshacer "${h.viejo} → ${h.nuevo}"? El mercado vuelve a llamarse "${h.viejo}" en las versiones y evaluaciones que se cambiaron.`)) return;
+        try {
+            await window.App.sb.deshacerRenombre(id);
+            toast('Cambio deshecho. Recarga la app para verlo.', { accion: 'Recargar', alAccionar: () => window.location.reload(), duracion: 12000 });
+            await C.cargarRenombrar();
         } catch (e) { toast(textoError(e)); }
     };
 
@@ -306,6 +400,7 @@
                 ${nuevosPropios ? `<button type="button" class="boton-lleno mt-3" onclick="App.catalogos.marcarPropios()"><span class="material-symbols-outlined text-[18px]">done_all</span> Marcar ${fmt(nuevosPropios)} como La Santé</button>` : ''}
             </div>
             ${bloqueNombresMercado()}
+            ${bloqueRenombrar()}
             <div class="rounded-2xl border border-slate-200 p-4 mb-4">
                 <div class="flex items-center gap-2 mb-1"><span class="material-symbols-outlined text-blue-700">menu_book</span>
                     <h4 class="text-base font-bold text-slate-800">Cómo descargar los datos de origen</h4></div>
