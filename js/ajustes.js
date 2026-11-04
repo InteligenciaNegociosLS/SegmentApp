@@ -364,10 +364,11 @@ function aplicarVista() {
 /* ============================================================
    BITÁCORA DE CAMBIOS (migración 11)
 ============================================================ */
-const NOMBRES_CONFIG = { umbrales_matriz: 'los umbrales de la matriz', umbrales_encuesta: 'los puntajes de la encuesta', ponderacion_encuesta: 'la ponderación de la encuesta', productos_phq: 'los productos del laboratorio', equipos_otc: 'los equipos OTC' };
+const NOMBRES_CONFIG = { umbrales_matriz: 'los umbrales de la matriz', umbrales_encuesta: 'los puntajes de la encuesta', ponderacion_encuesta: 'la ponderación de la encuesta', productos_phq: 'los productos del laboratorio', equipos_otc: 'los equipos OTC', nombres_mercado: 'los nombres de mercado', filtros_closeup: 'los filtros de CloseUp', laboratorios_propios: 'mis laboratorios' };
 const ETIQUETAS_UMBRAL = { TH_LOY_LOW: 'Adopción baja hasta', TH_LOY_HIGH: 'Adopción alta desde', TH_POT_LOW: 'Potencial A hasta', TH_POT_HIGH: 'Potencial B hasta' };
 
 function detalleCambio(b) {
+    if (b.accion === 'renombrar_mercado') return `${b.despues && b.despues.deshecho ? 'Deshizo el renombre' : 'Renombró el mercado'} ${escA(b.antes && b.antes.nombre)} → <b>${escA(b.despues && b.despues.nombre)}</b>`;
     if (b.accion === 'publicar_version') return `Publicó la versión de ${b.clave === 'fichero' ? 'fichero' : 'recetas'} <b>${escA(b.despues && b.despues.nombre)}</b>`;
     const antes = b.antes || {}, despues = b.despues || {};
     let detalle = '';
@@ -388,7 +389,7 @@ window.App.ajustes.cargarBitacora = async function() {
     try {
         const lista = await window.App.sb.bitacora(30);
         zona.innerHTML = lista.length ? lista.map(b => `<li class="flex gap-3 py-3">
-            <span class="material-symbols-outlined ${b.accion === 'publicar_version' ? 'text-blue-700' : 'text-amber-700'}">${b.accion === 'publicar_version' ? 'publish' : 'tune'}</span>
+            <span class="material-symbols-outlined ${b.accion === 'publicar_version' ? 'text-blue-700' : 'text-amber-700'}">${b.accion === 'publicar_version' ? 'publish' : b.accion === 'renombrar_mercado' ? 'drive_file_rename_outline' : 'tune'}</span>
             <div class="min-w-0 flex-1"><div class="text-sm text-slate-800">${detalleCambio(b)}</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">${escA(b.quien)} · ${new Date(b.hecho_en).toLocaleString('es-VE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div></div></li>`).join('')
             : '<li class="py-3 text-sm text-slate-500">Todavía no hay cambios registrados. Desde hoy se anota cada cambio.</li>';

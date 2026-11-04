@@ -174,3 +174,45 @@ describe('Fase 12C: clases con niveles, historial, cómo descargarlo y mis labor
         expect(await App.catalogos.marcarPropios()).toBe(0);
     });
 });
+
+describe('Renombrar mercados ya cargados (migración 19)', () => {
+    it('sugiere "Mdo + producto", renombra los marcados (versiones y evaluaciones) y se puede deshacer', async () => {
+        const bd = baseSimulada(App);
+        bd.mercados.push({ nombre: 'ESOZ MERCADO A02B2', versiones: 3, en_vigente: true, evaluaciones: 0 },
+            { nombre: 'Mdo Fludil', versiones: 1, en_vigente: true, evaluaciones: 0 });
+        bd.evaluaciones.push({ id: 'e-esoz', mercado: 'ESOZ MERCADO A02B2' });
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.catalogos.cargar();
+        await App.catalogos.cargarRenombrar();
+        const zona = document.getElementById('catRenombrarCuerpo');
+        expect(zona.textContent).toContain('1 mercado(s) no siguen la regla');
+        expect(document.querySelector('[data-renombrar-nuevo="0"]').value).toBe('Mdo Esoz');
+        expect(document.querySelector('[data-renombrar-marca="0"]').checked).toBe(true);
+        expect(document.querySelector('[data-renombrar-marca="1"]').checked).toBe(false);   // ya sigue la regla
+        expect(App.catalogos.cambiosMarcados()).toEqual([{ viejo: 'ESOZ MERCADO A02B2', nuevo: 'Mdo Esoz' }]);
+
+        window.confirm = () => true;
+        await App.catalogos.renombrarMarcados();
+        expect(window.__calls).toContain('rpc:admin_renombrar_mercados:1');
+        expect(bd.mercados[0].nombre).toBe('Mdo Esoz');
+        expect(bd.evaluaciones.find(e => e.id === 'e-esoz').mercado).toBe('Mdo Esoz');
+        expect(bd.configuracion.find(c => c.clave === 'nombres_mercado').valor['ESOZ MERCADO A02B2']).toBe('Mdo Esoz');
+        expect(zona.textContent).toContain('Todos los mercados siguen la regla');
+        expect(zona.textContent).toContain('ESOZ MERCADO A02B2 → Mdo Esoz');
+
+        await App.catalogos.deshacerRenombre(1);
+        expect(window.__calls).toContain('rpc:admin_deshacer_renombre');
+        expect(bd.mercados[0].nombre).toBe('ESOZ MERCADO A02B2');
+        expect(bd.evaluaciones.find(e => e.id === 'e-esoz').mercado).toBe('ESOZ MERCADO A02B2');
+    });
+
+    it('sin cambios marcados no llama a la base', async () => {
+        baseSimulada(App).mercados.push({ nombre: 'Mdo Esoz', versiones: 1, en_vigente: true, evaluaciones: 0 });
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.catalogos.cargar();
+        await App.catalogos.cargarRenombrar();
+        await App.catalogos.renombrarMarcados();
+        expect(window.__calls).not.toContain('rpc:admin_renombrar_mercados:0');
+        expect(window.__calls.filter(c => c.startsWith('rpc:admin_renombrar_mercados:'))).toHaveLength(0);
+    });
+});

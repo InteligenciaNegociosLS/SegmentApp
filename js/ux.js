@@ -89,7 +89,8 @@ window.App.ux.armarNavegacion = function() {
     const botones = NAV_POR_ROL[rol] || NAV_POR_ROL.vm;
     const boton = (id, clase) => {
         const [icono, texto] = BOTONES_NAV[id];
-        const accion = id === 'mas' ? 'App.ux.abrirMas()' : `App.ux.irA('${id}')`;
+        // Desde la barra: el botón se marca al instante y lo pesado se dibuja en el siguiente cuadro (se siente rápido)
+        const accion = id === 'mas' ? 'App.ux.abrirMas()' : `App.ux.irA('${id}', { tocado: true })`;
         return `<button class="${clase}" data-seccion="${id}" onclick="${accion}" aria-current="false"><span class="nav-icono"><span class="material-symbols-outlined">${icono}</span></span>${texto}</button>`;
     };
     const abajo = document.getElementById('navInferior');
@@ -103,11 +104,18 @@ window.App.ux.armarNavegacion = function() {
     if (tableros && destino && tableros.parentElement !== destino) destino.appendChild(tableros);
 };
 
-window.App.ux.irA = function(id, { historial = true } = {}) {
+window.App.ux.irA = function(id, { historial = true, tocado = false } = {}) {
     const st = window.App.state;
     const pantalla = ALIAS_PANTALLA[id] || id;
     if (!PANTALLAS.includes(pantalla)) return;
     const destino = pantallasDelRol().includes(pantalla) ? pantalla : 'inicio';
+    if (tocado) {
+        // Primero se ve el botón elegido; el cambio de pantalla, en el siguiente cuadro
+        window.App.ux.marcarNav(destino);
+        const seguir = () => window.App.ux.irA(id, { historial });
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => setTimeout(seguir, 0)); else setTimeout(seguir, 0);
+        return;
+    }
     const anterior = st.PANTALLA;
     st.PANTALLA = destino;
     window.App.ux.cerrarMatrizCompleta();

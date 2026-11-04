@@ -33,6 +33,33 @@
     };
     const nombreSinExtension = (n) => limpio(String(n || '').split(/[\\/]/).pop().replace(/\.(csv|txt|gz)$/i, '').replace(/\.(csv|txt)$/i, ''));
     CU.mercadoDeArchivo = (nombre) => nombreSinExtension(nombre).toUpperCase();
+    // Nombre del mercado como viene en el portal ("Esoz", "Bumetin Retard Mercado 2") → clave para la tabla de nombres
+    CU.claveMercado = (crudo) => limpio(crudo).toUpperCase();
+    // Nombre oficial: el de la tabla de nombres (Ajustes → Catálogos), tal como lo escribió el admin
+    // ("Mdo Esoz"); si aún no tiene, el del portal en mayúsculas
+    CU.nombreMercado = (crudo, ctx) => {
+        const k = CU.claveMercado(crudo);
+        const tabla = (ctx && ctx.nombresMercado) || {};
+        return tabla[k] ? limpio(tabla[k]) : k;
+    };
+    // Regla de La Santé para nombrar un mercado: "Mdo " + el producto (la primera palabra que no sea
+    // relleno ni código ATC). "ESOZ MERCADO A02B2" → "Mdo Esoz", "FLUDIL SOLO" → "Mdo Fludil",
+    // "Bumetin Retard Mercado 2" → "Mdo Bumetin". Los casos especiales los ajusta el admin a mano.
+    const RELLENO = new Set(['MDO', 'MDO.', 'MCDO', 'MCDO.', 'MERCADO', 'MERC', 'MKT', 'SOLO', 'DE', 'DEL', 'LA', 'EL', 'Y']);
+    const esCodigo = (w) => /^[A-Z]\d{2}[A-Z0-9]*$/.test(w) || /^\d+$/.test(w);
+    const tipoTitulo = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    CU.sugerirNombre = function(crudo) {
+        const palabras = CU.claveMercado(crudo).split(/[\s_\-\/]+/).map(w => w.replace(/[^A-Z0-9ÁÉÍÓÚÑÜ.]/g, '')).filter(Boolean);
+        const producto = palabras.find(w => !RELLENO.has(w) && !esCodigo(w));
+        return producto ? `Mdo ${tipoTitulo(producto.replace(/\.$/, ''))}` : limpio(crudo);
+    };
+    // El mismo nombre escrito con otras mayúsculas ("MDO ESOZ" y "Mdo Esoz") es un solo mercado:
+    // se usa la forma que ya existe
+    CU.unificarNombre = function(nombre, conocidos) {
+        const v = limpio(nombre);
+        const igual = (conocidos || []).find(c => limpio(c).toUpperCase() === v.toUpperCase());
+        return igual ? limpio(igual) : v;
+    };
 
     // ¿Es un archivo crudo del portal? (encabezados "Matricula" y "Productos1" en las primeras filas)
     CU.esCrudo = function(texto) {
@@ -57,8 +84,10 @@
             dom: col('domicilio'), cp: col('codpostal'), loc: col('localidad'), reg: col('region') };
         const faltan = Object.entries(i).filter(([, v]) => v < 0).map(([k]) => k);
         if (faltan.length) return { error: `"${nombreArchivo}": faltan columnas (${faltan.join(', ')}).` };
-
-        const mercado = CU.mercadoDeArchivo(nombreArchivo);
+        // El mercado sale de la columna "Mercado" (un archivo puede traer varios); si no está, del nombre del archivo
+        const iMer = col('mercado');
+        const porArchivo = CU.mercadoDeArchivo(nombreArchivo);
+        const nombresCrudos = new Map();   // nombre del portal → filas
         const f = ctx.filtros || {};
         const espExcluir = new Set((f.especialidades_excluir || []).map(x => String(x).toUpperCase()));
         const nomExcluir = new Set((f.nombres_especialidad_excluir || []).map(x => String(x).toUpperCase()));
@@ -86,6 +115,9 @@
             const claseCod = p ? limpio(p.clase_terapeutica).toUpperCase() : '';
             const clase = claseCod ? (ctx.claseDe(claseCod) || null) : null;
             const rx = parseInt(String(r[i.px]).replace(/[.\s]/g, ''), 10) || 0;
+            const crudo = iMer >= 0 && limpio(r[iMer]) ? CU.claveMercado(r[iMer]) : porArchivo;
+            nombresCrudos.set(crudo, (nombresCrudos.get(crudo) || 0) + 1);
+            const mercado = iMer >= 0 && limpio(r[iMer]) ? CU.nombreMercado(r[iMer], ctx) : porArchivo;
             salida.push([
                 limpio(r[i.nom]), matRaw.padStart(10, '0'), mercado, producto, rx,
                 limpio(r[i.unico]), limpio(r[i.dom]), limpio(r[i.cp]), limpio(r[i.loc]), limpio(r[i.reg]),
@@ -93,8 +125,8 @@
                 p ? limpio(p.generico) : '', laboratorio
             ]);
         });
-        return { mercado, archivo: nombreArchivo, edicion: ed ? `${ed[1].padStart(2, '0')}/${ed[2]}` : '', periodo: per ? limpio(per[1]) : '',
-            filas: salida, leidas, quitadas, sinCatalogo };
+        return { archivo: nombreArchivo, edicion: ed ? `${ed[1].padStart(2, '0')}/${ed[2]}` : '', periodo: per ? limpio(per[1]) : '',
+            filas: salida, leidas, quitadas, sinCatalogo, nombresCrudos, porColumna: iMer >= 0 };
     };
 
     /* ---------- Todos los archivos: consolidado + informe ---------- */
@@ -105,23 +137,42 @@
         const sinCatalogo = { especialidades: new Set(), productos: new Set(), laboratorios: new Set() };
         const ediciones = new Set();
         let repetidas = 0;
-        const mercados = new Map();
+        const mercados = new Map();         // nombre oficial → { mercado, archivos, crudos, leidas?, filas, rx }
+        const crudosVistos = new Map();     // nombre del portal → { filas, archivos }
+        const archivoDe = new Map();        // nombre del portal → primer archivo donde apareció
         archivos.forEach(({ nombre, texto }) => {
             const r = CU.leerArchivo(texto, nombre, ctx);
             if (r.error) { errores.push(r.error); return; }
-            if (mercados.has(r.mercado)) { errores.push(`Hay dos archivos para el mercado "${r.mercado}" (${mercados.get(r.mercado)} y ${nombre}). Deja uno.`); return; }
-            mercados.set(r.mercado, nombre);
             if (r.edicion) ediciones.add(r.edicion);
-            let antes = filas.length, rx = 0;
+            r.nombresCrudos.forEach((n, crudo) => {
+                const c = crudosVistos.get(crudo) || { filas: 0, archivos: new Set() };
+                c.filas += n; c.archivos.add(nombre); crudosVistos.set(crudo, c);
+                if (archivoDe.has(crudo) && archivoDe.get(crudo) !== nombre) {
+                    errores.push(`El mercado "${crudo}" viene en dos archivos (${archivoDe.get(crudo)} y ${nombre}). Quita uno para no sumarlo dos veces.`);
+                }
+                if (!archivoDe.has(crudo)) archivoDe.set(crudo, nombre);
+            });
             r.filas.forEach(f => {
                 const clave = f.join('\u0001');
                 if (vistos.has(clave)) { repetidas++; return; }
-                vistos.add(clave); filas.push(f); rx += f[4];
+                vistos.add(clave); filas.push(f);
+                const m = mercados.get(f[2]) || { mercado: f[2], archivos: new Set(), filas: 0, rx: 0 };
+                m.filas++; m.rx += f[4]; m.archivos.add(nombre); mercados.set(f[2], m);
             });
             Object.keys(sinCatalogo).forEach(k => r.sinCatalogo[k].forEach(x => sinCatalogo[k].add(x)));
-            porMercado.push({ mercado: r.mercado, archivo: nombre, edicion: r.edicion, leidas: r.leidas, quitadas: r.quitadas, filas: filas.length - antes, rx });
+            porMercado.push({ archivo: nombre, leidas: r.leidas, quitadas: r.quitadas });
         });
+        // Por mercado (oficial), sumando todos los archivos
+        const archivosLeidos = porMercado.splice(0);
+        mercados.forEach(m => porMercado.push({ mercado: m.mercado, archivo: [...m.archivos].join(', '), filas: m.filas, rx: m.rx,
+            crudos: [...crudosVistos.keys()].filter(c => CU.nombreMercado(c, ctx) === m.mercado) }));
         porMercado.sort((a, b) => a.mercado.localeCompare(b.mercado));
+        // Nombres del portal que todavía no están en la tabla de nombres
+        const tabla = ctx.nombresMercado || {};
+        const existentes = anterior && anterior.porMercado ? [...anterior.porMercado.keys()] : [];
+        const nombres = [...crudosVistos.entries()].map(([crudo, c]) => ({ crudo, filas: c.filas, oficial: tabla[crudo] || null,
+            sugerencia: tabla[crudo] ? null : CU.unificarNombre(CU.sugerirNombre(crudo), existentes.concat(Object.values(tabla))) })).sort((a, b) => a.crudo.localeCompare(b.crudo));
+        const sinNombre = nombres.filter(n => !n.oficial);
 
         // Comparación con la versión anterior (la que usa hoy la app)
         const alertas = [];
@@ -148,7 +199,7 @@
 
         const edicion = [...ediciones].sort().pop() || '';
         return {
-            errores, alertas, porMercado, repetidas, edicion, sinCatalogo,
+            errores, alertas, porMercado, archivosLeidos, nombres, sinNombre, repetidas, edicion, sinCatalogo,
             leido: { encabezados: window.App.carga.COLUMNAS_RECETAS.slice(), filas: filas.map(f => f.map(v => String(v))) },
             resumen: { archivos: porMercado.length, filas: filas.length, rx: totalRx, rxPropio, share: totalRx ? rxPropio / totalRx * 100 : 0,
                 shareAntes: anterior && anterior.rx ? anterior.rxPropio / anterior.rx * 100 : null, rxAntes: anterior ? anterior.rx : null }
@@ -172,7 +223,7 @@
         let rx = 0, rxPropio = 0;
         const propios = new Set();
         datos.forEach(r => {
-            const m = String(r.market || '').toUpperCase();
+            const m = String(r.market || '');
             const x = porMercado.get(m) || { filas: 0, rx: 0 };
             x.filas++; x.rx += r.rx || 0; porMercado.set(m, x);
             rx += r.rx || 0;
@@ -195,6 +246,7 @@
             claseDe,
             filtros: { especialidades_excluir: ['DCR', 'INS', 'OTR'], nombres_especialidad_excluir: ['UNIDAD DE CUIDADOS INTENS'], excluir_matricula_cero: true, ...((cfg && cfg.filtros_closeup) || {}) },
             esPropio: (prodNombre) => window.App.data.isPhq(prodNombre),
+            nombresMercado: (cfg && cfg.nombres_mercado) || {},
             vacio: !esp.length || !prod.length
         };
     };
@@ -223,25 +275,28 @@
 
     /* ---------- Comparar con el archivo de Power Query (una sola vez) ---------- */
     // Suma de recetas por matrícula + mercado + producto en cada lado
-    const sumaPorClave = (encabezados, filas) => {
+    // tabla (opcional): nombre viejo → nombre de hoy, para que "ESOZ MERCADO A02B2" del archivo de
+    // Power Query cuente como "Mdo Esoz" (la tabla de nombres guarda los nombres viejos como alias)
+    const sumaPorClave = (encabezados, filas, tabla = {}) => {
+        const traducir = (m) => { const k = limpio(m).toUpperCase(); return limpio(tabla[k] || m).toUpperCase(); };
         const c = encabezados.map(norm);
         const iM = c.indexOf('matricula'), iMe = c.indexOf('mercado'), iP = c.indexOf('producto'), iR = c.indexOf('pxproduct');
         const mapa = new Map();
         const porMercado = new Map();
         let total = 0;
         filas.forEach(r => {
-            const k = `${String(r[iM] || '').replace(/^0+/, '')}|${limpio(r[iMe]).toUpperCase()}|${limpio(r[iP]).toUpperCase()}`;
+            const me = traducir(r[iMe]);
+            const k = `${String(r[iM] || '').replace(/^0+/, '')}|${me}|${limpio(r[iP]).toUpperCase()}`;
             const rx = parseInt(r[iR], 10) || 0;
             mapa.set(k, (mapa.get(k) || 0) + rx);
-            const me = limpio(r[iMe]).toUpperCase();
             porMercado.set(me, (porMercado.get(me) || 0) + rx);
             total += rx;
         });
         return { mapa, porMercado, total, filas: filas.length };
     };
-    CU.comparar = function(nuestro, suyo) {
+    CU.comparar = function(nuestro, suyo, nombresMercado = {}) {
         const a = sumaPorClave(nuestro.encabezados, nuestro.filas);
-        const b = sumaPorClave(suyo.encabezados, suyo.filas);
+        const b = sumaPorClave(suyo.encabezados, suyo.filas, nombresMercado);
         const diferencias = [];
         new Set([...a.mapa.keys(), ...b.mapa.keys()]).forEach(k => {
             const x = a.mapa.get(k) || 0, y = b.mapa.get(k) || 0;
