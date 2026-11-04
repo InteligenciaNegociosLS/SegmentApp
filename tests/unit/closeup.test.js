@@ -112,6 +112,13 @@ describe('Varios mercados juntos: consolidado e informe', () => {
         expect(c.iguales).toBe(false);
         expect(c.diferencias[0]).toEqual({ clave: '107041|ARAII MCDO|NEFROTAL RWE', app: 176, powerQuery: 170 });
     });
+
+    it('comparación con Power Query: el nombre viejo del mercado ("ARAII VIEJO") cuenta como el de hoy', () => {
+        const r = App.closeup.consolidar([{ nombre: 'ARAII MCDO.csv', texto: ARAII }], ctx());
+        const pq = { encabezados: r.leido.encabezados, filas: r.leido.filas.map(f => f.map((v, i) => (i === 2 ? 'Araii Viejo' : v))) };
+        expect(App.closeup.comparar(r.leido, pq).iguales).toBe(false);
+        expect(App.closeup.comparar(r.leido, pq, { 'ARAII VIEJO': 'ARAII MCDO' }).iguales).toBe(true);
+    });
 });
 
 describe('En "Cargar datos": de los archivos del portal a la versión', () => {

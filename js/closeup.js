@@ -275,25 +275,28 @@
 
     /* ---------- Comparar con el archivo de Power Query (una sola vez) ---------- */
     // Suma de recetas por matrícula + mercado + producto en cada lado
-    const sumaPorClave = (encabezados, filas) => {
+    // tabla (opcional): nombre viejo → nombre de hoy, para que "ESOZ MERCADO A02B2" del archivo de
+    // Power Query cuente como "Mdo Esoz" (la tabla de nombres guarda los nombres viejos como alias)
+    const sumaPorClave = (encabezados, filas, tabla = {}) => {
+        const traducir = (m) => { const k = limpio(m).toUpperCase(); return limpio(tabla[k] || m).toUpperCase(); };
         const c = encabezados.map(norm);
         const iM = c.indexOf('matricula'), iMe = c.indexOf('mercado'), iP = c.indexOf('producto'), iR = c.indexOf('pxproduct');
         const mapa = new Map();
         const porMercado = new Map();
         let total = 0;
         filas.forEach(r => {
-            const k = `${String(r[iM] || '').replace(/^0+/, '')}|${limpio(r[iMe]).toUpperCase()}|${limpio(r[iP]).toUpperCase()}`;
+            const me = traducir(r[iMe]);
+            const k = `${String(r[iM] || '').replace(/^0+/, '')}|${me}|${limpio(r[iP]).toUpperCase()}`;
             const rx = parseInt(r[iR], 10) || 0;
             mapa.set(k, (mapa.get(k) || 0) + rx);
-            const me = limpio(r[iMe]).toUpperCase();
             porMercado.set(me, (porMercado.get(me) || 0) + rx);
             total += rx;
         });
         return { mapa, porMercado, total, filas: filas.length };
     };
-    CU.comparar = function(nuestro, suyo) {
+    CU.comparar = function(nuestro, suyo, nombresMercado = {}) {
         const a = sumaPorClave(nuestro.encabezados, nuestro.filas);
-        const b = sumaPorClave(suyo.encabezados, suyo.filas);
+        const b = sumaPorClave(suyo.encabezados, suyo.filas, nombresMercado);
         const diferencias = [];
         new Set([...a.mapa.keys(), ...b.mapa.keys()]).forEach(k => {
             const x = a.mapa.get(k) || 0, y = b.mapa.get(k) || 0;

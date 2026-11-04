@@ -509,7 +509,7 @@ window.App.carga.compararConPowerQuery = async function(input) {
     zona.innerHTML = '<p class="text-xs text-indigo-700">Comparando…</p>';
     try {
         const suyo = await window.App.carga.leerArchivo(archivo);
-        const r = window.App.closeup.comparar(c.res.leido, suyo);
+        const r = window.App.closeup.comparar(c.res.leido, suyo, c.nombresMercado || {});
         const filasMercado = r.mercados.filter(m => m.app !== m.powerQuery);
         zona.innerHTML = `<div class="rounded-xl p-3 text-xs ${r.iguales ? 'bg-green-50 text-green-900' : 'bg-amber-50 text-amber-900'}">
             <b>${r.iguales ? '✅ Dan exactamente lo mismo' : `⚠️ Hay ${fmt(r.totalDiferencias)} diferencia(s)`}</b> ·
