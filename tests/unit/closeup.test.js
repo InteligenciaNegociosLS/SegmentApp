@@ -169,6 +169,15 @@ describe('Fase 12D-2: descarga en tandas (varios mercados por archivo) y tabla d
         expect(r.nombres.find(n => n.crudo === 'FLUDIL SOLO').oficial).toBe('Mdo Fludil');
     });
 
+    it('avisa los mercados que no siguen la regla Mdo + producto (cuando ya todos tienen nombre)', () => {
+        const tabla = { 'BUMETIN RETARD MERCADO 2': 'Mdo Bumetin', ESOZ: 'ESOZ VIEJO', 'FLUDIL SOLO': 'Mdo Fludil' };
+        const r = App.closeup.consolidar([{ nombre: 'tanda 1.csv', texto: TANDA }], { ...ctx(), nombresMercado: tabla });
+        const a = r.alertas.find(x => /no siguen la regla/.test(x.texto));
+        expect(a.texto).toContain('1 mercado(s) no siguen la regla "Mdo + producto": ESOZ VIEJO');
+        const ok = App.closeup.consolidar([{ nombre: 'tanda 1.csv', texto: TANDA }], { ...ctx(), nombresMercado: { ...tabla, ESOZ: 'Mdo Esoz' } });
+        expect(ok.alertas.some(x => /no siguen la regla/.test(x.texto))).toBe(false);
+    });
+
     it('regla de nombres: Mdo + producto, sin relleno ni códigos ATC', () => {
         const s = App.closeup.sugerirNombre;
         expect(s('ESOZ MERCADO A02B2')).toBe('Mdo Esoz');

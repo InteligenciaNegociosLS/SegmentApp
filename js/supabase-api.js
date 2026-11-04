@@ -511,6 +511,13 @@ window.App.sb.deshacerRenombre = async function(id) {
     if (error) throw fallo(error, 'Deshacer renombre');
     return data;
 };
+// Espacio usado en Supabase (migración 20, solo admin)
+window.App.sb.espacio = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_espacio');
+    if (error) throw fallo(error, 'Espacio usado');
+    return data;
+};
 window.App.sb.pendientesAcceso = async function() {
     const sb = await window.App.sb.cliente();
     const { data, error } = await sb.rpc('admin_pendientes_acceso');

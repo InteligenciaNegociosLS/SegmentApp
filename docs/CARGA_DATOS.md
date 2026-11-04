@@ -178,3 +178,10 @@ lo carga como antes.
   **Deshacer**. Hazlo **antes** de la próxima carga de CloseUp.
 - Si un mismo mercado viene en las dos tandas, la app lo avisa para no sumarlo
   dos veces.
+
+## Recordatorio de carga (Fase 12E)
+- La campanita del admin avisa **"Toca cargar CloseUp"** (o el fichero)
+  cuando la versión de hoy se cargó hace más de 90 días. Tocar el aviso abre
+  Cargar datos.
+- Los días se cambian en **Ajustes → Catálogos → Cómo descargar los datos de
+  origen → Recordarme cada N días** (0 = nunca).

@@ -88,7 +88,7 @@ Cada script pide escribir **`MIGRAR PRODUCCION`**.
 node 0-preparar-base.mjs
 ```
 
-Debe decir: ✅ Base lista: se aplicaron 19 archivo(s).
+Debe decir: ✅ Base lista: se aplicaron 20 archivo(s).
 
 ```bash
 node 1-exportar-firebase.mjs
@@ -213,4 +213,14 @@ estaba. Cópiame el error y lo resolvemos.
 - **Cargar datos nuevos** (CloseUp o fichero): desde la app, **Ajustes →
   Cargar datos** (`docs/CARGA_DATOS.md`).
 - **No borres Firebase** por al menos 3 meses: es el respaldo.
+- **Cambios de la base sin Cloud Shell (Fase 12E):** al llevar `rediseno` →
+  `main` con una migración nueva, GitHub la aplica sola (pestaña **Actions →
+  Base de datos de producción**, debe quedar en verde). Se activa UNA vez
+  agregando en **Settings → Secrets and variables → Actions → New repository
+  secret** el secreto `SUPABASE_DB_URL_PRODUCCION` (Supabase → **Connect →
+  Session pooler → URI**, con la clave de la base en lugar de
+  `[YOUR-PASSWORD]`). `SUPABASE_URL_PRODUCCION` ya existe (latido). Sin ese
+  secreto, el trabajo avisa y no hace nada: se sigue usando Cloud Shell.
+  También se puede correr a mano: **Actions → Base de datos de producción →
+  Run workflow**.
 - Correo automático (opcional, más adelante): `docs/CORREO.md`.

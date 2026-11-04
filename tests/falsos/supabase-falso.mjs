@@ -337,6 +337,11 @@ export function createClient(url, clave, opciones = {}) {
             registrar('rpc:admin_deshacer_renombre');
             return { data: { ok: true }, error: null };
         },
+        admin_espacio() {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            return { data: bd.espacio || { base_bytes: 120 * 1048576, archivos_bytes: 300 * 1048576, archivos: 12,
+                tablas: [{ nombre: 'recetas', bytes: 90 * 1048576 }, { nombre: 'fichero', bytes: 20 * 1048576 }], versiones: [] }, error: null };
+        },
         admin_pendientes_acceso() {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
             const conAcceso = (id) => { const p = bd.perfiles.find(x => x.id === id); return !!(p && p.activo); };

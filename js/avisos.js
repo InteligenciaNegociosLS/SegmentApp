@@ -5,7 +5,9 @@
    - un visitador evalúa médicos (agrupado por visitador y día),
    - un visitador evaluó a TODOS sus médicos 🎉,
    - hay visitadores que llevan 7 días o más sin evaluar,
-   - una evaluación no coincide con CloseUp (alerta).
+   - una evaluación no coincide con CloseUp (alerta),
+   - (solo admin) ya toca cargar CloseUp o el fichero: la versión de hoy
+     tiene más días que los configurados (Fase 12E; 90 = cada trimestre).
    Los avisos se arman con las evaluaciones que la persona ya puede
    ver (el GD, solo su distrito). Cada 2 minutos, con la app abierta y
    con internet, se traen SOLO las evaluaciones nuevas o cambiadas.
@@ -89,9 +91,48 @@ window.App = window.App || {};
             texto: `${g.n === 1 ? 'Una evaluación' : fmtV(g.n) + ' evaluaciones'} de <b>${escV(nomV(g.vm))}</b> no ${g.n === 1 ? 'coincide' : 'coinciden'} con CloseUp${g.graves ? ` (${g.graves === 1 ? 'una muy distinta' : fmtV(g.graves) + ' muy distintas'})` : ''}`
         }));
 
-        avisos.sort((a, b) => b.t - a.t);
+        // 5) Solo el admin: recordatorio de carga (la versión de hoy ya tiene sus días)
+        window.App.avisos.recordatorios(ahora).forEach(a => avisos.push(a));
+
+        avisos.sort((a, b) => (b.fijo ? 1 : 0) - (a.fijo ? 1 : 0) || b.t - a.t);
         window.App.avisos.lista = avisos.slice(0, 40);
         return window.App.avisos.lista;
+    };
+
+    // Límites del plan gratis de Supabase (si se cambia de plan, se ajustan aquí)
+    window.App.avisos.LIMITES = { base: 500 * 1024 * 1024, archivos: 1024 * 1024 * 1024 };
+    window.App.avisos.usoEspacio = function(e) {
+        if (!e) return null;
+        const L = window.App.avisos.LIMITES;
+        const base = (e.base_bytes || 0) / L.base * 100, archivos = (e.archivos_bytes || 0) / L.archivos * 100;
+        return { base, archivos, mayor: Math.max(base, archivos) };
+    };
+    const NOMBRE_FUENTE = { recetas: 'CloseUp', fichero: 'el fichero médico' };
+    window.App.avisos.recordatorios = function(ahora = Date.now()) {
+        const st = window.App.state;
+        if (st.rolReal !== 'admin') return [];
+        const dias = st.RECORDATORIO_CARGAS || {};
+        return ['recetas', 'fichero'].map(tipo => {
+            const cada = Number(dias[tipo]);
+            const v = (st.VERSIONES || []).find(x => x.tipo === tipo && x.es_vigente);
+            if (!v || !(cada > 0)) return null;
+            const base = Date.parse(v.publicado_en || v.creado_en || v.fecha);
+            if (!base) return null;
+            const vence = base + cada * DIA;
+            if (ahora < vence) return null;
+            const hace = Math.floor((ahora - base) / DIA);
+            return { tipo: 'recordatorio', fuente: tipo, fijo: true, t: vence, icono: 'event_upcoming', color: 'bg-indigo-50 text-indigo-800',
+                texto: `Toca cargar <b>${NOMBRE_FUENTE[tipo]}</b>: la versión de hoy (${escV(v.nombre)}) se cargó hace ${fmtV(hace)} días. Toca aquí para cargar la nueva.` };
+        }).filter(Boolean).concat(avisoEspacio());
+    };
+    // Aviso diario mientras el espacio pase del 80% del plan
+    const avisoEspacio = () => {
+        const u = window.App.avisos.usoEspacio(window.App.avisos._espacio);
+        if (!u || u.mayor < 80) return [];
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        const que = u.base >= u.archivos ? `la base de datos (${Math.round(u.base)}%)` : `los archivos guardados (${Math.round(u.archivos)}%)`;
+        return [{ tipo: 'espacio', fijo: true, t: hoy.getTime(), icono: 'database', color: u.mayor >= 95 ? 'bg-rose-50 text-rose-800' : 'bg-amber-50 text-amber-800',
+            texto: `El espacio de Supabase está casi lleno: ${que} del plan gratis. Revisa Ajustes → Salud de los datos.` }];
     };
 
     window.App.avisos.sinLeer = () => window.App.avisos.lista.filter(a => a.t > window.App.avisos.vistoHasta).length;
@@ -157,6 +198,8 @@ window.App = window.App || {};
         const a = window.App.avisos.lista[i];
         window.App.avisos.cerrar();
         if (!a) return;
+        if (a.tipo === 'recordatorio') { window.App.carga.abrirPanel('nueva'); return; }
+        if (a.tipo === 'espacio') { window.App.ux.irA('ajustes'); window.App.ajustes.irA && window.App.ajustes.irA('ajSalud'); return; }
         window.App.ux.irA('equipo');
         if (a.tipo === 'alerta') { window.App.equipo.verVista('alertas'); return; }
         window.App.equipo.verVista('visitadores');
@@ -195,6 +238,10 @@ window.App = window.App || {};
         if (!visto) visto = Date.now() - DIA;
         window.App.avisos.vistoHasta = visto;
         window.App.avisos.actualizar();
+        // Solo el admin: cuánto espacio se usa (para el aviso de "casi lleno")
+        if (st.rolReal === 'admin' && window.App.sb.espacio) {
+            window.App.sb.espacio().then(e => { window.App.avisos._espacio = e; window.App.avisos.actualizar(); }).catch(() => { /* sin la migración 20 o sin conexión */ });
+        }
         try {
             const delServidor = await window.App.sb.avisosVistos(st.usuarioId);
             const t = delServidor ? Date.parse(delServidor) : 0;

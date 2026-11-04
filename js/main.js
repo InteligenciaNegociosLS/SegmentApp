@@ -38,6 +38,7 @@ window.App.main.aplicarConfiguracion = function(cfg) {
     if (cfg.umbrales_encuesta)    st.SURVEY_THRESHOLDS = cfg.umbrales_encuesta;
     if (Array.isArray(cfg.productos_phq)) st.PHQ_PRODUCTS = cfg.productos_phq.map(p => String(p).toUpperCase());
     if (Array.isArray(cfg.equipos_otc)) st.EQUIPOS_OTC = cfg.equipos_otc.map(String);
+    if (cfg.recordatorio_cargas) st.RECORDATORIO_CARGAS = { ...st.RECORDATORIO_CARGAS, ...cfg.recordatorio_cargas };
     if (cfg.umbrales_matriz) {
         const u = cfg.umbrales_matriz;
         ['TH_LOY_LOW', 'TH_LOY_HIGH', 'TH_POT_LOW', 'TH_POT_HIGH'].forEach(k => { if (Number.isFinite(u[k])) st[k] = u[k]; });

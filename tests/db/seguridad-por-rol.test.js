@@ -578,3 +578,18 @@ describe('Renombrar mercados (migración 19)', () => {
         expect(await falla(U.admin, 'select public.admin_deshacer_renombre($1)', [primero])).toBe(true);
     });
 });
+
+describe('Espacio usado (migración 20)', () => {
+    it('el admin ve el tamaño de la base, de los archivos y de las tablas; nadie más', async () => {
+        await db.query(`insert into storage.buckets (id, name) values ('espacio', 'espacio') on conflict do nothing`);
+        await db.query(`insert into storage.objects (bucket_id, name, metadata) values ('espacio', 'a.gz', '{"size": 1000}'), ('espacio', 'b.gz', '{"size": 2500}')`);
+        const e = (await filas(U.admin, 'select public.admin_espacio() as e'))[0].e;
+        expect(e.base_bytes).toBeGreaterThan(0);
+        expect(e.archivos_bytes).toBeGreaterThanOrEqual(3500);
+        expect(e.tablas.length).toBeGreaterThan(0);
+        expect(e.tablas[0]).toHaveProperty('bytes');
+        expect(e.versiones.some(v => v.tipo === 'recetas')).toBe(true);
+        expect(await falla(U.gd1, 'select public.admin_espacio()')).toBe(true);
+        expect(await falla(U.vm1, 'select public.admin_espacio()')).toBe(true);
+    });
+});

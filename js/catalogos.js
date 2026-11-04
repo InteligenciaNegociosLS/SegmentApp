@@ -225,10 +225,33 @@
         C.pintar();
     };
 
+    // Recordatorio de carga en la campanita del admin (Fase 12E): fuente de la pantalla → tipo de versión
+    const TIPO_RECORDATORIO = { closeup: 'recetas', fichero: 'fichero' };
+    const diasRecordatorio = (fuente) => {
+        const d = (window.App.state.RECORDATORIO_CARGAS || {})[TIPO_RECORDATORIO[fuente]];
+        return Number.isFinite(Number(d)) ? Number(d) : 90;
+    };
+    C.guardarRecordatorio = async function(fuente, valor) {
+        const tipo = TIPO_RECORDATORIO[fuente];
+        const dias = Math.max(0, Math.min(730, Math.round(Number(valor))));
+        if (!tipo || !Number.isFinite(dias)) { toast('Escribe un número de días.'); return; }
+        const nuevo = { ...(window.App.state.RECORDATORIO_CARGAS || {}), [tipo]: dias };
+        try {
+            await window.App.sb.guardarConfiguracion('recordatorio_cargas', nuevo);
+            window.App.state.RECORDATORIO_CARGAS = nuevo;
+            if (window.App.avisos) window.App.avisos.actualizar();
+            toast(dias ? `Listo: te recuerdo cargar ${C.FUENTES[fuente]} cada ${dias} días.` : `Listo: sin recordatorio para ${C.FUENTES[fuente]}.`);
+        } catch (e) { toast(textoError(e)); }
+    };
     const bloqueInstructivo = (fuente) => `<details class="mt-2 rounded-xl bg-slate-50 px-3 py-2" data-instructivo="${fuente}">
         <summary class="text-xs font-bold text-blue-800 cursor-pointer">Cómo descargarlo${['fichero', 'closeup'].includes(fuente) ? ': ' + esc(C.FUENTES[fuente]) : ''}</summary>
         <p class="text-xs text-slate-700 whitespace-pre-line mt-2">${esc(C.instructivo(fuente))}</p>
         <button type="button" class="boton-texto !h-8 !px-2 mt-1" onclick="App.catalogos.editarInstructivo('${fuente}')"><span class="material-symbols-outlined text-[16px]">edit</span> Editar</button>
+        ${TIPO_RECORDATORIO[fuente] ? `<label class="flex items-center gap-2 text-xs text-slate-700 mt-2 pt-2 border-t border-slate-200">
+            <span class="material-symbols-outlined text-[18px] text-indigo-700">event_upcoming</span> Recordarme en la campanita cada
+            <input type="number" min="0" max="730" step="1" class="campo-mini !w-20" data-recordatorio="${fuente}" value="${esc(diasRecordatorio(fuente))}"
+                onchange="App.catalogos.guardarRecordatorio('${fuente}', this.value)" aria-label="Días para recordar cargar ${esc(C.FUENTES[fuente])}"> días
+            <span class="text-slate-500">(90 = cada trimestre · 0 = nunca)</span></label>` : ''}
     </details>`;
     C.bloqueInstructivo = bloqueInstructivo;
 

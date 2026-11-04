@@ -193,6 +193,9 @@
             const propiosAusentes = [...(anterior.productosPropios || [])].filter(p => !propiosAhora.has(p));
             if (propiosAusentes.length) alertas.push({ tipo: 'aviso', texto: `${propiosAusentes.length} producto(s) de La Santé que estaban y ya no aparecen${propiosAusentes.length <= 3 ? ': ' + propiosAusentes.join(', ') : ''}.`, lista: propiosAusentes.sort() });
         }
+        // Nomenclatura: todos los mercados se llaman "Mdo + producto" (decisión del dueño, Fase 12D-2)
+        const fueraDeRegla = porMercado.map(m => m.mercado).filter(m => !/^Mdo\s+\S/.test(m));
+        if (fueraDeRegla.length && !sinNombre.length) alertas.push({ tipo: 'info', texto: `${fueraDeRegla.length} mercado(s) no siguen la regla "Mdo + producto"${fueraDeRegla.length <= 3 ? ': ' + fueraDeRegla.join(', ') : ''}. Corrígelos en "Nombres de mercado" si hace falta.`, lista: fueraDeRegla.sort() });
         if (sinCatalogo.productos.size) alertas.push({ tipo: 'aviso', texto: `${sinCatalogo.productos.size} producto(s) no están en el catálogo (quedan sin molécula, clase ni laboratorio). Agrégalos en Ajustes → Catálogos → Productos.`, lista: [...sinCatalogo.productos].sort() });
         if (sinCatalogo.especialidades.size) alertas.push({ tipo: 'aviso', texto: `${sinCatalogo.especialidades.size} código(s) de especialidad no están en el catálogo (se deja el código).`, lista: [...sinCatalogo.especialidades].sort() });
         if (sinCatalogo.laboratorios.size) alertas.push({ tipo: 'info', texto: `${sinCatalogo.laboratorios.size} laboratorio(s) sin nombre en el catálogo (se deja la abreviatura).`, lista: [...sinCatalogo.laboratorios].sort() });
