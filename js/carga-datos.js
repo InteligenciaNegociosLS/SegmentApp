@@ -436,6 +436,7 @@ window.App.carga.informeCloseUp = function(res) {
             <p class="text-xs text-slate-700"><b>¿Solo estás corrigiendo ${res.porMercado.length === 1 ? 'este mercado' : 'estos mercados'}?</b> No hace falta subir los demás:
                 la app toma los otros ${fmt(res.faltan.length)} mercado(s) de la versión de hoy, tal cual, y arma una versión nueva completa. La de hoy queda guardada.</p>
             <button type="button" class="boton-tonal !h-9 !px-3 !text-xs mt-2" onclick="App.carga.completarConHoy()"><span class="material-symbols-outlined text-[16px]">library_add</span> Completar con los ${fmt(res.faltan.length)} mercados de hoy</button></div>` : ''}
+        ${window.App.carga.bloqueUnificados(res)}
         ${window.App.carga.bloqueNombresMercado(res)}
         <p class="text-[11px] text-slate-600 mb-2">${fmt((res.archivosLeidos || []).length)} archivo(s): ${fmt((res.archivosLeidos || []).reduce((s, a) => s + a.leidas, 0))} filas leídas ·
             ${fmt((res.archivosLeidos || []).reduce((s, a) => s + a.quitadas.matricula + a.quitadas.especialidad + a.quitadas.nombreEspecialidad, 0))} quitadas por los filtros.</p>
@@ -451,6 +452,23 @@ window.App.carga.informeCloseUp = function(res) {
         </div>
         <div id="comparacionPowerQuery" class="mt-3"></div>
     </div>`;
+};
+
+// Médicos repetidos en el mismo mercado y producto (Fase 12H): queda la fila de más recetas y se muestra
+// en qué columnas se diferenciaban, para entender el porqué y detectar errores en la data del portal
+window.App.carga.bloqueUnificados = function(res) {
+    const casos = res.unificados || [];
+    if (!casos.length) return '';
+    const valores = (d) => d.valores.map(v => `<span class="inline-block rounded bg-white border border-amber-200 px-1">${esc(v || '(vacío)')}</span>`).join(' ≠ ');
+    return `<details class="mb-3 rounded-xl bg-amber-50 border border-amber-200 p-3">
+        <summary class="text-xs font-bold text-amber-900 cursor-pointer">Repetidos unificados · ${fmt(casos.length)} médico(s)</summary>
+        <p class="text-[11px] text-slate-700 mt-2">Venían dos o más veces con el mismo médico, mercado y producto, pero con algún dato distinto. Quedó <b>la fila con más recetas</b> (la misma regla de la matriz, así que los números no cambian). Abajo, en qué se diferenciaban.</p>
+        <div class="overflow-x-auto mt-2"><table class="w-full text-[11px]"><thead><tr class="text-left text-slate-500"><th class="p-1">Médico</th><th class="p-1">Mercado · producto</th><th class="p-1">Rx de cada fila</th><th class="p-1">Se diferencian en</th></tr></thead><tbody>
+        ${casos.map(c => `<tr class="border-t border-amber-100 align-top"><td class="p-1"><b>${esc(c.medico)}</b><br><span class="text-slate-500">${esc(c.matricula)}</span></td>
+            <td class="p-1">${esc(c.mercado)}<br><span class="text-slate-500">${esc(c.producto)}</span></td>
+            <td class="p-1">${c.rx.map(x => fmt(x)).join(' / ')}<br><span class="text-green-800">queda ${fmt(c.rxQueda)}</span></td>
+            <td class="p-1">${c.difieren.map(d => `<div><b>${esc(d.col)}</b>: ${valores(d)}</div>`).join('')}</td></tr>`).join('')}
+        </tbody></table></div></details>`;
 };
 
 // Tabla de nombres de mercado: el nombre del portal ("Esoz") → el nombre oficial ("Mdo Esoz").
