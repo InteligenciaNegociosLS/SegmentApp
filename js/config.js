@@ -19,6 +19,12 @@ window.App.config.LIBRARIES = {
 };
 
 // --- Productos del laboratorio (PHQ) por defecto ---
+// --- Líneas de visitadores: código del campo "Equipo" del fichero → nombre (Fase 12F) ---
+window.App.config.LINEAS_EQUIPO = {
+    '1': 'LINEA_HIBRIDA_1', '2': 'LINEA_HIBRIDA_2', '3': 'COMERCIAL', '4': 'LINEA_3', '5': 'LINEA_HIBRIDA_3',
+    '6': 'LA SANTE', '7': 'OTC', '8': 'LINEA_1', '9': 'LINEA_2'
+};
+
 window.App.config.DEFAULT_PHQ_PRODUCTS = [
     "AIREX PHQ", "ALLERFEX PHQ", "AMLODIPINA LST LST", "AMOXICILINA LST LST", "ANALPER NAX LST",
     "ATENOLOL LST LST", "ATORVASTATINA LST LST", "AZITROMICINA LST LST", "BROXOL ALERG LST",

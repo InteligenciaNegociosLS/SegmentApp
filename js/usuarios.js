@@ -73,8 +73,11 @@
             window.App.ui.safeSetText('ajUsuariosResumen', '');
             return;
         }
+        U.pintarLineas();
         U.pintar();
         await U.cargarPendientes();
+        // "Salud de los datos" cuenta lo mismo: se actualiza al cambiar los accesos
+        if (window.App.ajustes && window.App.ajustes.renderSalud && document.getElementById('ajSaludLista')) window.App.ajustes.renderSalud();
     };
 
     /* ---------- Quién no tiene acceso todavía (migración 18) ---------- */
@@ -227,11 +230,39 @@
     const iniciales = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0] || '').join('').toUpperCase() || '?';
 
     // Los que se ven con la búsqueda y el rol elegidos (los botones de abajo usan esta misma lista)
+    // Líneas de un usuario (del fichero): el VM, la suya; el GD, las de los visitadores de sus distritos
+    U.lineasDe = function(u) {
+        const l = window.App.data.lineasDelFichero();
+        if (u.rol === 'vm' && u.visitador) return [...(l.porVm.get(String(u.visitador).trim().toUpperCase()) || [])].sort();
+        if (u.rol === 'gd' && u.distritos) {
+            const todas = new Set();
+            String(u.distritos).split(/[,\s]+/).filter(Boolean).forEach(c => (l.porDistrito.get(c) || []).forEach(x => todas.add(x)));
+            return [...todas].sort();
+        }
+        return [];
+    };
+    const valorDe = (id) => String((document.getElementById(id) || {}).value || '');
     U.filtrados = function() {
-        const buscar = String((document.getElementById('ajUsuariosBuscar') || {}).value || '').trim().toLowerCase();
-        const rol = String((document.getElementById('ajUsuariosRol') || {}).value || '');
+        const buscar = valorDe('ajUsuariosBuscar').trim().toLowerCase();
+        const rol = valorDe('ajUsuariosRol'), activo = valorDe('ajUsuariosActivo'), metricas = valorDe('ajUsuariosMetricas'), linea = valorDe('ajUsuariosLinea');
         return lista.filter(u => (!rol || u.rol === rol)
+            && (!activo || (activo === 'si') === !!u.activo)
+            // "Métricas" solo aplica a visitadores
+            && (!metricas || (u.rol === 'vm' && u.visitador && (metricas === 'si') === window.App.data.cuentaEnMetricas(u.visitador)))
+            && (!linea || U.lineasDe(u).includes(linea))
             && (!buscar || `${u.nombre} ${u.correo} ${u.visitador || ''} ${u.distritos || ''}`.toLowerCase().includes(buscar)));
+    };
+    // Opciones de "Línea": las que hay en el fichero cargado
+    U.pintarLineas = function() {
+        const sel = document.getElementById('ajUsuariosLinea');
+        if (!sel) return;
+        const l = window.App.data.lineasDelFichero();
+        const todas = new Set();
+        l.porVm.forEach(x => x.forEach(y => todas.add(y)));
+        const orden = Object.values((window.App.config && window.App.config.LINEAS_EQUIPO) || {});
+        const lista2 = [...todas].sort((a, b) => ((orden.indexOf(a) + 1) || 99) - ((orden.indexOf(b) + 1) || 99) || a.localeCompare(b));
+        const elegida = sel.value;
+        sel.innerHTML = '<option value="">Todas las líneas</option>' + lista2.map(x => `<option value="${esc(x)}" ${x === elegida ? 'selected' : ''}>${esc(x)}</option>`).join('');
     };
 
     U.pintar = function() {
@@ -259,7 +290,7 @@
             return;
         }
         // De 10 en 10 (Fase 12E); al cambiar la búsqueda o el rol se vuelve a la primera página
-        const firma = String((document.getElementById('ajUsuariosBuscar') || {}).value || '') + '|' + String((document.getElementById('ajUsuariosRol') || {}).value || '');
+        const firma = ['ajUsuariosBuscar', 'ajUsuariosRol', 'ajUsuariosActivo', 'ajUsuariosMetricas', 'ajUsuariosLinea'].map(valorDe).join('|');
         if (firma !== U._firma) { U._firma = firma; U._pagina = 1; }
         const pag = window.App.ui.paginar(vistos, U._pagina);
         U._pagina = pag.pagina;
@@ -271,6 +302,7 @@
                 `<span class="usuario-etiqueta">${esc(ROL_CORTO[u.rol] || u.rol)}</span>`,
                 u.visitador && u.visitador.toUpperCase() !== String(u.nombre).toUpperCase() ? `<span class="usuario-etiqueta">${esc(u.visitador)}</span>` : '',
                 u.distritos ? `<span class="usuario-etiqueta">${esc(u.distritos)}</span>` : '',
+                ...U.lineasDe(u).slice(0, 3).map(x => `<span class="usuario-etiqueta">${esc(x)}</span>`),
                 !u.activo ? '<span class="usuario-etiqueta aviso">Acceso desactivado</span>' : '',
                 u.rol === 'vm' && u.visitador && !window.App.data.cuentaEnMetricas(u.visitador) ? '<span class="usuario-etiqueta">No cuenta en las métricas</span>' : '',
                 u.clave_temporal ? '<span class="usuario-etiqueta aviso">Clave temporal pendiente</span>' : '',
