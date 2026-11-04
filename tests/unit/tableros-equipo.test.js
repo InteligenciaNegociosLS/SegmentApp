@@ -209,3 +209,36 @@ describe('Fase 12D-2: la barra de navegación responde al instante', () => {
         expect(App.state.PANTALLA).toBe('equipo');
     });
 });
+
+describe('Fase 12E: visitadores con acceso que no cuentan en las métricas', () => {
+    it('no suman en el distrito, en el resumen ni en la cobertura del inicio; siguen en la lista, marcados', async () => {
+        await admin();
+        App.ux.irA('equipo', { historial: false });
+        const antes = App.tableros.calcular().embudo.fichados;
+        expect(App.equipo.estadisticas().distritos.map(g => g.nombre).sort()).toEqual(['GERENTE DOS', 'GERENTE UNO']);
+        // El admin lo saca de las métricas desde Ajustes → Usuarios
+        await App.usuarios.cargar();
+        const u = baseSimulada(App).perfiles.find(p => p.id === 'u-vm');
+        App.usuarios.metricas(u.id);
+        await App.usuarios.confirmarMetricas();
+        expect(window.__calls).toContain('rpc:admin_metricas_visitador:NEIVIS PARRA:false');
+        expect(document.querySelector('#ajUsuariosLista [data-usuario="u-vm"]').textContent).toContain('No cuenta en las métricas');
+        const e = App.equipo.estadisticas();
+        expect(e.vms.find(v => v.nombre === 'NEIVIS PARRA').fueraMetricas).toBe(true);
+        expect(e.distritos.map(g => g.nombre)).toEqual(['GERENTE DOS']);
+        expect(App.tableros.calcular().embudo.fichados).toBe(antes - 1);
+        App.equipo.verVista('visitadores');
+        expect(document.getElementById('equipoContenido').textContent).toContain('No cuenta en las métricas');
+        expect(document.getElementById('equipoResumen').textContent).toContain('1 no cuentan');
+        // Y vuelve a contar
+        App.usuarios.metricas(u.id);
+        await App.usuarios.confirmarMetricas();
+        expect(App.equipo.estadisticas().distritos).toHaveLength(2);
+    });
+
+    it('al entrar, el GD recibe la lista de quién no cuenta', async () => {
+        baseSimulada(App).visitadores[0].en_metricas = false;
+        await ingresar('gd@lasante.com', '123456');
+        expect([...(App.state.REPS_FUERA_METRICAS || [])]).toEqual(['NEIVIS PARRA']);
+    });
+});

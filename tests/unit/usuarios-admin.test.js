@@ -204,3 +204,63 @@ describe('Fase 12C: crear el acceso de personas nuevas desde la app', () => {
         expect(document.getElementById('usuarioError').innerText).toContain('ya lo usa otra persona');
     });
 });
+
+describe('Fase 12E: listas de 10 en 10 y correo automático', () => {
+    it('el correo se arma solo: nombre.apellido@lasante.com.ve (sin tildes ni ñ)', () => {
+        const c = App.usuarios.correoSugerido;
+        expect(c('NEIVIS PARRA')).toBe('neivis.parra@lasante.com.ve');
+        expect(c('José Peña')).toBe('jose.pena@lasante.com.ve');
+        expect(c('MARIA JOSE PEREZ GOMEZ')).toBe('maria.perez@lasante.com.ve');
+        expect(c('ANA DE LA ROSA')).toBe('ana.rosa@lasante.com.ve');
+        expect(c('EI-LING LOPEZ')).toBe('eiling.lopez@lasante.com.ve');
+        expect(c('')).toBe('');
+    });
+
+    it('"Crear acceso" ya trae el correo sugerido', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.usuarios.cargar();
+        const i = App.usuarios.pendientes().visitadores.findIndex(v => v.nombre === 'OTRO VISITADOR');
+        App.usuarios.nuevo('vm', i);
+        expect(document.getElementById('nuevoCorreo').value).toBe('otro.visitador@lasante.com.ve');
+    });
+
+    it('crear varios a la vez: revisa los correos, crea los marcados y muestra sus claves', async () => {
+        const bd = baseSimulada(App);
+        bd.visitadores.push({ id: 'v-n1', nombre_sector: 'LUIS ÑAÑEZ', distrito: '100007', activo: true, perfil_id: null },
+            { id: 'v-n2', nombre_sector: 'CARLA DIAZ', distrito: '100007', activo: true, perfil_id: null });
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.usuarios.cargar();
+        App.usuarios.nuevosEnBloque();
+        const correos = [...document.querySelectorAll('[data-bloque-correo]')].map(x => x.value);
+        expect(correos).toEqual(expect.arrayContaining(['luis.nanez@lasante.com.ve', 'carla.diaz@lasante.com.ve', 'otro.visitador@lasante.com.ve']));
+        // Desmarca a uno y corrige otro
+        const idx = (correo) => [...document.querySelectorAll('[data-bloque-correo]')].findIndex(x => x.value === correo);
+        document.querySelector(`[data-bloque-marca="${idx('otro.visitador@lasante.com.ve')}"]`).checked = false;
+        document.querySelector(`[data-bloque-correo="${idx('carla.diaz@lasante.com.ve')}"]`).value = 'carla.diaz2@lasante.com.ve';
+        await App.usuarios.crearEnBloque();
+        expect(window.__calls).toContain('rpc:admin_crear_usuario:vm:luis.nanez@lasante.com.ve');
+        expect(window.__calls).toContain('rpc:admin_crear_usuario:vm:carla.diaz2@lasante.com.ve');
+        expect(window.__calls).not.toContain('rpc:admin_crear_usuario:vm:otro.visitador@lasante.com.ve');
+        expect(document.getElementById('usuarioAccesos').querySelectorAll('li')).toHaveLength(2);
+    });
+
+    it('la lista de usuarios va de 10 en 10', async () => {
+        const bd = baseSimulada(App);
+        for (let n = 0; n < 23; n++) {
+            const id = 'u-extra-' + n;
+            bd.usuarios.push({ id, email: `extra${n}@lasante.com.ve`, clave: 'x' });
+            bd.perfiles.push({ id, correo: `extra${n}@lasante.com.ve`, nombre: `EXTRA ${String(n).padStart(2, '0')}`, rol: 'vm', activo: true });
+        }
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.usuarios.cargar();
+        expect(document.querySelectorAll('#ajUsuariosLista [data-usuario]')).toHaveLength(10);
+        expect(document.getElementById('ajUsuariosPaginas').textContent).toMatch(/Página 1 de \d/);
+        App.usuarios.irAPagina(3);
+        const total = App.usuarios.filtrados().length;
+        expect(document.querySelectorAll('#ajUsuariosLista [data-usuario]')).toHaveLength(total - 20);
+        // Buscar vuelve a la primera página
+        document.getElementById('ajUsuariosBuscar').value = 'extra';
+        App.usuarios.pintar();
+        expect(document.getElementById('ajUsuariosPaginas').textContent).toContain('Página 1 de 3');
+    });
+});

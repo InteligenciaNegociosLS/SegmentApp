@@ -1,0 +1,69 @@
+# Aplica los cambios de la base (supabase/migrations) en PRODUCCIÓN, solo,
+# cada vez que se lleva rediseno → main con una migración nueva.
+# Reemplaza el "node 0-preparar-base.mjs" de Cloud Shell.
+#   - Solo aplica lo que falte (las ya aplicadas no se tocan).
+#   - Cada archivo se aplica completo o nada; si uno falla, sale en rojo
+#     y no se aplica ninguno de los siguientes.
+#   - Nunca borra datos (las migraciones son aditivas).
+#
+# Secretos que se configuran UNA vez en GitHub (Settings → Secrets and
+# variables → Actions → New repository secret):
+#   SUPABASE_DB_URL_PRODUCCION  (Supabase → Connect → Session pooler → URI,
+#                               con la clave de la base en lugar de [YOUR-PASSWORD])
+#   SUPABASE_URL_PRODUCCION     (ya existe: lo usa el latido)
+# Sin esos secretos, el trabajo avisa y no hace nada (sale en verde).
+# Para correrlo a mano: pestaña Actions → "Base de datos de producción" → Run workflow.
+name: Base de datos de producción
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migraciones-produccion
+  cancel-in-progress: false
+
+jobs:
+  migraciones:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ¿Están los secretos?
+        id: secretos
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL_PRODUCCION }}
+          URL: ${{ secrets.SUPABASE_URL_PRODUCCION }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$URL" ]; then
+            echo "::warning::Faltan los secretos SUPABASE_DB_URL_PRODUCCION o SUPABASE_URL_PRODUCCION. No se aplicó nada: usa Cloud Shell (node 0-preparar-base.mjs) o agrega los secretos."
+            echo "listo=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "listo=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.secretos.outputs.listo == 'si'
+        with:
+          node-version: 20
+
+      - name: Instalar lo necesario
+        if: steps.secretos.outputs.listo == 'si'
+        working-directory: scripts/migracion
+        run: npm ci --no-audit --no-fund
+
+      - name: Aplicar las migraciones que falten
+        if: steps.secretos.outputs.listo == 'si'
+        working-directory: scripts/migracion
+        env:
+          DESTINO: produccion
+          CONFIRMACION: MIGRAR PRODUCCION
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL_PRODUCCION }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_PRODUCCION }}
+        run: node 0-preparar-base.mjs

@@ -77,8 +77,15 @@ export async function destinoSeguro({ necesitaAuth = false } = {}) {
 
     console.log(`\nDestino: ${destino.toUpperCase()} · proyecto Supabase: ${ref}`);
     if (destino === 'produccion') {
-        const r = await preguntar('⚠️  Vas a escribir en PRODUCCIÓN. Para continuar escribe exactamente: MIGRAR PRODUCCION\n> ');
-        if (r !== 'MIGRAR PRODUCCION') salir('Cancelado. No se hizo ningún cambio.');
+        // En GitHub (al pasar a main) no hay nadie para escribirlo: el trabajo automático lo trae en CONFIRMACION
+        const auto = (process.env.CONFIRMACION || '').trim();
+        if (auto) {
+            if (auto !== 'MIGRAR PRODUCCION') salir('CONFIRMACION no dice MIGRAR PRODUCCION. No se hizo ningún cambio.');
+            console.log('⚠️  PRODUCCIÓN: confirmado por el trabajo automático (CONFIRMACION=MIGRAR PRODUCCION).');
+        } else {
+            const r = await preguntar('⚠️  Vas a escribir en PRODUCCIÓN. Para continuar escribe exactamente: MIGRAR PRODUCCION\n> ');
+            if (r !== 'MIGRAR PRODUCCION') salir('Cancelado. No se hizo ningún cambio.');
+        }
     }
     return { destino, ref, dbUrl, url };
 }

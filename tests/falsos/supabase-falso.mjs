@@ -337,6 +337,11 @@ export function createClient(url, clave, opciones = {}) {
             registrar('rpc:admin_deshacer_renombre');
             return { data: { ok: true }, error: null };
         },
+        admin_espacio() {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            return { data: bd.espacio || { base_bytes: 120 * 1048576, archivos_bytes: 300 * 1048576, archivos: 12,
+                tablas: [{ nombre: 'recetas', bytes: 90 * 1048576 }, { nombre: 'fichero', bytes: 20 * 1048576 }], versiones: [] }, error: null };
+        },
         admin_pendientes_acceso() {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
             const conAcceso = (id) => { const p = bd.perfiles.find(x => x.id === id); return !!(p && p.activo); };
@@ -355,6 +360,14 @@ export function createClient(url, clave, opciones = {}) {
             if (p_rol === 'vm') bd.visitadores.filter(v => v.nombre_sector === String(p_visitador).toUpperCase()).forEach(v => { v.perfil_id = id; v.activo = true; });
             registrar(`rpc:admin_crear_usuario:${p_rol}:${correo}`);
             return { data: { ok: true, id, correo, nombre: p_nombre, rol: p_rol }, error: null };
+        },
+        admin_metricas_visitador({ p_visitador, p_en_metricas }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const v = bd.visitadores.find(x => x.nombre_sector === String(p_visitador).toUpperCase());
+            if (!v) return { data: null, error: { message: 'No existe el visitador.' } };
+            v.en_metricas = p_en_metricas;
+            registrar(`rpc:admin_metricas_visitador:${v.nombre_sector}:${p_en_metricas}`);
+            return { data: { ok: true, visitador: v.nombre_sector, en_metricas: p_en_metricas }, error: null };
         },
         admin_activar_usuario({ p_id, p_activo }) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };

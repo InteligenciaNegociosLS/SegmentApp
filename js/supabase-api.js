@@ -397,6 +397,19 @@ window.App.sb.visitadoresOcultos = async function() {
     return filas.map(f => String(f.nombre_sector || '').trim().toUpperCase()).filter(Boolean);
 };
 
+// Visitadores con acceso que no cuentan en las métricas del GD ni nacionales (migración 21)
+window.App.sb.visitadoresFueraMetricas = async function() {
+    const sb = await window.App.sb.cliente();
+    const filas = await leerTodo(() => sb.from('visitadores').select('nombre_sector').eq('en_metricas', false).order('nombre_sector'), 'Visitadores fuera de métricas');
+    return filas.map(f => String(f.nombre_sector || '').trim().toUpperCase()).filter(Boolean);
+};
+window.App.sb.metricasVisitador = async function(visitador, enMetricas) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_metricas_visitador', { p_visitador: visitador, p_en_metricas: enMetricas });
+    if (error) throw fallo(error, 'Métricas del visitador');
+    return data;
+};
+
 window.App.sb.visitadoresConUsuario = async function() {
     const sb = await window.App.sb.cliente();
     const filas = await leerTodo(() => sb.from('visitadores')
@@ -509,6 +522,13 @@ window.App.sb.deshacerRenombre = async function(id) {
     const sb = await window.App.sb.cliente();
     const { data, error } = await sb.rpc('admin_deshacer_renombre', { p_id: id });
     if (error) throw fallo(error, 'Deshacer renombre');
+    return data;
+};
+// Espacio usado en Supabase (migración 20, solo admin)
+window.App.sb.espacio = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_espacio');
+    if (error) throw fallo(error, 'Espacio usado');
     return data;
 };
 window.App.sb.pendientesAcceso = async function() {
