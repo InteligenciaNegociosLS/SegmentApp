@@ -262,6 +262,16 @@ window.App.data.parseStoredFicheroData = function(savedArray) {
    PARSEO DE CSV DE AUDITORÍA (CloseUp)
 ============================================================ */
 // Convierte filas del archivo de recetas al formato de la app (sin tocar el estado)
+// Nombre de mercado de hoy: los archivos guardados de cada versión conservan el nombre con el que se
+// cargaron ("ESOZ MERCADO A02B2"). Al renombrar (Ajustes → Catálogos), el nombre viejo queda como alias
+// en la tabla de nombres de mercado → aquí se traduce al de hoy ("Mdo Esoz"), igual que en la base.
+window.App.data.mercadoDeHoy = function(nombre) {
+    const m = String(nombre || '').trim();
+    const tabla = window.App.state.NOMBRES_MERCADO;
+    if (!m || !tabla) return m;
+    const nuevo = tabla[m.replace(/\s+/g, ' ').toUpperCase()];
+    return nuevo ? String(nuevo).trim() : m;
+};
 window.App.data.convertirRecetas = function(json) {
     const salida = [];
     json.forEach(row => {
@@ -270,7 +280,7 @@ window.App.data.convertirRecetas = function(json) {
             salida.push({
                 doc:      String(vals[0] || "").trim(),
                 license:  String(vals[1] || "").trim(),
-                market:   String(vals[2] || "").trim(),
+                market:   window.App.data.mercadoDeHoy(vals[2]),
                 prod:     String(vals[3] || "").trim(),
                 rx:       parseInt(vals[4]) || 0,
                 address:  String(vals[6] || "").trim(),
@@ -343,6 +353,8 @@ async function restaurarCopia(ids, modo) {
         if (!audit) return false;
         window.App.state.MARKET_SERVIDOR = null;
         window.App.state.RAW_DATA = JSON.parse(audit);
+        // La copia pudo guardarse antes de renombrar un mercado
+        if (window.App.state.NOMBRES_MERCADO) window.App.state.RAW_DATA.forEach(r => { r.market = window.App.data.mercadoDeHoy(r.market); });
         if (fichero) window.App.data.parseStoredFicheroData(JSON.parse(fichero));
         return true;
     } catch (e) {

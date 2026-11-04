@@ -56,6 +56,7 @@ window.App.state = {
     visitadorId: null,            // id del visitador (solo vm)
     REPS_PERMITIDOS: null,        // Set de visitadores visibles (null = todos)
     REPS_OCULTOS: null,           // Set de visitadores desactivados que no se muestran (Fase 11)
+    NOMBRES_MERCADO: null,        // tabla de nombres de mercado (alias viejo → nombre de hoy), de la configuración
     EQUIPOS_OTC: null,            // Códigos de "Equipo" del fichero que son línea OTC (configuración)
 
     // --- Versiones de datos ---
