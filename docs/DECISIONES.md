@@ -531,3 +531,15 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 - Pregunta del dueño: Cloud Shell solo queda para aplicar migraciones de la
   base. Propuesta para la Fase 12E: que GitHub las aplique sola al fusionar a
   `main` (con la clave de la base como secreto de GitHub).
+
+## Fase 12D (03/11/2026) · CloseUp en un solo paso
+- La carga de recetas acepta **varios archivos de mercado del portal o un
+  .zip** y hace el trabajo de Power Query en el navegador (filtros, catálogos,
+  matrícula a 10 dígitos, sin repetidas). **Mercado = nombre del archivo.**
+- La clase terapéutica vuelve a ser real (código + nombre del catálogo de
+  clases); ya no "SIN DATOS".
+- Informe previo con alertas y comparación con la versión de hoy; descarga
+  del consolidado; comparación única con el archivo de Power Query.
+- A Supabase llega **una sola versión** (igual que antes): no se sobrecarga.
+- Los archivos originales se guardan comprimidos (`closeup/<versión>/…`,
+  registrados en `catalogo_versiones` con tipo `closeup`). Sin migración nueva.

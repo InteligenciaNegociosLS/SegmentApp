@@ -226,6 +226,18 @@ try {
         await page.evaluate(() => { App.ajustes.descartarUmbrales(); App.ux.irA('inicio'); });
         await page.evaluate(() => abrirCargaDatos());
         await foto('5-admin-carga');
+        await page.evaluate(async () => {
+            const tit = ['Medicos Prescriptores por Mercado', 'Edicion: 09/2026', 'Linea: Todas', 'Mercados: X', 'Periodos: TAM 09/26 - ', 'Geografia: VENEZUELA', 'Especialidades: TOTAL', 'Sin filtros avanzados', 'Medico;;;;;;TAM 09/26'];
+            const cab = 'Nombre;Matricula;Esp1;Esp2;Representantes;Mercado;Categ;%MS;Px;Productos1;Rnk1;%MS1;Px1;Medico Unico;Domicilio;Cod.Postal;Localidad ;Region';
+            const f = (n, m, e, p, x) => `${n};${m};${e};;;X;1;1;1;${p};1;1;${x};1;DIR;1000;CARACAS;REGION CAPITAL`;
+            const a1 = [...tit, cab, f('DR UNO', '107041', 'CAR', 'DESLER PHQ', 12), f('DR UNO', '107041', 'CAR', 'AERIUS SCH', 30), f('CLINICA', '0', 'INS', 'AERIUS SCH', 9)].join('\r\n');
+            const a2 = [...tit, cab, f('DR DOS', '200', 'PED', 'ESOZ PHQ', 5), f('DR DOS', '200', 'PED', 'NEXIUM AZ', 7)].join('\r\n');
+            document.querySelector('input[name="cargaTipo"][value="recetas"]').checked = true;
+            await App.carga.intentarCloseUp([new File([a1], 'DESLER MERCADO.csv'), new File([a2], 'ESOZ MERCADO A02B2.csv')]);
+            document.querySelector('#informeCloseUp details').open = true;
+        });
+        await page.waitForTimeout(300);
+        await foto('5a-admin-carga-closeup', { completa: true });
         await page.evaluate(() => { App.carga.cerrarPanel(); App.reports.openModal(); });
         await foto('5b-reportes');
         await page.evaluate(() => { document.querySelectorAll('.fixed.inset-0').forEach(m => m.classList.add('hidden')); App.exports.showExportModal('excel'); });
