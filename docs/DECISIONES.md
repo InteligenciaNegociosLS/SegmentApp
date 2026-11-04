@@ -632,3 +632,11 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   dispositivo (médico, mercado, hace cuánto) con "Subir ahora" y la última
   subida; el aviso "Sin conexión" dice cuántas hay guardadas; la app pide al
   navegador no borrar lo guardado (`navigator.storage.persist`).
+
+## Fase 12H (04/11/2026)
+- **Único por médico + mercado + producto (decisión del dueño):** al cargar
+  CloseUp, si un médico (matrícula) viene más de una vez en el mismo mercado y
+  producto con datos distintos, queda **la fila de más recetas** (la misma
+  regla de la matriz: los números no cambian). El informe muestra
+  "Repetidos unificados" con las Rx de cada fila y las columnas en que se
+  diferenciaban (ej. Domicilio), para detectar errores en la data del portal.

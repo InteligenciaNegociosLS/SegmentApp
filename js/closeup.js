@@ -138,6 +138,8 @@
         const ediciones = new Set();
         let repetidas = 0;
         const mercados = new Map();         // nombre oficial → { mercado, archivos, crudos, leidas?, filas, rx }
+        const indiceUnico = new Map();      // matrícula + mercado + producto → posición en "filas"
+        const unificadas = new Map();       // las que venían repetidas con datos distintos
         const crudosVistos = new Map();     // nombre del portal → { filas, archivos }
         const archivoDe = new Map();        // nombre del portal → primer archivo donde apareció
         archivos.forEach(({ nombre, texto }) => {
@@ -155,13 +157,36 @@
             r.filas.forEach(f => {
                 const clave = f.join('\u0001');
                 if (vistos.has(clave)) { repetidas++; return; }
-                vistos.add(clave); filas.push(f);
+                vistos.add(clave);
                 const m = mercados.get(f[2]) || { mercado: f[2], archivos: new Set(), filas: 0, rx: 0 };
-                m.filas++; m.rx += f[4]; m.archivos.add(nombre); mercados.set(f[2], m);
+                m.archivos.add(nombre); mercados.set(f[2], m);
+                // Un solo registro por médico (matrícula) + mercado + producto: queda el de más recetas
+                // (la misma regla de la matriz). Se anota en qué columnas se diferenciaban (Fase 12H).
+                const unica = `${String(f[1]).replace(/^0+/, '')}\u0001${f[2]}\u0001${f[3]}`;
+                const i = indiceUnico.get(unica);
+                if (i === undefined) {
+                    indiceUnico.set(unica, filas.length); filas.push(f);
+                    m.filas++; m.rx += f[4];
+                    return;
+                }
+                const caso = unificadas.get(unica) || { filas: [filas[i]] };
+                caso.filas.push(f);
+                unificadas.set(unica, caso);
+                if (f[4] > filas[i][4]) { m.rx += f[4] - filas[i][4]; filas[i] = f; }
             });
             Object.keys(sinCatalogo).forEach(k => r.sinCatalogo[k].forEach(x => sinCatalogo[k].add(x)));
             porMercado.push({ archivo: nombre, leidas: r.leidas, quitadas: r.quitadas });
         });
+        // Repetidas con datos distintos: qué columnas las diferenciaban (para detectar errores en la data)
+        const cols = window.App.carga.COLUMNAS_RECETAS;
+        const casosUnificados = [...unificadas.values()].map(c => {
+            const quedo = c.filas.reduce((a, b) => (b[4] > a[4] ? b : a));
+            const difieren = cols.map((col, j) => ({ col, valores: [...new Set(c.filas.map(f => String(f[j])))] })).filter(x => x.valores.length > 1);
+            return { medico: quedo[0], matricula: quedo[1], mercado: quedo[2], producto: quedo[3], filas: c.filas.length, rxQueda: quedo[4],
+                rx: c.filas.map(f => f[4]), difieren };
+        }).sort((a, b) => a.mercado.localeCompare(b.mercado) || a.medico.localeCompare(b.medico));
+        const porColumna = new Map();
+        casosUnificados.forEach(c => c.difieren.forEach(d => porColumna.set(d.col, (porColumna.get(d.col) || 0) + 1)));
         // Por mercado (oficial), sumando todos los archivos
         const archivosLeidos = porMercado.splice(0);
         mercados.forEach(m => porMercado.push({ mercado: m.mercado, archivo: [...m.archivos].join(', '), filas: m.filas, rx: m.rx,
@@ -196,13 +221,14 @@
         // Nomenclatura: todos los mercados se llaman "Mdo + producto" (decisión del dueño, Fase 12D-2)
         const fueraDeRegla = porMercado.map(m => m.mercado).filter(m => !/^Mdo\s+\S/.test(m));
         if (fueraDeRegla.length && !sinNombre.length) alertas.push({ tipo: 'info', texto: `${fueraDeRegla.length} mercado(s) no siguen la regla "Mdo + producto"${fueraDeRegla.length <= 3 ? ': ' + fueraDeRegla.join(', ') : ''}. Corrígelos en "Nombres de mercado" si hace falta.`, lista: fueraDeRegla.sort() });
+        if (casosUnificados.length) alertas.push({ tipo: 'aviso', texto: `${casosUnificados.length} médico(s) venían repetidos en el mismo mercado y producto con datos distintos: se dejó la fila de más recetas. Se diferenciaban en: ${[...porColumna.entries()].sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} (${n})`).join(', ')}. Mira el detalle en "Repetidos unificados".` });
         if (sinCatalogo.productos.size) alertas.push({ tipo: 'aviso', texto: `${sinCatalogo.productos.size} producto(s) no están en el catálogo (quedan sin molécula, clase ni laboratorio). Agrégalos en Ajustes → Catálogos → Productos.`, lista: [...sinCatalogo.productos].sort() });
         if (sinCatalogo.especialidades.size) alertas.push({ tipo: 'aviso', texto: `${sinCatalogo.especialidades.size} código(s) de especialidad no están en el catálogo (se deja el código).`, lista: [...sinCatalogo.especialidades].sort() });
         if (sinCatalogo.laboratorios.size) alertas.push({ tipo: 'info', texto: `${sinCatalogo.laboratorios.size} laboratorio(s) sin nombre en el catálogo (se deja la abreviatura).`, lista: [...sinCatalogo.laboratorios].sort() });
 
         const edicion = [...ediciones].sort().pop() || '';
         return {
-            errores, alertas, porMercado, archivosLeidos, nombres, sinNombre, repetidas, edicion, sinCatalogo, faltan: typeof faltan !== 'undefined' ? faltan : [],
+            errores, alertas, porMercado, archivosLeidos, nombres, sinNombre, repetidas, edicion, sinCatalogo, unificados: casosUnificados, faltan: typeof faltan !== 'undefined' ? faltan : [],
             leido: { encabezados: window.App.carga.COLUMNAS_RECETAS.slice(), filas: filas.map(f => f.map(v => String(v))) },
             resumen: { archivos: porMercado.length, filas: filas.length, rx: totalRx, rxPropio, share: totalRx ? rxPropio / totalRx * 100 : 0,
                 shareAntes: anterior && anterior.rx ? anterior.rxPropio / anterior.rx * 100 : null, rxAntes: anterior ? anterior.rx : null }

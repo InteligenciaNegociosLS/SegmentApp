@@ -194,3 +194,9 @@ lo carga como antes.
   el informe toca **"Completar con los N mercados de hoy"**: la app toma los
   demás de la versión de hoy, sin cambios, y arma una versión nueva completa.
   Publícala como siempre; la de hoy queda guardada por si hay que volver.
+
+## Médicos repetidos en el mismo mercado y producto (Fase 12H)
+- Si el portal trae a un médico dos veces en el mismo mercado y producto (por
+  ejemplo, con dos domicilios), la app deja **una sola fila: la de más
+  recetas**. En el informe, **"Repetidos unificados"** muestra cada caso, las
+  recetas de cada fila y **en qué columnas se diferenciaban**.
