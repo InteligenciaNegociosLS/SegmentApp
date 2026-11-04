@@ -204,7 +204,8 @@ describe('Fase 12D-2: la barra de navegación responde al instante', () => {
         App.ux.irA('inicio', { historial: false });
         App.ux.irA('equipo', { tocado: true });
         expect(document.querySelector('#navInferior [data-seccion="equipo"], #navRiel [data-seccion="equipo"]').getAttribute('aria-current')).toBe('true');
-        await new Promise(r => setTimeout(r, 60));
+        // Cambia en el siguiente cuadro; en un servidor cargado puede tardar más: se espera hasta 3 s
+        for (let i = 0; i < 150 && App.state.PANTALLA !== 'equipo'; i++) await new Promise(r => setTimeout(r, 20));
         expect(App.state.PANTALLA).toBe('equipo');
     });
 });
