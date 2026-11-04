@@ -127,6 +127,13 @@ window.App.ficha.renderEncabezado = function() {
         (campo(f0, 'ESPEC1_FICHERO_DESC') || doc.spec) && ['stethoscope', campo(f0, 'ESPEC1_FICHERO_DESC') || doc.spec],
         visitadores.length && ['person', visitadores.join(', ')]
     ].filter(Boolean);
+    // Fase 12I: misma matrícula, otro nombre en el fichero
+    const enFichero = window.App.data.nombreEnFichero(f0);
+    const nivelNombre = f0 ? window.App.data.compararNombres(doc.name, enFichero) : 'igual';
+    const avisoNombre = nivelNombre === 'igual' ? '' : `<div class="mt-3 rounded-2xl ${nivelNombre === 'distinto' ? 'bg-rose-50 text-rose-900' : 'bg-amber-50 text-amber-900'} px-3 py-2 text-xs flex gap-2" role="note">
+        <span class="material-symbols-outlined text-[18px]">badge</span>
+        <span>${nivelNombre === 'distinto' ? '<b>Nombre distinto.</b>' : '<b>Nombre parecido.</b>'} En CloseUp: <b>${escF(doc.name)}</b> · En el fichero: <b>${escF(enFichero)}</b>.
+            Revisa que sea el mismo médico; si no lo es, al evaluar marca <b>"Cruce errado"</b>.</span></div>`;
     document.getElementById('fichaEncabezado').innerHTML = `
         <div class="flex items-start gap-4">
             <div class="flex-1 min-w-0">
@@ -135,7 +142,7 @@ window.App.ficha.renderEncabezado = function() {
             </div>
             ${cuadrante}
         </div>
-        <div class="flex flex-wrap gap-1.5 sm:gap-2 mt-3">${chips.map(([i, t]) => `<span class="chip !h-auto min-h-[30px] py-1 !px-2.5 !text-xs !whitespace-normal"><span class="material-symbols-outlined text-[16px]">${i}</span>${escF(t)}</span>`).join('')}</div>`;
+        <div class="flex flex-wrap gap-1.5 sm:gap-2 mt-3">${chips.map(([i, t]) => `<span class="chip !h-auto min-h-[30px] py-1 !px-2.5 !text-xs !whitespace-normal"><span class="material-symbols-outlined text-[16px]">${i}</span>${escF(t)}</span>`).join('')}</div>${avisoNombre}`;
     const tendencia = doc.deltaShare == null || Math.abs(doc.deltaShare) < 0.05 ? ''
         : `<span class="tendencia ${doc.deltaShare > 0 ? 'sube' : 'baja'}">${doc.deltaShare > 0 ? '▲' : '▼'} ${fmtF(Math.abs(doc.deltaShare), 1)} pts</span>`;
     const kpi = (titulo, valor, extra, clase = '') => `<div class="rounded-2xl p-3 ${clase || 'bg-slate-50'}"><div class="text-[11px] font-semibold opacity-80">${titulo}</div><div class="text-xl font-display font-extrabold mt-0.5">${valor}</div><div class="text-[11px] mt-0.5 min-h-[16px]">${extra || ''}</div></div>`;

@@ -314,3 +314,20 @@ describe('Fase 12G: Movimientos por mercado', () => {
         expect(t).toContain('Mdo Fludil');
     });
 });
+
+describe('Fase 12I: comparar con una versión anterior escrita distinto', () => {
+    it('la anterior con clase "SIN DATOS" y otro laboratorio no queda vacía; el médico se une por matrícula', async () => {
+        await admin();
+        const antes = (doc, license, prod, rx) => ({ doc, license, market: 'DESLER MERCADO', prod, rx, address: '', zip: '', city: '', region: 'DC',
+            spec: 'MG', molecule: 'DESLORATADINA', class: 'SIN DATOS', generic: 'N', lab: 'LAB VIEJO' });
+        App.comparar.estado = { version: { nombre: 'Datos enero' }, filas: [
+            antes('PEREZ A', '0000123', 'DESLER PHQ', 2), antes('PEREZ A', '0000123', 'OTRO X', 40), antes('ROJAS LUIS', '456', 'OTRO X', 5)] };
+        App.comparar.alRecalcular();
+        const est = App.comparar.estado;
+        expect(est.kpis.medicos).toBe(2);                  // antes: 0 (todo quedaba fuera por la clase)
+        expect(est.kpis.totalRx).toBe(47);
+        expect(est.resumen.nuevo).toBe(0);                  // PEREZ ANA = PEREZ A (misma matrícula)
+        expect(est.resumen.mejor + est.resumen.peor + est.resumen.igual).toBe(2);
+        expect(est.resumen.salieron).toBe(0);
+    });
+});

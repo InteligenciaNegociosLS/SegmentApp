@@ -640,3 +640,21 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   regla de la matriz: los números no cambian). El informe muestra
   "Repetidos unificados" con las Rx de cada fila y las columnas en que se
   diferenciaban (ej. Domicilio), para detectar errores en la data del portal.
+
+## Fase 12I (04/11/2026)
+- **Comparar con la versión anterior:** a la anterior solo se le aplican los
+  filtros que la persona achicó. "Datos enero" (de Power Query) tenía la clase
+  terapéutica "SIN DATOS" en todas las filas y los filtros de hoy la dejaban
+  vacía (Movimientos 0 / 0 y "▲" igual al total). El médico se une por
+  matrícula si el nombre cambió de forma entre versiones.
+- **Nombre distinto CloseUp vs fichero** (misma matrícula): se compara palabra
+  por palabra sin orden, iniciales, tildes, Ñ ("#") ni errores de tipeo chicos.
+  2+ palabras en común = igual; 1 = parecido (revisar); 0 = distinto. Con los
+  datos del repositorio: 2.491 iguales, 32 parecidos, 182 distintos. Se ve en
+  Salud de los datos (lista y descarga), en la ficha del médico (sugiere
+  "Cruce errado") y en la campanita del GD y admin.
+- **Productos de La Santé que ya no aparecen:** la lista dice en qué mercado
+  estaban, sus recetas y el posible motivo (su mercado no vino, cambió de
+  nombre — hay uno parecido —, o sin recetas en la edición).
+- **Salud:** cuenta las evaluaciones de mercados que no están en la versión de
+  hoy (se conservan y vuelven si el mercado regresa).

@@ -985,6 +985,22 @@
 </div>
 
 <!-- Products/Config Modal M3 -->
+<!-- Médicos con nombre distinto entre CloseUp y el fichero (Fase 12I) -->
+<div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4" id="nombresModal" role="dialog" aria-modal="true" aria-labelledby="nombresTitulo">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+            <div><h3 id="nombresTitulo" class="text-lg font-display font-bold text-slate-800 flex items-center gap-2"><span class="material-symbols-outlined text-amber-700">badge</span> Nombre distinto: CloseUp vs fichero</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Misma matrícula, nombre diferente. Revisa si es el mismo médico.</p></div>
+            <button type="button" class="boton-icono" aria-label="Cerrar" onclick="App.ajustes.cerrarNombres()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-5 overflow-y-auto flex-1" id="nombresCuerpo"></div>
+        <div class="p-5 border-t border-slate-100 flex flex-wrap justify-end gap-2">
+            <button type="button" class="boton-tonal" onclick="App.ajustes.descargarNombres()"><span class="material-symbols-outlined text-[18px]">download</span> Descargar (Excel)</button>
+            <button type="button" class="boton-lleno" onclick="App.ajustes.cerrarNombres()">Listo</button>
+        </div>
+    </div>
+</div>
+
 <!-- Evaluaciones guardadas en el dispositivo, por subir (Fase 12G) -->
 <div class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4" id="pendientesModal" role="dialog" aria-modal="true" aria-labelledby="pendientesTitulo">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh] overflow-hidden">
