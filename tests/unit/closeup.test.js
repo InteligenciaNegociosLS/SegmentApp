@@ -96,6 +96,20 @@ describe('Varios mercados juntos: consolidado e informe', () => {
         expect(t).toContain('no están en el catálogo');
     });
 
+    it('productos de La Santé que ya no aparecen: en qué mercado estaban, sus recetas y el posible motivo', () => {
+        const anterior = { porMercado: new Map([['ARAII MCDO', { filas: 2, rx: 177 }], ['VIEJO MCDO', { filas: 10, rx: 50 }]]), rx: 227, rxPropio: 31,
+            productosPropios: new Set(['CANDETIQUE PHQ', 'TRALIX PHQ', 'CANDETIQUE FORTE PHQ', 'NEFROX PHQ']),
+            detallePropios: new Map([['TRALIX PHQ', { rx: 20, mercados: new Set(['VIEJO MCDO']) }], ['CANDETIQUE FORTE PHQ', { rx: 9, mercados: new Set(['ARAII MCDO']) }],
+                ['NEFROX PHQ', { rx: 2, mercados: new Set(['ARAII MCDO']) }], ['CANDETIQUE PHQ', { rx: 1, mercados: new Set(['ARAII MCDO']) }]]) };
+        const r = App.closeup.consolidar([{ nombre: 'ARAII MCDO.csv', texto: ARAII }], ctx(), anterior);
+        const a = r.alertas.find(x => /producto\(s\) de La Santé/.test(x.texto));
+        expect(a.texto).toContain('3 producto(s) de La Santé que estaban y ya no aparecen (1 porque su mercado no vino en esta carga)');
+        expect(a.lista).toEqual([
+            'CANDETIQUE FORTE PHQ (antes ARAII MCDO, 9 Rx) → ¿cambió de nombre? ahora hay "CANDETIQUE PHQ"',
+            'NEFROX PHQ (antes ARAII MCDO, 2 Rx) → sin recetas en esta edición (o no está en el catálogo de productos)',
+            'TRALIX PHQ (antes VIEJO MCDO, 20 Rx) → su mercado no vino en esta carga']);
+    });
+
     it('médico repetido en el mismo mercado y producto: queda la fila de más recetas y se ve en qué se diferenciaban', () => {
         const otraDireccion = fila('SEIJAS G FRANCYS E', '107041', 'CAR', 'NEFROTAL RWE', 90).replace('CTRA 17 CON CLL 12', 'AV BOLIVAR LOCAL 3');
         const r = App.closeup.consolidar([{ nombre: 'ARAII MCDO.csv', texto: archivo([fila('SEIJAS G FRANCYS E', '107041', 'CAR', 'NEFROTAL RWE', 176), otraDireccion,

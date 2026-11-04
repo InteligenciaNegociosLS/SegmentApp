@@ -215,8 +215,25 @@
             var faltan = [...anterior.porMercado.keys()].filter(k => !mercados.has(k));
             if (faltan.length) alertas.push({ tipo: 'aviso', texto: `Faltan ${faltan.length} mercado(s) que estaban en la carga anterior${faltan.length <= 3 ? ': ' + faltan.join(', ') : ''}.`, lista: faltan.sort() });
             const propiosAhora = new Set(filas.filter(f => esPropio(f[3])).map(f => f[3]));
-            const propiosAusentes = [...(anterior.productosPropios || [])].filter(p => !propiosAhora.has(p));
-            if (propiosAusentes.length) alertas.push({ tipo: 'aviso', texto: `${propiosAusentes.length} producto(s) de La Santé que estaban y ya no aparecen${propiosAusentes.length <= 3 ? ': ' + propiosAusentes.join(', ') : ''}.`, lista: propiosAusentes.sort() });
+            const propiosAusentes = [...(anterior.productosPropios || [])].filter(p => !propiosAhora.has(p)).sort();
+            if (propiosAusentes.length) {
+                // Por qué puede faltar cada uno (Fase 12I): su mercado no vino en esta carga, cambió de nombre en el portal
+                // (hay uno parecido) o no tuvo recetas en el período
+                const todosAhora = [...new Set(filas.map(f => f[3]))];
+                const primera = (p) => String(p).split(/\s+/)[0];
+                const detalle = anterior.detallePropios || new Map();
+                const explicar = (p) => {
+                    const d = detalle.get(p);
+                    const merc = d ? [...d.mercados] : [];
+                    const parecido = todosAhora.find(x => x !== p && primera(x) === primera(p) && primera(p).length >= 3);
+                    const motivo = merc.length && merc.every(m => !mercados.has(m)) ? 'su mercado no vino en esta carga'
+                        : parecido ? `¿cambió de nombre? ahora hay "${parecido}"` : 'sin recetas en esta edición (o no está en el catálogo de productos)';
+                    return `${p}${d ? ` (antes ${merc.slice(0, 2).join(', ')}${merc.length > 2 ? '…' : ''}, ${d.rx} Rx)` : ''} → ${motivo}`;
+                };
+                const lista = propiosAusentes.map(explicar);
+                const porMercadoFaltante = lista.filter(x => /su mercado no vino/.test(x)).length;
+                alertas.push({ tipo: 'aviso', texto: `${propiosAusentes.length} producto(s) de La Santé que estaban y ya no aparecen${porMercadoFaltante ? ` (${porMercadoFaltante} porque su mercado no vino en esta carga)` : ''}. Abre "Ver lista": dice en qué mercado estaban, sus recetas y el posible motivo.`, lista });
+            }
         }
         // Nomenclatura: todos los mercados se llaman "Mdo + producto" (decisión del dueño, Fase 12D-2)
         const fueraDeRegla = porMercado.map(m => m.mercado).filter(m => !/^Mdo\s+\S/.test(m));
@@ -279,14 +296,21 @@
         const porMercado = new Map();
         let rx = 0, rxPropio = 0;
         const propios = new Set();
+        const detalle = new Map();   // producto propio → { rx, mercados } (para explicar los que ya no aparecen)
         datos.forEach(r => {
             const m = String(r.market || '');
             const x = porMercado.get(m) || { filas: 0, rx: 0 };
             x.filas++; x.rx += r.rx || 0; porMercado.set(m, x);
             rx += r.rx || 0;
-            if (window.App.data.isPhq(r.prod)) { rxPropio += r.rx || 0; propios.add(String(r.prod).toUpperCase()); }
+            if (window.App.data.isPhq(r.prod)) {
+                rxPropio += r.rx || 0;
+                const p = String(r.prod).toUpperCase();
+                propios.add(p);
+                const dp = detalle.get(p) || { rx: 0, mercados: new Set() };
+                dp.rx += r.rx || 0; dp.mercados.add(m); detalle.set(p, dp);
+            }
         });
-        return { porMercado, rx, rxPropio, productosPropios: propios };
+        return { porMercado, rx, rxPropio, productosPropios: propios, detallePropios: detalle };
     };
 
     /* ---------- Catálogos y filtros para el cruce ---------- */

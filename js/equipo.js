@@ -99,7 +99,7 @@
                 v.conRx++; v.rx += doc.totalRx; v.phq += doc.rxPhq; v.gap += doc.gap;
                 const celda = `${doc.closeupPotency}_${doc.closeupLoyalty}`;
                 v.celdas[celda] = (v.celdas[celda] || 0) + 1;
-                const p = previos && previos.get(doc.id);
+                const p = previos && (comp.buscarPrevio ? comp.buscarPrevio(doc) : previos.get(doc.id));
                 if (p) { v.rxAntes += p.totalRx; v.phqAntes += p.rxPhq; }
             });
         });

@@ -77,26 +77,34 @@ window.App.comparar.alRecalcular = function() {
     const docs = st.PROCESSED_DATA || [];
     docs.forEach(d => { d.movimiento = null; d.antes = null; d.deltaShare = null; });
     if (est && est.filas) {
-        const r = window.App.matrix.calcularMedicos(est.filas, false);
+        const r = window.App.matrix.calcularMedicos(est.filas, false, { soloFiltrosElegidos: true });
         const previos = new Map(r.doctors.filter(d => !d.isZeroRx).map(d => [d.id, d]));
+        // Si el nombre del médico cambió de forma entre versiones (ej. "SEIJAS G FRANCYS E" ↔ "SEIJAS FRANCYS"),
+        // se une por la matrícula cuando esa matrícula es de un solo médico en la versión anterior
+        const porMatricula = new Map();
+        previos.forEach(p => { const k = p._clave || window.App.data.normalizeKey(p.id); porMatricula.set(k, porMatricula.has(k) ? null : p); });
+        const buscarPrevio = (d) => previos.get(d.id) || porMatricula.get(d._clave || window.App.data.normalizeKey(d.id)) || null;
+        const usados = new Set();
         const resumen = { mejor: 0, peor: 0, igual: 0, nuevo: 0, salieron: 0 };
         const actuales = new Set();
         docs.forEach(d => {
             if (d.isZeroRx) return;
             actuales.add(d.id);
-            const p = previos.get(d.id);
+            const p = buscarPrevio(d);
             if (!p) { d.movimiento = 'nuevo'; resumen.nuevo++; return; }
+            usados.add(p.id);
             d.antes = p.closeupLabel;
             d.deltaShare = d.share - p.share;
             const a = puntaje(p.closeupLabel), b = puntaje(d.closeupLabel);
             d.movimiento = a === b ? 'igual' : (b > a ? 'mejor' : 'peor');
             resumen[d.movimiento]++;
         });
-        previos.forEach((p, id) => { if (!actuales.has(id)) resumen.salieron++; });
+        previos.forEach((p, id) => { if (!actuales.has(id) && !usados.has(id)) resumen.salieron++; });
         const totalAntes = r.grandTotalRx;
         const phqAntes = r.doctors.reduce((s, d) => s + (d.isZeroRx ? 0 : d.rxPhq), 0);
         est.resumen = resumen;
         est.previos = previos;   // por médico: lo usa la pantalla Equipo para la tendencia de cada VM
+        est.buscarPrevio = buscarPrevio;
         est.kpis = { totalRx: totalAntes, rxPhq: phqAntes, share: totalAntes ? phqAntes / totalAntes * 100 : 0, medicos: previos.size };
     }
     window.App.comparar.render();

@@ -263,9 +263,13 @@ window.App.matrix.switchMatrixMode = function(mode) {
    misma regla, para la versión anterior (movimientos y tendencias).
    usarCache: solo para los datos actuales.
 ------------------------------------------------------------ */
-window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
+// opciones.soloFiltrosElegidos (Fase 12I): para la versión ANTERIOR solo se aplican los filtros que la persona
+// achicó (un mercado, una región…). Si un filtro tiene todo marcado, no se aplica: la versión anterior puede
+// escribir distinto la clase, el laboratorio o la especialidad (ej. "SIN DATOS") y no debe quedar vacía.
+window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false, opciones = {}) {
     const st = window.App.state;
     const d  = window.App.data;
+    if (opciones.soloFiltrosElegidos) usarCache = false;
 
     const fStatus  = document.getElementById('filterStatus').value;
     const fGeneric = document.getElementById('filterGeneric')?.value || 'all';
@@ -298,16 +302,17 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false) {
     } else {
         // Recalcular universo desde cero
         // Conjuntos (búsqueda instantánea) en vez de recorrer cada lista por fila
-        const fs = st.FILTER_STATE;
-        const mk = new Set(fs.Market), rg = new Set(fs.Region), sp = new Set(fs.Spec),
-              mo = new Set(fs.Molecule), cl = new Set(fs.Class), lb = new Set(fs.Lab);
+        const fs = st.FILTER_STATE, fo = st.FILTER_OPTIONS || {};
+        const filtro = (k) => (opciones.soloFiltrosElegidos && (fs[k] || []).length >= (fo[k] || []).length) ? null : new Set(fs[k]);
+        const mk = filtro('Market'), rg = filtro('Region'), sp = filtro('Spec'),
+              mo = filtro('Molecule'), cl = filtro('Class'), lb = filtro('Lab');
         universeRows = filasFuente.filter(row => {
-            if (!mk.has(row.market))   return false;
-            if (!rg.has(row.region))   return false;
-            if (!sp.has(row.spec))     return false;
-            if (!mo.has(row.molecule)) return false;
-            if (!cl.has(row.class))    return false;
-            if (!lb.has(row.lab))      return false;
+            if (mk && !mk.has(row.market))   return false;
+            if (rg && !rg.has(row.region))   return false;
+            if (sp && !sp.has(row.spec))     return false;
+            if (mo && !mo.has(row.molecule)) return false;
+            if (cl && !cl.has(row.class))    return false;
+            if (lb && !lb.has(row.lab))      return false;
             if (fGeneric !== 'all' && row.generic !== fGeneric)   return false;
             return true;
         });
