@@ -675,6 +675,16 @@
                             <option value="">Todos los roles</option><option value="vm">Visitadores</option><option value="gd">Gerentes de distrito</option>
                             <option value="gte_nacional">Gerente nacional</option><option value="admin">Administradores</option></select></label>
                 </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                    <label><span class="sr-only">Acceso</span>
+                        <select id="ajUsuariosActivo" class="filter-select !rounded-2xl w-full" onchange="App.usuarios.pintar()">
+                            <option value="">Activos e inactivos</option><option value="si">Solo con acceso activo</option><option value="no">Solo con acceso desactivado</option></select></label>
+                    <label><span class="sr-only">Métricas</span>
+                        <select id="ajUsuariosMetricas" class="filter-select !rounded-2xl w-full" onchange="App.usuarios.pintar()">
+                            <option value="">Con y sin métricas</option><option value="si">Cuentan en las métricas</option><option value="no">No cuentan en las métricas</option></select></label>
+                    <label><span class="sr-only">Línea</span>
+                        <select id="ajUsuariosLinea" class="filter-select !rounded-2xl w-full" onchange="App.usuarios.pintar()"><option value="">Todas las líneas</option></select></label>
+                </div>
                 <p id="ajUsuariosResumen" class="text-xs text-slate-500 mb-1" aria-live="polite"></p>
                 <div id="ajUsuariosPendientes" class="my-3"></div>
                 <div class="flex flex-wrap gap-2 my-3">

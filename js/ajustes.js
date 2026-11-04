@@ -284,11 +284,17 @@ window.App.ajustes.renderSalud = async function() {
     window.App.ajustes.renderEspacio();
     try {
         const lista = await window.App.sb.visitadoresConUsuario();
-        const activos = lista.filter(x => x.activo);
+        // Solo los visitadores del fichero de HOY (igual que "Sin acceso" en Usuarios). Los de ficheros
+        // anteriores que ya no están no necesitan usuario: se informan aparte.
+        const delFichero = window.App.data.lineasDelFichero().porVm;
+        const enFichero = (x) => !delFichero.size || delFichero.has(String(x.nombre_sector || '').trim().toUpperCase());
+        const activos = lista.filter(x => x.activo && enFichero(x));
         const sin = activos.filter(x => !x.perfiles || !x.perfiles.activo);
+        const viejos = lista.filter(x => x.activo && !enFichero(x) && (!x.perfiles || !x.perfiles.activo)).length;
         const li = document.getElementById('ajSaludUsuarios');
-        if (li) li.outerHTML = fila(sin.length ? 'aviso' : 'ok', `${fmtA(sin.length)} de ${fmtA(activos.length)} visitadores todavía no tienen usuario`,
-            sin.length ? escA(sin.slice(0, 6).map(x => x.nombre_sector).join(', ') + (sin.length > 6 ? '…' : '')) + ' · <button type="button" class="font-bold text-blue-700 underline" onclick="App.ajustes.irA(\'ajUsuarios\')">Crear sus accesos</button>' : 'Todos pueden entrar.');
+        const notaViejos = viejos ? ` <span class="text-slate-400">· ${fmtA(viejos)} de ficheros anteriores sin usuario (ya no están en el de hoy; no hace falta crearles acceso).</span>` : '';
+        if (li) li.outerHTML = fila(sin.length ? 'aviso' : 'ok', `${fmtA(sin.length)} de ${fmtA(activos.length)} visitadores del fichero de hoy todavía no tienen usuario`,
+            (sin.length ? escA(sin.slice(0, 6).map(x => x.nombre_sector).join(', ') + (sin.length > 6 ? '…' : '')) + ' · <button type="button" class="font-bold text-blue-700 underline" onclick="App.ajustes.irA(\'ajUsuarios\')">Crear sus accesos</button>' : 'Todos pueden entrar.') + notaViejos);
     } catch (err) {
         const li = document.getElementById('ajSaludUsuarios');
         if (li) li.textContent = 'No se pudo revisar los usuarios (¿sin conexión?).';

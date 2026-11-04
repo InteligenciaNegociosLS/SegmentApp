@@ -604,3 +604,13 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
 - **Umbrales de Potencial:** se muestran como Adopción (Bajo a la izquierda,
   Alto a la derecha). Los controles van de derecha a izquierda porque A se
   cuenta desde los que más recetan (Pareto).
+
+## Fase 12F (04/11/2026)
+- **Salud de los datos:** "visitadores sin usuario" cuenta solo los del
+  fichero de hoy (igual que "Sin acceso"); los de ficheros anteriores se
+  informan aparte. Se actualiza al crear accesos.
+- **Usuarios:** filtros por acceso (activo / desactivado), métricas (cuentan /
+  no cuentan) y línea. La línea sale del campo "Equipo" del fichero: 1
+  LINEA_HIBRIDA_1, 2 LINEA_HIBRIDA_2, 3 COMERCIAL, 4 LINEA_3, 5 LINEA_HIBRIDA_3,
+  6 LA SANTE, 7 OTC, 8 LINEA_1, 9 LINEA_2 (`App.config.LINEAS_EQUIPO`). El GD
+  tiene las líneas de los visitadores de sus distritos.

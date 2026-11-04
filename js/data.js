@@ -228,6 +228,31 @@ window.App.data.esOculto = function(nombre) {
     const ocultos = window.App.state.REPS_OCULTOS;
     return !!(ocultos && nombre && ocultos.has(String(nombre).trim().toUpperCase()));
 };
+// Línea de cada visitador según el campo "Equipo" del fichero ("7" → "OTC"; si ya viene con nombre, tal cual)
+window.App.data.nombreLinea = function(valor) {
+    const v = String(valor == null ? '' : valor).trim();
+    if (!v) return '';
+    const tabla = (window.App.config && window.App.config.LINEAS_EQUIPO) || {};
+    return tabla[v.replace(/^0+(?=\d)/, '')] || v.toUpperCase();
+};
+// Mapa visitador → líneas y distrito (código GER_DIS) → líneas, a partir del fichero cargado
+window.App.data.lineasDelFichero = function() {
+    const st = window.App.state;
+    if (st._lineasMemo && st._lineasMemo.mapa === st.FICHERO_MAP) return st._lineasMemo;
+    const porVm = new Map(), porDistrito = new Map();
+    const agregar = (m, k, l) => { if (!k || !l) return; if (!m.has(k)) m.set(k, new Set()); m.get(k).add(l); };
+    (st.FICHERO_MAP || new Map()).forEach(filas => filas.forEach(r => {
+        const kEq = Object.keys(r).find(x => /^equipo$/i.test(x.trim()));
+        const kDis = Object.keys(r).find(x => /^ger_dis$/i.test(x.trim()));
+        const kRep = window.App.data.getFicheroRepKey(r);
+        const linea = kEq ? window.App.data.nombreLinea(r[kEq]) : '';
+        agregar(porVm, kRep && r[kRep] ? String(r[kRep]).trim().toUpperCase() : '', linea);
+        agregar(porDistrito, kDis && r[kDis] ? String(r[kDis]).trim() : '', linea);
+    }));
+    st._lineasMemo = { mapa: st.FICHERO_MAP, porVm, porDistrito };
+    return st._lineasMemo;
+};
+
 // ¿Cuenta en las métricas del GD y nacionales? (Fase 12E: con acceso pero "fuera de métricas" = no)
 window.App.data.cuentaEnMetricas = function(nombre) {
     const fuera = window.App.state.REPS_FUERA_METRICAS;
