@@ -219,17 +219,41 @@ window.App.ux.alSalir = function() {
 };
 
 /* ---------- Menú "Más" ---------- */
+// Fase 12J: tocar "Más" otra vez lo cierra; mientras está abierto, la pantalla de atrás no se desplaza;
+// en el teléfono también se cierra deslizándolo hacia abajo
 window.App.ux.abrirMas = function() {
     const m = document.getElementById('menuMas');
     if (!m) return;
+    if (!m.classList.contains('hidden')) { window.App.ux.cerrarMas(); return; }
     m.classList.remove('hidden');
+    document.body.classList.add('sin-desplazar');
     document.getElementById('btnMas')?.setAttribute('aria-expanded', 'true');
     window.App.ux.marcarNav('mas');
+    window.App.ux.deslizarParaCerrar(m.querySelector('.hoja'), window.App.ux.cerrarMas);
 };
 window.App.ux.cerrarMas = function() {
     const m = document.getElementById('menuMas');
     if (m) m.classList.add('hidden');
+    const hoja = m && m.querySelector('.hoja');
+    if (hoja) hoja.style.transform = '';
+    document.body.classList.remove('sin-desplazar');
     document.getElementById('btnMas')?.setAttribute('aria-expanded', 'false');
+    // Vuelve a marcar en la barra la pantalla en la que está la persona
+    if (window.App.ux.marcarNav && window.App.state.PANTALLA) window.App.ux.marcarNav(window.App.state.PANTALLA);
+};
+// Gesto: arrastrar la hoja hacia abajo más de 80 px la cierra (si no, vuelve a su lugar)
+window.App.ux.deslizarParaCerrar = function(hoja, cerrar) {
+    if (!hoja || hoja._conGesto) return;
+    hoja._conGesto = true;
+    let y0 = null, dy = 0;
+    hoja.addEventListener('touchstart', (e) => { if (hoja.scrollTop > 0) { y0 = null; return; } y0 = e.touches[0].clientY; dy = 0; hoja.style.transition = 'none'; }, { passive: true });
+    hoja.addEventListener('touchmove', (e) => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); hoja.style.transform = dy ? `translateY(${dy}px)` : ''; }, { passive: true });
+    hoja.addEventListener('touchend', () => {
+        if (y0 === null) return;
+        hoja.style.transition = '';
+        if (dy > 80) cerrar(); else hoja.style.transform = '';
+        y0 = null; dy = 0;
+    });
 };
 
 /* ---------- Hoja de filtros ---------- */
@@ -539,7 +563,9 @@ window.App.ux.renderTarjetas = function(pageData, startIdx) {
         }
         const etiqueta = d.isZeroRx ? '—' : (st.currentMatrixMode === 'survey' ? d.surveyLabel : d.matrixLabel);
         const accion = window.App.ux.estadoEvaluacion(d);
-        return `<article class="p-4 flex gap-3 items-start cursor-pointer md-estado" onclick="handleRowClick(false, ${startIdx + i}, '${escUx(d.id)}')">
+        // Fase 12J: si ya está evaluado, el estado va en su propia línea abajo, para que el nombre y las cifras se lean
+        const abajo = /eval-hecha/.test(accion) || !esVm;
+        return `<article class="p-4 flex flex-wrap gap-3 items-start cursor-pointer md-estado" onclick="handleRowClick(false, ${startIdx + i}, '${escUx(d.id)}')">
             <span class="${window.App.ux.claseCuadrante(d) || 'bg-slate-100 text-slate-500'} w-11 h-11 rounded-2xl flex items-center justify-center font-display font-extrabold shrink-0">${escUx(etiqueta)}</span>
             <div class="flex-1 min-w-0">
                 <div class="font-bold text-sm text-slate-800 truncate">${escUx(window.App.ui.nombreVisible(d.name))}</div>
@@ -549,7 +575,7 @@ window.App.ux.renderTarjetas = function(pageData, startIdx) {
                     ${!d.isZeroRx && d.gap > 0 ? `<span class="badge-gap">+${fmtN(d.gap)} Rx</span>` : ''}
                 </div>
             </div>
-            <div class="shrink-0 self-center">${accion}</div>
+            ${abajo ? `<div class="basis-full pl-14 -mt-1 flex">${accion}</div>` : `<div class="shrink-0 self-center">${accion}</div>`}
         </article>`;
     }).join('');
 };
@@ -615,7 +641,7 @@ window.App.ux.construirChips = function(selectId) {
 };
 
 window.App.ux.sincronizarEvaluacion = function() {
-    ['evalMarketSelect', 'surveyQ1', 'surveyQ5', 'surveyQ2', 'surveyQ3'].forEach(window.App.ux.construirChips);
+    ['surveyQ1', 'surveyQ5', 'surveyQ2', 'surveyQ3'].forEach(window.App.ux.construirChips);   // el mercado es una lista desplegable (Fase 12J)
     window.App.ux.actualizarResumenMedico();
     window.App.ux.mostrarEvaluacionAnterior();
 };

@@ -608,3 +608,17 @@ describe('Visitadores fuera de métricas (migración 21)', () => {
         expect((await db.query(`select en_metricas from public.visitadores where nombre_sector = 'NEIVIS PARRA'`)).rows[0].en_metricas).toBe(true);
     });
 });
+
+describe('Eliminar un mercado (migración 22)', () => {
+    it('archiva sus evaluaciones (no las borra), solo el admin, y se puede deshacer', async () => {
+        await db.query(`insert into public.evaluaciones (visitador_id, matricula, mercado, cuadrante) values ($1, '100', 'Mdo Sesgo', 'A'), ($2, '200', 'Mdo Sesgo', 'B')`, [ids.v1, ids.v2]);
+        expect(await falla(U.gd1, 'select public.admin_eliminar_evaluaciones_mercado($1)', ['Mdo Sesgo'])).toBe(true);
+        const r = (await filas(U.admin, 'select public.admin_eliminar_evaluaciones_mercado($1) as r', ['Mdo Sesgo']))[0].r;
+        expect(r).toMatchObject({ ok: true, mercado: 'Mdo Sesgo', evaluaciones: 2 });
+        expect((await db.query(`select count(*)::int as n from public.evaluaciones where mercado = 'Mdo Sesgo'`)).rows[0].n).toBe(2);   // siguen ahí
+        expect((await db.query(`select count(*)::int as n from public.evaluaciones where mercado = 'Mdo Sesgo' and eliminado_en is null`)).rows[0].n).toBe(0);
+        await como(db, U.admin, 'select public.admin_deshacer_eliminar_mercado($1)', [r.id]);
+        expect((await db.query(`select count(*)::int as n from public.evaluaciones where mercado = 'Mdo Sesgo' and eliminado_en is null`)).rows[0].n).toBe(2);
+        expect(await falla(U.admin, 'select public.admin_deshacer_eliminar_mercado($1)', [r.id])).toBe(true);
+    });
+});

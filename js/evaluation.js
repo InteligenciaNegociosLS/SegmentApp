@@ -24,6 +24,7 @@ window.App.evaluation.armarMapaVisitador = function(lista) {
     st.EVALUACIONES_VISITADOR = {};
     window.App.evaluation.marcarCambio();
     lista.forEach(data => {
+        if (window.App.data.mercadoOculto(data.mercado)) return;   // mercado oculto por el admin (Fase 12J)
         const key = window.App.data.normalizeKey(data.medico_id);
         if (!st.EVALUACIONES_VISITADOR[key]) st.EVALUACIONES_VISITADOR[key] = {};
         st.EVALUACIONES_VISITADOR[key][data.mercado || 'General'] = data;
@@ -160,13 +161,18 @@ window.App.evaluation.openEvalModal = function(docId, docName) {
 
     const globalMarkets = st.FILTER_OPTIONS['Market'] || [];
     const marketSelect = document.getElementById('evalMarketSelect');
-    marketSelect.innerHTML = '<option value="">Seleccione un mercado...</option>';
-    globalMarkets.forEach(m => {
-        const markText = docEvalsMap[m] ? ' ✅ Evaluado' : '';
-        marketSelect.innerHTML += `<option value="${m}">${m}${markText}</option>`;
-    });
-    if (globalMarkets.length === 1) {
-        marketSelect.value = globalMarkets[0];
+    // Lista desplegable (Fase 12J): primero los mercados donde receta este médico (con sus recetas), luego el resto
+    const esc = (v) => window.App.ui.escapeHtml(v);
+    const rxPorMercado = {};
+    (doc.rows || []).forEach(r => { rxPorMercado[r.market] = (rxPorMercado[r.market] || 0) + (r.rx || 0); });
+    const suyos = globalMarkets.filter(m => rxPorMercado[m]).sort((a, b) => rxPorMercado[b] - rxPorMercado[a]);
+    const otros = globalMarkets.filter(m => !rxPorMercado[m]);
+    const opcion = (m) => `<option value="${esc(m)}">${esc(m)}${rxPorMercado[m] ? ` · ${window.App.ui.formatNumber(rxPorMercado[m])} recetas` : ''}${docEvalsMap[m] ? ' ✅ Evaluado' : ''}</option>`;
+    marketSelect.innerHTML = '<option value="">Elige el mercado…</option>'
+        + (suyos.length ? `<optgroup label="Donde receta este médico">${suyos.map(opcion).join('')}</optgroup>` : '')
+        + (otros.length ? `<optgroup label="${suyos.length ? 'Otros mercados' : 'Mercados'}">${otros.map(opcion).join('')}</optgroup>` : '');
+    if (globalMarkets.length === 1 || suyos.length === 1) {
+        marketSelect.value = suyos.length === 1 ? suyos[0] : globalMarkets[0];
     } else {
         marketSelect.value = "";
     }
@@ -438,8 +444,23 @@ window.App.evaluation.updateVisitadorDashboard = function(totalFichero, totalCru
     const barCruz = document.getElementById('visBarCruzados');
     if (barCruz) barCruz.style.width = `${pctCruzados}%`;
 
-    const evaluados = Object.keys(st.EVALUACIONES_VISITADOR).length;
+    // Solo cuentan los médicos de su fichero de HOY (Fase 12J). Los evaluados que ya no están en su
+    // fichero se conservan y se avisan aparte, sin pasar del 100%.
+    const claves = Object.keys(st.EVALUACIONES_VISITADOR);
+    const mio = (clave) => {
+        const filas = st.FICHERO_MAP.get(clave);
+        if (!filas) return false;
+        const yo = String(st.currentVisitadorName || '').trim().toUpperCase();
+        return filas.some(f => { const k = window.App.data.getFicheroRepKey(f); return k && String(f[k]).trim().toUpperCase() === yo; });
+    };
+    const evaluados = claves.filter(mio).length;
+    const fuera = claves.length - evaluados;
     ui.safeSetText('visTotalEvaluados', ui.formatNumber(evaluados) + "");
+    const zonaFuera = document.getElementById('visFueraFichero');
+    if (zonaFuera) {
+        zonaFuera.classList.toggle('hidden', !fuera);
+        zonaFuera.textContent = fuera ? `Además, ${ui.formatNumber(fuera)} ${fuera === 1 ? 'médico que evaluaste ya no está' : 'médicos que evaluaste ya no están'} en tu fichero de hoy: no cuentan aquí, pero sus evaluaciones siguen guardadas.` : '';
+    }
 
     const pctEvaluados = totalFichero > 0 ? (evaluados / totalFichero) * 100 : 0;
     const barEval = document.getElementById('visBarEvaluados');

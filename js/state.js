@@ -59,6 +59,7 @@ window.App.state = {
     REPS_OCULTOS: null,           // Set de visitadores desactivados que no se muestran (Fase 11)
     RECORDATORIO_CARGAS: { recetas: 90, fichero: 90 },   // cada cuántos días recordar al admin cargar datos (configuración)
     LABS_PROPIOS: ['PHQ', 'LST'],  // sufijos / laboratorios de La Santé (configuración laboratorios_propios)
+    MERCADOS_OCULTOS: null,       // Set de mercados que el admin ocultó (no se ven ni cuentan; Fase 12J)
     NOMBRES_MERCADO: null,        // tabla de nombres de mercado (alias viejo → nombre de hoy), de la configuración
     EQUIPOS_OTC: null,            // Códigos de "Equipo" del fichero que son línea OTC (configuración)
 
