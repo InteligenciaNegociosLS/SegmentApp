@@ -531,6 +531,25 @@ window.App.sb.espacio = async function() {
     if (error) throw fallo(error, 'Espacio usado');
     return data;
 };
+// Eliminar (archivar) las evaluaciones de un mercado oculto (migración 22)
+window.App.sb.eliminarEvaluacionesMercado = async function(mercado) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_eliminar_evaluaciones_mercado', { p_mercado: mercado });
+    if (error) throw fallo(error, 'Eliminar mercado');
+    return data;
+};
+window.App.sb.mercadosEliminados = async function() {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.from('mercados_eliminados').select('id, mercado, evaluaciones, hecho_en, deshecho_en').order('id', { ascending: false }).limit(50);
+    if (error) throw fallo(error, 'Mercados eliminados');
+    return data || [];
+};
+window.App.sb.deshacerEliminarMercado = async function(id) {
+    const sb = await window.App.sb.cliente();
+    const { data, error } = await sb.rpc('admin_deshacer_eliminar_mercado', { p_id: id });
+    if (error) throw fallo(error, 'Deshacer eliminar mercado');
+    return data;
+};
 window.App.sb.pendientesAcceso = async function() {
     const sb = await window.App.sb.cliente();
     const { data, error } = await sb.rpc('admin_pendientes_acceso');

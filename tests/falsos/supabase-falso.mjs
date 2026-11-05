@@ -49,7 +49,7 @@ export function datosDePrueba() {
         // Catálogos de CloseUp (migración 17)
         catalogo_especialidades: [], catalogo_laboratorios: [], catalogo_productos: [], catalogo_clases: [], catalogo_versiones: [],
         // Renombrar mercados (migración 19): { nombre, versiones, en_vigente, evaluaciones }
-        mercados: [], mercados_renombres: [],
+        mercados: [], mercados_renombres: [], mercados_eliminados: [],
         // Contenido de cada versión (para datos_equipo): { id: { encabezados, filas } }
         fuentes: {},
         // O el resultado ya calculado: { 'recetas|fichero|usuario': {...} }
@@ -341,6 +341,15 @@ export function createClient(url, clave, opciones = {}) {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
             return { data: bd.espacio || { base_bytes: 120 * 1048576, archivos_bytes: 300 * 1048576, archivos: 12,
                 tablas: [{ nombre: 'recetas', bytes: 90 * 1048576 }, { nombre: 'fichero', bytes: 20 * 1048576 }], versiones: [] }, error: null };
+        },
+        admin_eliminar_evaluaciones_mercado({ p_mercado }) {
+            if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };
+            const evs = bd.evaluaciones.filter(e => e.mercado === p_mercado && !e.eliminado_en);
+            evs.forEach(e => { e.eliminado_en = new Date().toISOString(); });
+            bd.mercados_eliminados = bd.mercados_eliminados || [];
+            bd.mercados_eliminados.push({ id: bd.mercados_eliminados.length + 1, mercado: p_mercado, evaluaciones: evs.map(e => e.id), hecho_en: new Date().toISOString(), deshecho_en: null });
+            registrar(`rpc:admin_eliminar_evaluaciones_mercado:${p_mercado}`);
+            return { data: { ok: true, id: bd.mercados_eliminados.length, mercado: p_mercado, evaluaciones: evs.length }, error: null };
         },
         admin_pendientes_acceso() {
             if (!esAdmin()) return { data: null, error: { message: 'Solo el administrador puede gestionar usuarios.' } };

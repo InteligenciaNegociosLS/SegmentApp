@@ -658,3 +658,31 @@ Pendiente de decisión del dueño (`docs/SALIDA.md`, parte 1):
   nombre — hay uno parecido —, o sin recetas en la edición).
 - **Salud:** cuenta las evaluaciones de mercados que no están en la versión de
   hoy (se conservan y vuelven si el mercado regresa).
+
+## Fase 12J (05/11/2026)
+- **Un médico = una matrícula:** si CloseUp escribe distinto el nombre en dos
+  mercados, es el mismo médico (con datos reales: 28.712 → 28.278; las
+  pruebas de la matriz con datos reales se actualizaron). Arregla "Todos 167"
+  vs 163 del fichero.
+- **Mercados compartidos** (ej. Mdo Esoz y Mdo Leprit): el mismo producto en
+  dos mercados son las mismas recetas. La matriz ya contaba cada producto una
+  vez por médico (su valor mayor); ahora la ficha también.
+- **Contador del VM:** solo cuenta los médicos de su fichero de hoy; los
+  evaluados que ya no están se avisan aparte ("Además, N médicos…").
+- **Oportunidad:** sube la adopción, nunca el potencial: "para pasar a A"
+  (A- → A, 33%) o "a A+" (66%). La fórmula no cambia (recetas de La Santé que
+  faltan para llegar al umbral).
+- **Ficha:** cada mercado muestra La Santé (recetas y %) y sus productos con
+  su %; al tocarlo, todos los productos del mercado. Productos: total y de 10
+  en 10.
+- **Médicos sin recetas:** nombre, especialidad y dirección salen del fichero
+  (nunca "Profesional" = "M").
+- **Ocultar / eliminar un mercado** (Ajustes → Catálogos, `mercados_ocultos`;
+  migración 22): ocultar = no se ve ni cuenta; eliminar = además archiva sus
+  evaluaciones (`eliminado_en`, se puede deshacer). Las recetas guardadas no
+  se borran.
+- **Evaluar:** el mercado es una lista desplegable (primero los del médico).
+- **Teléfono:** en la lista de médicos, el estado "Evaluado" va en su propia
+  línea. Menú "Más": tocarlo otra vez lo cierra, se cierra deslizando hacia
+  abajo y la pantalla de atrás no se desplaza.
+- **"Por institución"** escondido por ahora.

@@ -258,6 +258,7 @@ Medido con los datos reales en Postgres:
 | `supabase/migrations/20261109120000_renombrar_mercados.sql` | Fase 12D-2: renombrar mercados ya cargados en todas las versiones y evaluaciones (`admin_mercados_en_uso`, `admin_renombrar_mercados`, `admin_deshacer_renombre`). Cada cambio queda en `mercados_renombres` (con lo necesario para deshacerlo) y en la bitácora; nada se borra. Si el nombre nuevo ya existe, junta las versiones (nunca dos mercados de la misma versión). Solo admin |
 | `supabase/migrations/20261110120000_espacio_usado.sql` | Fase 12E: `admin_espacio` (tamaño de la base, de los archivos del almacén y de las tablas más grandes; solo lee, solo admin). Lo muestra Ajustes → Salud de los datos y la campanita avisa al pasar del 80% del plan gratis |
 | `supabase/migrations/20261111120000_visitadores_fuera_de_metricas.sql` | Fase 12E: `visitadores.en_metricas` (false = tiene acceso pero no cuenta en las métricas del GD ni nacionales) y `admin_metricas_visitador` (solo admin, queda en la bitácora). Nada se borra |
+| `supabase/migrations/20261112120000_eliminar_evaluaciones_mercado.sql` | Fase 12J: "Eliminar" un mercado oculto archiva sus evaluaciones (`admin_eliminar_evaluaciones_mercado`, `eliminado_en`) y se puede deshacer (`admin_deshacer_eliminar_mercado`); registro en `mercados_eliminados` y bitácora. Las recetas no se tocan |
 | `supabase/rollback/…` | Archivos para **deshacer**. **No se aplican** salvo que haya que revertir algo |
 | `tests/db/` | Pruebas: permisos por rol y "Datos enero" sin pérdidas |
 

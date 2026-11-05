@@ -77,7 +77,8 @@ window.App.comparar.alRecalcular = function() {
     const docs = st.PROCESSED_DATA || [];
     docs.forEach(d => { d.movimiento = null; d.antes = null; d.deltaShare = null; });
     if (est && est.filas) {
-        const r = window.App.matrix.calcularMedicos(est.filas, false, { soloFiltrosElegidos: true });
+        const filasAntes = st.MERCADOS_OCULTOS ? est.filas.filter(x => !st.MERCADOS_OCULTOS.has(x.market)) : est.filas;
+        const r = window.App.matrix.calcularMedicos(filasAntes, false, { soloFiltrosElegidos: true });
         const previos = new Map(r.doctors.filter(d => !d.isZeroRx).map(d => [d.id, d]));
         // Si el nombre del médico cambió de forma entre versiones (ej. "SEIJAS G FRANCYS E" ↔ "SEIJAS FRANCYS"),
         // se une por la matrícula cuando esa matrícula es de un solo médico en la versión anterior
@@ -137,7 +138,7 @@ window.App.comparar.cambiosPorMercado = function(evolucion, idActual) {
     const lista = evolucion || [];
     const i = lista.findIndex(v => v.id === idActual);
     if (i <= 0) return null;
-    const share = (v) => new Map((v.mercados || []).map(([m, total, phq]) => [m, { total: Number(total) || 0, share: total ? phq / total * 100 : 0 }]));
+    const share = (v) => new Map((v.mercados || []).filter(([m]) => !window.App.data.mercadoOculto(m)).map(([m, total, phq]) => [m, { total: Number(total) || 0, share: total ? phq / total * 100 : 0 }]));
     const ahora = share(lista[i]), antes = share(lista[i - 1]);
     const cambios = [...ahora.entries()].filter(([m]) => antes.has(m)).map(([m, a]) => ({ mercado: m, share: a.share, antes: antes.get(m).share, delta: a.share - antes.get(m).share, total: a.total }));
     return {
@@ -232,7 +233,9 @@ window.App.comparar.render = function() {
                 <div><div class="text-lg font-extrabold text-blue-800">${fmtC(c.encuestaMejor)}</div><div class="text-[11px] text-slate-500">la encuesta los ve mejor</div></div>
                 <div><div class="text-lg font-extrabold text-amber-800">${fmtC(c.encuestaPeor)}</div><div class="text-[11px] text-slate-500">la encuesta los ve peor</div></div>
             </div>
-            <button class="chip mt-3" aria-pressed="${st.FILTRO_RAPIDO === 'discrepan'}" onclick="App.ux.filtroRapido('discrepan', true)"><span class="material-symbols-outlined text-[18px]">rule</span> Ver los que no coinciden <span class="cuenta">${fmtC(c.encuestaMejor + c.encuestaPeor)}</span></button>`
+            <p class="text-[11px] text-slate-500 mt-2">De ${fmtC(c.total)} médicos con encuesta: compara su cuadrante según las recetas de CloseUp con el que sale de la encuesta del visitador.
+                <b>Mejor</b> = la encuesta le da más potencial o adopción que CloseUp; <b>peor</b> = menos.</p>
+            <button class="chip mt-2" aria-pressed="${st.FILTRO_RAPIDO === 'discrepan'}" onclick="App.ux.filtroRapido('discrepan', true)" title="Muestra en Médicos la lista de los que no coinciden, para revisarlos"><span class="material-symbols-outlined text-[18px]">rule</span> Ver en la lista los que no coinciden <span class="cuenta">${fmtC(c.encuestaMejor + c.encuestaPeor)}</span></button>`
             : '<p class="text-xs text-slate-500 mt-2">Cuando haya médicos evaluados con encuesta verás aquí si su clasificación coincide con la de CloseUp.</p>'}`;
     }
 };

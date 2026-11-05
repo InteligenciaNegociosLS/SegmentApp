@@ -282,6 +282,77 @@
         } catch (e) { toast(textoError(e)); }
     };
 
+    /* ---------- Mercados ocultos (Fase 12J) ----------
+       Ocultar: el mercado no se ve ni cuenta en ninguna pantalla (matriz, inicio, equipo, ficha, encuestas).
+       Eliminar: además archiva sus evaluaciones (migración 22; se puede deshacer). Las recetas guardadas
+       de cada versión no se tocan. */
+    let eliminados = [];
+    const bloqueOcultos = () => {
+        const todos = window.App.state.MERCADOS_TODOS || [];
+        const ocultos = window.App.state.MERCADOS_OCULTOS || new Set();
+        return `<details class="rounded-2xl border border-slate-200 p-4 mb-4" id="catOcultos" ontoggle="if(this.open) App.catalogos.cargarEliminados()">
+            <summary class="text-base font-bold text-slate-800 cursor-pointer">Ocultar o eliminar mercados <span class="text-xs font-semibold text-slate-500">(${fmt(ocultos.size)} oculto${ocultos.size === 1 ? '' : 's'})</span></summary>
+            <p class="text-xs text-slate-600 mt-2">Para un mercado que altera los resultados. <b>Ocultar</b>: deja de verse y de contar en la matriz, el inicio, Equipo, la ficha y las encuestas (se vuelve a mostrar con un clic).
+                <b>Eliminar</b>: lo oculta y además <b>archiva sus evaluaciones</b> (se pueden recuperar con "Deshacer"). Las recetas guardadas de cada versión no se borran.</p>
+            ${todos.length ? `<ul class="mt-3 divide-y divide-slate-100">${todos.map(m => `<li class="flex items-center gap-2 py-2">
+                <label class="flex items-center gap-2 flex-1 min-w-0 text-sm"><input type="checkbox" data-mercado-oculto="${esc(m)}" ${ocultos.has(m) ? 'checked' : ''}>
+                    <span class="truncate ${ocultos.has(m) ? 'text-slate-400 line-through' : 'text-slate-800'}">${esc(m)}</span>${ocultos.has(m) ? '<span class="usuario-etiqueta aviso">Oculto</span>' : ''}</label>
+                <button type="button" class="boton-texto !h-8 !px-2 !text-xs text-rose-700" onclick="App.catalogos.eliminarMercado(${argC(m)})"><span class="material-symbols-outlined text-[16px]">delete</span> Eliminar</button></li>`).join('')}</ul>
+                <div class="flex justify-end mt-3"><button type="button" class="boton-lleno" onclick="App.catalogos.guardarOcultos()"><span class="material-symbols-outlined text-[18px]">visibility_off</span> Guardar los marcados como ocultos</button></div>`
+                : '<p class="text-xs text-slate-500 mt-2">Todavía no hay mercados cargados.</p>'}
+            <div id="catEliminados" class="mt-3"></div>
+        </details>`;
+    };
+    const aplicarOcultos = async (lista) => {
+        const st = window.App.state;
+        st.MERCADOS_OCULTOS = lista.length ? new Set(lista) : null;
+        if (st.RAW_DATA_TODO) st.RAW_DATA = st.RAW_DATA_TODO;
+        st.RAW_DATA_VISIBLE = null;
+        await window.App.main.processData();
+        if (st.isAdmin && window.App.evaluation.fetchAllEvaluacionesAdmin) await window.App.evaluation.fetchAllEvaluacionesAdmin();
+        C.pintar();
+    };
+    C.guardarOcultos = async function() {
+        const lista = [...document.querySelectorAll('[data-mercado-oculto]')].filter(c => c.checked).map(c => c.dataset.mercadoOculto);
+        try {
+            await window.App.sb.guardarConfiguracion('mercados_ocultos', lista);
+            await aplicarOcultos(lista);
+            toast(lista.length ? `Listo: ${lista.length} mercado(s) ocultos para todo el equipo.` : 'Listo: no hay mercados ocultos.');
+        } catch (e) { toast(textoError(e)); }
+    };
+    C.eliminarMercado = async function(m) {
+        if (!window.confirm(`¿Eliminar "${m}"?\n\nSe oculta para todo el equipo y se ARCHIVAN sus evaluaciones (dejan de contar). Se puede deshacer. Las recetas guardadas no se borran.`)) return;
+        try {
+            const r = await window.App.sb.eliminarEvaluacionesMercado(m);
+            const lista = [...new Set([...(window.App.state.MERCADOS_OCULTOS || []), m])];
+            await window.App.sb.guardarConfiguracion('mercados_ocultos', lista);
+            await aplicarOcultos(lista);
+            toast(`"${m}" eliminado: oculto y ${r.evaluaciones} evaluación(es) archivadas.`);
+        } catch (e) {
+            const t = String((e && e.original && e.original.message) || (e && e.message) || '');
+            toast(/admin_eliminar_evaluaciones_mercado|does not exist|could not find/i.test(t) ? 'Falta aplicar la migración 22 en Supabase.' : textoError(e));
+        }
+    };
+    C.cargarEliminados = async function() {
+        const zona = document.getElementById('catEliminados');
+        if (!zona) return;
+        try { eliminados = await window.App.sb.mercadosEliminados(); } catch (e) { eliminados = []; }
+        zona.innerHTML = eliminados.length ? `<div class="text-xs font-bold text-slate-700 mb-1">Eliminados</div><ul class="divide-y divide-slate-100">${eliminados.map(x => `<li class="flex items-center gap-2 py-1.5 text-xs ${x.deshecho_en ? 'text-slate-400 line-through' : 'text-slate-700'}">
+            <span class="flex-1 min-w-0 truncate">${esc(x.mercado)} · ${fmt((x.evaluaciones || []).length)} evaluación(es) archivadas · ${new Date(x.hecho_en).toLocaleDateString('es-VE')}</span>
+            ${x.deshecho_en ? '' : `<button type="button" class="boton-texto !h-8 !px-2" onclick="App.catalogos.deshacerEliminar(${Number(x.id)})"><span class="material-symbols-outlined text-[16px]">undo</span> Deshacer</button>`}</li>`).join('')}</ul>` : '';
+    };
+    C.deshacerEliminar = async function(id) {
+        const x = eliminados.find(e => e.id === id);
+        if (!x || !window.confirm(`¿Deshacer la eliminación de "${x.mercado}"? Sus evaluaciones vuelven y el mercado se vuelve a mostrar.`)) return;
+        try {
+            await window.App.sb.deshacerEliminarMercado(id);
+            const lista = [...(window.App.state.MERCADOS_OCULTOS || [])].filter(m => m !== x.mercado);
+            await window.App.sb.guardarConfiguracion('mercados_ocultos', lista);
+            await aplicarOcultos(lista);
+            toast(`"${x.mercado}" vuelve a mostrarse con sus evaluaciones.`);
+        } catch (e) { toast(textoError(e)); }
+    };
+
     /* ---------- Renombrar mercados ya cargados (migración 19) ---------- */
     // Cambia el nombre en TODAS las versiones de recetas y en las evaluaciones guardadas
     // ("ESOZ MERCADO A02B2" → "Mdo Esoz"). No borra nada y cada cambio se puede deshacer.
@@ -424,6 +495,7 @@
             </div>
             ${bloqueNombresMercado()}
             ${bloqueRenombrar()}
+            ${bloqueOcultos()}
             <div class="rounded-2xl border border-slate-200 p-4 mb-4">
                 <div class="flex items-center gap-2 mb-1"><span class="material-symbols-outlined text-blue-700">menu_book</span>
                     <h4 class="text-base font-bold text-slate-800">Cómo descargar los datos de origen</h4></div>
