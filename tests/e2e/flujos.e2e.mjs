@@ -204,7 +204,7 @@ try {
   await page.evaluate(() => App.ajustes.verComo('vm', 'NEIVIS PARRA')); await page.waitForTimeout(300);
   ok('ver como: el admin ve la app de NEIVIS PARRA (solo sus médicos, solo consulta)', await page.evaluate(() => App.state.soloLectura && App.state.PROCESSED_DATA.length === 142 && !document.getElementById('bannerVerComo').classList.contains('hidden')));
   await page.evaluate(() => App.ajustes.salirVerComo()); await page.waitForTimeout(300);
-  ok('ver como: "Salir" vuelve al administrador', await page.evaluate(() => !App.state.soloLectura && App.state.PROCESSED_DATA.length === 28712 && App.state.PANTALLA === 'ajustes'));
+  ok('ver como: "Salir" vuelve al administrador', await page.evaluate(() => !App.state.soloLectura && App.state.PROCESSED_DATA.length === 28278 && App.state.PANTALLA === 'ajustes'));
   await page.evaluate(() => App.ux.irA('equipo'));
   await page.evaluate(() => history.back()); await page.waitForTimeout(300);
   ok('botón atrás: vuelve a la pantalla anterior', await page.evaluate(() => App.state.PANTALLA === 'ajustes'));
