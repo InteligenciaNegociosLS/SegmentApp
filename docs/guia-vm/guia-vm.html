@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>SegmentApp · Guía rápida del Visitador Médico</title>
+<!-- Guía rápida en PDF para los VM. Se genera con: node scripts/guia-vm-pdf.mjs [carpeta-fuentes]
+     Las capturas (img/) salen de tests/e2e/capturas-guia-vm.mjs, con nombres y cédulas de EJEMPLO. -->
+<style>
+    :root {
+        --primario: #0b57d0; --primario-claro: #d3e3fd; --texto: #1f1f1f; --texto-2: #444746; --borde: #c4c7c5;
+        --fondo-suave: #f0f4f9; --verde: #146c2e; --verde-claro: #c4eed0; --rojo: #b3261e; --rojo-claro: #ffdad6;
+        --ambar: #7a5900; --ambar-claro: #ffefc9; --morado-claro: #eaddff;
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Roboto Flex", Roboto, "Segoe UI", Arial, sans-serif; color: var(--texto); font-size: 10.5pt; line-height: 1.45; }
+    h1, h2, h3 { margin: 0; font-weight: 750; letter-spacing: -0.01em; }
+    h2 { font-size: 17pt; color: var(--primario); margin-bottom: 2mm; display: flex; align-items: center; gap: 3mm; }
+    h2 .n { display: inline-flex; width: 9mm; height: 9mm; border-radius: 50%; background: var(--primario); color: white; font-size: 11pt; align-items: center; justify-content: center; flex: none; }
+    h3 { font-size: 11.5pt; margin: 3mm 0 1mm; }
+    p { margin: 0 0 2mm; }
+    ul { margin: 0 0 2mm; padding-left: 5mm; }
+    li { margin-bottom: 1mm; }
+    b { font-weight: 700; }
+    .pagina { page-break-after: always; break-after: page; }
+    .pagina:last-child { page-break-after: auto; break-after: auto; }
+    .sub { color: var(--texto-2); font-size: 10pt; margin-bottom: 4mm; }
+    .fila { display: flex; gap: 6mm; align-items: flex-start; }
+    .fila > .texto { flex: 1; min-width: 0; }
+    .captura { flex: none; border-radius: 4mm; border: 0.3mm solid var(--borde); overflow: hidden; background: white; box-shadow: 0 1mm 3mm rgb(0 0 0 / 0.08); }
+    .captura img { display: block; width: 100%; }
+    .w55 { width: 55mm; } .w65 { width: 65mm; } .w80 { width: 80mm; } .w100 { width: 100%; }
+    .caja { border-radius: 4mm; padding: 3.5mm 4mm; margin: 2mm 0 3mm; }
+    .caja.azul { background: var(--fondo-suave); }
+    .caja.verde { background: var(--verde-claro); }
+    .caja.ambar { background: var(--ambar-claro); }
+    .caja.roja { background: var(--rojo-claro); }
+    .caja .titulo { font-weight: 750; margin-bottom: 1mm; }
+    .etq { display: inline-block; min-width: 9mm; padding: 0.5mm 2mm; border-radius: 2mm; font-weight: 800; text-align: center; }
+    table { border-collapse: collapse; width: 100%; margin: 2mm 0 3mm; font-size: 9.5pt; }
+    th, td { border: 0.3mm solid var(--borde); padding: 1.8mm 2.2mm; text-align: left; vertical-align: top; }
+    th { background: var(--fondo-suave); font-weight: 700; }
+    .matriz { display: grid; grid-template-columns: 22mm repeat(3, 1fr); gap: 1.5mm; margin: 2mm 0 3mm; font-size: 9pt; }
+    .matriz .c { border-radius: 3mm; padding: 2mm; text-align: center; }
+    .matriz .c b { display: block; font-size: 15pt; line-height: 1.1; }
+    .matriz .cab { font-weight: 700; color: var(--texto-2); text-align: center; align-self: end; font-size: 8.5pt; }
+    .matriz .lat { font-weight: 700; color: var(--texto-2); font-size: 8.5pt; display: flex; align-items: center; }
+    .AC { background: #ffdad6; color: #410002; } .AB { background: #ffdcbe; color: #2c1600; } .AA { background: #c4eed0; color: #002110; }
+    .BC { background: #fde7e4; color: #410002; } .BB { background: #fff4e5; color: #2c1600; } .BA { background: #d3e3fd; color: #041e49; }
+    .CC { background: #dde3ea; color: #1f1f1f; } .CB { background: #e9edf1; color: #1f1f1f; } .CA { background: #eaddff; color: #21005d; }
+    .portada { display: flex; flex-direction: column; justify-content: center; min-height: 245mm; }
+    .portada .marca { font-size: 11pt; font-weight: 700; color: var(--primario); letter-spacing: 0.08em; text-transform: uppercase; }
+    .portada h1 { font-size: 34pt; line-height: 1.05; margin: 4mm 0 3mm; }
+    .portada .lema { font-size: 13pt; color: var(--texto-2); max-width: 140mm; }
+    .indice { margin-top: 12mm; columns: 2; column-gap: 10mm; font-size: 11pt; }
+    .indice div { break-inside: avoid; margin-bottom: 2.5mm; }
+    .indice span { display: inline-flex; width: 7mm; height: 7mm; border-radius: 50%; background: var(--primario-claro); color: var(--primario); font-weight: 800; align-items: center; justify-content: center; margin-right: 2mm; font-size: 9.5pt; }
+    .pie { margin-top: 10mm; font-size: 9pt; color: var(--texto-2); }
+    .paso { display: flex; gap: 3mm; margin-bottom: 2mm; }
+    .paso .num { flex: none; width: 6.5mm; height: 6.5mm; border-radius: 50%; background: var(--primario); color: white; font-weight: 800; font-size: 9pt; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+
+<!-- ===================== PORTADA ===================== -->
+<section class="pagina portada">
+    <div class="marca">La Santé · SegmentApp</div>
+    <h1>Guía rápida del<br>Visitador Médico</h1>
+    <p class="lema">Qué significa cada pantalla, cómo se lee la matriz y cómo evaluar a tus médicos, en pocas páginas.</p>
+    <div class="indice">
+        <div><span>1</span>Entrar a la app</div>
+        <div><span>2</span>Inicio: tu avance</div>
+        <div><span>3</span>La matriz: cómo se lee</div>
+        <div><span>4</span>Tus médicos</div>
+        <div><span>5</span>La ficha del médico</div>
+        <div><span>6</span>Evaluar paso a paso</div>
+        <div><span>7</span>Movimientos y CloseUp vs. encuesta</div>
+        <div><span>8</span>Sin internet</div>
+        <div><span>9</span>Palabras clave</div>
+    </div>
+    <p class="pie">Las imágenes son de la app real, con nombres y cédulas de <b>ejemplo</b>. Los porcentajes de 33% y 66% son los que usa la app hoy; el administrador puede ajustarlos.</p>
+</section>
+
+<!-- ===================== 1 ENTRAR + 2 INICIO ===================== -->
+<section class="pagina">
+    <h2><span class="n">1</span>Entrar a la app</h2>
+    <div class="fila">
+        <div class="texto">
+            <div class="paso"><span class="num">1</span><div>Abre el enlace que te enviaron y toca <b>Iniciar sesión</b>.</div></div>
+            <div class="paso"><span class="num">2</span><div>Escribe tu correo (<b>nombre.apellido@lasante.com.ve</b>) y la <b>clave temporal</b> que te llegó.</div></div>
+            <div class="paso"><span class="num">3</span><div>La primera vez la app te pide <b>crear tu propia clave</b>. Guárdala: con ella entras siempre.</div></div>
+            <div class="paso"><span class="num">4</span><div>Para tenerla como una app en el teléfono: menú <b>Más → Instalar la app</b> (en iPhone: Compartir → "Agregar a inicio").</div></div>
+            <div class="caja azul"><div class="titulo">¿Olvidaste tu clave?</div>Pídele a tu gerente o al administrador una clave temporal nueva.</div>
+        </div>
+        <div class="captura w55"><img src="img/01-entrar.jpg" alt="Pantalla de inicio de sesión"></div>
+    </div>
+
+    <h2 style="margin-top:6mm"><span class="n">2</span>Inicio: tu avance</h2>
+    <div class="captura w100" style="max-width:120mm"><img src="img/02-avance.jpg" alt="Tu avance"></div>
+    <ul style="margin-top:3mm">
+        <li><b>"X de Y médicos evaluados"</b>: cuántos médicos de <b>tu fichero de hoy</b> ya evaluaste. El círculo es el % de avance.</li>
+        <li><b>"con recetas en CloseUp"</b>: cuántos de tus médicos aparecen en CloseUp (los demás están en tu fichero pero sin recetas).</li>
+        <li><b>Promedio de tu distrito</b>: cómo vas frente a tus compañeros y cuántos médicos te faltan para llegar al promedio.</li>
+        <li>Si aparece <b>"Además, N médicos que evaluaste ya no están en tu fichero"</b>: esas evaluaciones siguen guardadas, pero no cuentan en tu avance.</li>
+        <li><b>"Evaluar pendientes"</b> te lleva directo a los que te faltan.</li>
+    </ul>
+</section>
+
+<!-- ===================== 2b INDICADORES + TOP 10 ===================== -->
+<section class="pagina">
+    <h3>Los 4 indicadores</h3>
+    <div class="fila">
+        <div class="captura w80"><img src="img/03-indicadores.jpg" alt="Indicadores"></div>
+        <div class="texto">
+            <table>
+                <tr><th>Indicador</th><th>Qué es</th></tr>
+                <tr><td><b>Médicos con recetas</b></td><td>Tus médicos que tienen recetas en CloseUp.</td></tr>
+                <tr><td><b>Recetas del mercado</b></td><td>Todas las recetas de tus médicos en los mercados elegidos (de todos los laboratorios).</td></tr>
+                <tr><td><b>Recetas La Santé</b></td><td>Cuántas de esas recetas son de nuestros productos.</td></tr>
+                <tr><td><b>Participación</b></td><td>Recetas La Santé ÷ recetas del mercado. Es nuestra porción del mercado.</td></tr>
+            </table>
+            <p>Si debajo ves <b>▲ / ▼</b>, es cuánto subió o bajó frente a la carga anterior de CloseUp.</p>
+        </div>
+    </div>
+
+    <h3 style="margin-top:4mm">Tus 10 médicos con más oportunidad</h3>
+    <div class="fila">
+        <div class="texto">
+            <p>Los médicos donde <b>más recetas de La Santé puedes ganar</b>. El número verde (<b>+78 Rx</b>) son las recetas de La Santé que le faltan para subir de adopción.</p>
+            <div class="caja verde"><div class="titulo">"para pasar a A (33% La Santé)"</div>
+                El médico <b>A-</b> pasa a <b>A</b> cuando La Santé llega al 33% de sus recetas. Un <b>A</b> pasa a <b>A+</b> al 66%.
+                La letra (A, B, C) <b>no cambia</b>: depende de cuánto receta el médico. Lo que tú mueves es el <b>signo</b> (la adopción).</div>
+            <p>Empieza por los primeros de la lista: son los que más mueven tu número.</p>
+        </div>
+        <div class="captura w65"><img src="img/11-top10.jpg" alt="Top 10 de oportunidad"></div>
+    </div>
+</section>
+
+<!-- ===================== 3 MATRIZ ===================== -->
+<section class="pagina">
+    <h2><span class="n">3</span>La matriz: cómo se lee</h2>
+    <p class="sub">Cada médico cae en una casilla según dos cosas: <b>cuánto receta</b> (la letra) y <b>cuánto receta de La Santé</b> (el signo).</p>
+    <div class="fila">
+        <div class="texto">
+            <h3>La letra = Potencial (cuánto receta)</h3>
+            <ul>
+                <li><b>A · Alto</b>: los que más recetan en el mercado (juntos suman el primer 33% de las recetas).</li>
+                <li><b>B · Medio</b>: los siguientes, hasta el 66%.</li>
+                <li><b>C · Bajo</b>: el resto.</li>
+            </ul>
+            <h3>El signo = Adopción (cuánto de La Santé)</h3>
+            <ul>
+                <li><b>−</b> Baja: La Santé es 33% o menos de sus recetas.</li>
+                <li><b>sin signo</b> Media: entre 33% y 66%.</li>
+                <li><b>+</b> Alta: 66% o más.</li>
+            </ul>
+            <div class="caja ambar"><div class="titulo">Tú subes el signo, no la letra</div>
+                El potencial depende del volumen del médico. Tu trabajo es que receta más La Santé: de <b>A−</b> a <b>A</b> y a <b>A+</b>; de <b>C</b> a <b>C+</b>.</div>
+        </div>
+        <div class="captura w80"><img src="img/06-matriz.jpg" alt="Matriz"></div>
+    </div>
+    <h3>Qué hacer en cada casilla</h3>
+    <div class="matriz">
+        <div></div><div class="cab">Adopción baja (−)</div><div class="cab">Media</div><div class="cab">Alta (+)</div>
+        <div class="lat">Potencial A</div><div class="c AC"><b>A−</b>Conquistar: máxima prioridad</div><div class="c AB"><b>A</b>Desarrollar: llevarlo a A+</div><div class="c AA"><b>A+</b>Defender: cuidarlo</div>
+        <div class="lat">Potencial B</div><div class="c BC"><b>B−</b>Conquistar</div><div class="c BB"><b>B</b>Desarrollar</div><div class="c BA"><b>B+</b>Defender</div>
+        <div class="lat">Potencial C</div><div class="c CC"><b>C−</b>Revisar: poca prioridad</div><div class="c CB"><b>C</b>Desarrollar</div><div class="c CA"><b>C+</b>Defender</div>
+    </div>
+    <p><b>Toca una casilla</b> para ver la lista de esos médicos. Arriba de la matriz puedes elegir un <b>mercado</b>, o cambiar entre <b>CloseUp</b> (recetas reales) y <b>Encuestas</b> (lo que tú evaluaste).</p>
+</section>
+
+<!-- ===================== 4 MÉDICOS + 5 FICHA ===================== -->
+<section class="pagina">
+    <h2><span class="n">4</span>Tus médicos</h2>
+    <div class="fila">
+        <div class="captura w55"><img src="img/07-medicos.jpg" alt="Lista de médicos"></div>
+        <div class="texto">
+            <h3>Botones de arriba (filtros rápidos)</h3>
+            <ul>
+                <li><b>Todos</b>: tu fichero completo.</li>
+                <li><b>Pendientes</b>: los que te faltan por evaluar.</li>
+                <li><b>Evaluados</b>: los que ya hiciste.</li>
+                <li><b>Mayor oportunidad</b>: ordenados por las recetas que puedes ganar.</li>
+                <li><b>Sin recetas</b>: están en tu fichero pero no aparecen en CloseUp.</li>
+            </ul>
+            <h3>Cada tarjeta</h3>
+            <ul>
+                <li>La <b>letra</b> de la izquierda es su casilla de la matriz.</li>
+                <li><b>240 recetas · 2 La Santé · 0,8%</b>: sus recetas del mercado, las de La Santé y la participación.</li>
+                <li><b>+78 Rx</b> (rojo): la oportunidad.</li>
+                <li><b>Evaluar</b> abre la encuesta. Si ya lo evaluaste dice <b>Evaluado</b> con la letra que le diste.</li>
+            </ul>
+            <p>Usa la <b>lupa</b> de arriba para buscar por nombre o matrícula, y el botón de <b>filtros</b> para elegir mercados o productos.</p>
+        </div>
+    </div>
+</section>
+
+<section class="pagina">
+    <h2><span class="n">5</span>La ficha del médico</h2>
+    <p class="sub">Toca el nombre de un médico para ver todo lo suyo en un solo lugar.</p>
+    <div class="fila">
+        <div class="captura w55"><img src="img/08-ficha.jpg" alt="Ficha del médico"></div>
+        <div class="texto">
+            <ul>
+                <li>Arriba: <b>matrícula, cédula, especialidad</b> y tu nombre como su visitador. A la derecha su <b>casilla</b> y qué hacer (Conquistar, Desarrollar, Defender).</li>
+                <li><b>Oportunidad</b>: cuántas recetas de La Santé le faltan y a qué casilla pasaría.</li>
+            </ul>
+            <h3>Pestañas</h3>
+            <table>
+                <tr><td><b>Resumen</b></td><td>Participación, producto más recetado y mercado favorito.</td></tr>
+                <tr><td><b>Mercados</b></td><td>Su letra en cada mercado, sus recetas y las de La Santé. <b>Tócalo</b> para ver todos sus productos en ese mercado.</td></tr>
+                <tr><td><b>Productos</b></td><td>Todo lo que receta, de 10 en 10. En azul, los de La Santé.</td></tr>
+                <tr><td><b>Historial</b></td><td>Cómo cambiaron sus recetas y tus evaluaciones con el tiempo.</td></tr>
+                <tr><td><b>Datos del fichero</b></td><td>Lo que dice el CRM: dirección, consultorio, teléfono…</td></tr>
+            </table>
+            <div class="caja roja"><div class="titulo">Aviso "Nombre distinto"</div>
+                Si la ficha dice que el nombre de CloseUp no coincide con el del fichero, revisa que sea el mismo médico. Si no lo es, al evaluar marca <b>"Cruce errado"</b>.</div>
+        </div>
+        <div class="captura w55"><img src="img/09-ficha-mercados.jpg" alt="Ficha: mercados"></div>
+    </div>
+</section>
+
+<!-- ===================== 6 EVALUAR ===================== -->
+<section class="pagina">
+    <h2><span class="n">6</span>Evaluar paso a paso</h2>
+    <div class="fila">
+        <div class="texto">
+            <div class="paso"><span class="num">1</span><div>Toca <b>Evaluar</b> en la tarjeta o en la ficha del médico.</div></div>
+            <div class="paso"><span class="num">2</span><div><b>Elige el mercado</b> en la lista. Arriba salen los mercados donde receta ese médico; ✅ = ya evaluado.</div></div>
+            <div class="paso"><span class="num">3</span><div><b>Sobre el médico</b> (se responde una sola vez y vale para todos sus mercados): pacientes por semana y costo de la consulta.</div></div>
+            <div class="paso"><span class="num">4</span><div><b>En este mercado</b>: a cuántos pacientes les receta esa clase de producto y cuántos con nuestro producto, y su competidor principal.</div></div>
+            <div class="paso"><span class="num">5</span><div>Elige su <b>cuadrante</b> según tu criterio y escribe una <b>nota</b> si hace falta.</div></div>
+            <div class="paso"><span class="num">6</span><div>Toca <b>Guardar y siguiente</b>: se guarda y pasas al próximo mercado o médico.</div></div>
+            <div class="caja azul"><div class="titulo">Cruce errado</div>
+                Úsalo cuando el médico de CloseUp <b>no es</b> el de tu fichero (otro nombre, otra persona). Así esa evaluación no cuenta para la calidad y el administrador lo revisa.</div>
+            <div class="caja verde"><div class="titulo">¿Me equivoqué?</div>Vuelve a tocar <b>Evaluado</b>: se abre la encuesta con tus respuestas y la puedes cambiar.</div>
+        </div>
+        <div class="captura w55"><img src="img/10-evaluar.jpg" alt="Evaluar"></div>
+    </div>
+</section>
+
+<!-- ===================== 7 MOVIMIENTOS + 8 SIN INTERNET + 9 GLOSARIO ===================== -->
+<section class="pagina">
+    <h2><span class="n">7</span>Movimientos y CloseUp vs. encuesta</h2>
+    <div class="fila">
+        <div class="texto">
+            <h3>Movimientos</h3>
+            <p>Al llegar una carga nueva de CloseUp, la app compara con la anterior: cuántos médicos <b>mejoraron</b> o <b>bajaron</b> de casilla y en qué mercados <b>ganó o perdió</b> La Santé. Toca "Mejoraron" o "Bajaron" para ver la lista.</p>
+            <h3>CloseUp vs. encuesta</h3>
+            <ul>
+                <li><b>Coinciden</b>: tu evaluación dice lo mismo que las recetas.</li>
+                <li><b>La encuesta los ve mejor</b>: tú le diste más potencial o adopción que CloseUp.</li>
+                <li><b>La encuesta los ve peor</b>: le diste menos.</li>
+                <li><b>"Ver en la lista los que no coinciden"</b> te lleva a esos médicos para revisarlos.</li>
+            </ul>
+        </div>
+        <div style="width:80mm; flex:none">
+            <div class="captura w100" style="margin-bottom:3mm"><img src="img/04-movimientos.jpg" alt="Movimientos"></div>
+            <div class="captura w100"><img src="img/05-concordancia.jpg" alt="CloseUp vs encuesta"></div>
+        </div>
+    </div>
+
+</section>
+
+<section class="pagina">
+    <h2><span class="n">8</span>Sin internet</h2>
+    <div class="captura w100" style="max-width:110mm; margin-bottom:3mm"><img src="img/12-sin-internet.jpg" alt="Sin conexión"></div>
+    <ul>
+        <li>Puedes <b>ver tus médicos y evaluar sin señal</b>. Lo que evalúas queda guardado en el teléfono.</li>
+        <li>Arriba verás <b>"Sin conexión · N guardadas aquí"</b> y el botón <b>"N por subir"</b>; tócalo para ver la lista.</li>
+        <li>Cuando vuelva la señal se suben solas (o toca <b>Subir ahora</b>).</li>
+        <li><b>No cierres sesión</b> mientras tengas evaluaciones por subir.</li>
+    </ul>
+
+    <h2 style="margin-top:6mm"><span class="n">9</span>Palabras clave</h2>
+    <table>
+        <tr><td style="width:38mm"><b>Rx</b></td><td>Recetas.</td></tr>
+        <tr><td><b>CloseUp</b></td><td>Auditoría de recetas: cuánto receta cada médico de cada producto.</td></tr>
+        <tr><td><b>Fichero</b></td><td>Tu lista de médicos asignados (del CRM).</td></tr>
+        <tr><td><b>Mercado (Mdo)</b></td><td>Grupo de productos que compiten entre sí (ej. Mdo Esoz).</td></tr>
+        <tr><td><b>Participación</b></td><td>Recetas de La Santé ÷ recetas del mercado.</td></tr>
+        <tr><td><b>Potencial</b></td><td>La letra A, B o C: cuánto receta el médico.</td></tr>
+        <tr><td><b>Adopción</b></td><td>El signo −, (nada) o +: cuánto de eso es La Santé.</td></tr>
+        <tr><td><b>Oportunidad</b></td><td>Recetas de La Santé que le faltan para subir de adopción.</td></tr>
+    </table>
+</section>
+
+</body>
+</html>
