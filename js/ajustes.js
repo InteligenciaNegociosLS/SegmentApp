@@ -445,10 +445,11 @@ function aplicarVista() {
 /* ============================================================
    BITÁCORA DE CAMBIOS (migración 11)
 ============================================================ */
-const NOMBRES_CONFIG = { umbrales_matriz: 'los umbrales de la matriz', umbrales_encuesta: 'los puntajes de la encuesta', ponderacion_encuesta: 'la ponderación de la encuesta', productos_phq: 'los productos del laboratorio', equipos_otc: 'los equipos OTC', nombres_mercado: 'los nombres de mercado', filtros_closeup: 'los filtros de CloseUp', laboratorios_propios: 'mis laboratorios', recordatorio_cargas: 'el recordatorio de carga', instructivos_descarga: 'cómo descargar los datos' };
+const NOMBRES_CONFIG = { umbrales_matriz: 'los umbrales de la matriz', umbrales_encuesta: 'los puntajes de la encuesta', ponderacion_encuesta: 'la ponderación de la encuesta', productos_phq: 'los productos del laboratorio', equipos_otc: 'los equipos OTC', nombres_mercado: 'los nombres de mercado', filtros_closeup: 'los filtros de CloseUp', laboratorios_propios: 'mis laboratorios', recordatorio_cargas: 'el recordatorio de carga', mercados_ocultos: 'los mercados ocultos', instructivos_descarga: 'cómo descargar los datos' };
 const ETIQUETAS_UMBRAL = { TH_LOY_LOW: 'Adopción baja hasta', TH_LOY_HIGH: 'Adopción alta desde', TH_POT_LOW: 'Potencial A hasta', TH_POT_HIGH: 'Potencial B hasta' };
 
 function detalleCambio(b) {
+    if (b.accion === 'eliminar_mercado') return `${b.despues && b.despues.deshecho ? 'Deshizo la eliminación del mercado' : 'Eliminó (archivó) el mercado'} <b>${escA(b.clave)}</b>${b.despues ? ` · ${escA(b.despues.evaluaciones)} evaluación(es)` : ''}`;
     if (b.accion === 'renombrar_mercado') return `${b.despues && b.despues.deshecho ? 'Deshizo el renombre' : 'Renombró el mercado'} ${escA(b.antes && b.antes.nombre)} → <b>${escA(b.despues && b.despues.nombre)}</b>`;
     if (b.accion === 'publicar_version') return `Publicó la versión de ${b.clave === 'fichero' ? 'fichero' : 'recetas'} <b>${escA(b.despues && b.despues.nombre)}</b>`;
     const antes = b.antes || {}, despues = b.despues || {};

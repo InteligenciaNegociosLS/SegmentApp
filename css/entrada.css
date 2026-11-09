@@ -336,7 +336,10 @@
     }
 
     /* Hojas (menú "Más", filtros): suben desde abajo en el teléfono; a la derecha en pantallas grandes */
-    .hoja-fondo { background: var(--md-scrim); }
+    .hoja-fondo { background: var(--md-scrim); overscroll-behavior: contain; touch-action: none; }
+    .hoja-fondo > .hoja { touch-action: pan-y; }
+    /* Con una hoja abierta, la pantalla de atrás no se desplaza (Fase 12J) */
+    body.sin-desplazar { overflow: hidden; }
     .hoja {
         position: absolute; left: 0; right: 0; bottom: 0; max-height: 88vh; overflow-y: auto;
         background: rgb(var(--c-white)); color: var(--md-on-surface);

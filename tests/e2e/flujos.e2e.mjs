@@ -128,7 +128,7 @@ try {
   const primero = await page.evaluate(() => { const d = App.state.CURRENT_TABLE_DATA[0]; openEvalModal(d.id, d.name); return d.name; });
   const toque = (zona, i = 0) => page.evaluate(([z, n]) => document.querySelectorAll(`#${z}_chips button`)[n].click(), [zona, i]);
   ok('evaluación: respuestas como botones', await page.evaluate(() => document.querySelectorAll('#surveyQ1_chips button').length === 7));
-  await toque('evalMarketSelect'); await toque('surveyQ1', 1); await toque('surveyQ5', 2); await toque('surveyQ2', 1); await toque('surveyQ3', 1);
+  await page.evaluate(() => { const s = document.getElementById('evalMarketSelect'); s.value = [...s.options].find(o => o.value).value; s.dispatchEvent(new Event('change')); }); await toque('surveyQ1', 1); await toque('surveyQ5', 2); await toque('surveyQ2', 1); await toque('surveyQ3', 1);
   ok('evaluación: tocar un botón llena la respuesta', await page.evaluate(() => document.getElementById('surveyQ1').value === '10 a 20'));
   await page.evaluate(() => { selectEvalQuadrant(document.querySelector('.eval-btn'), 'A-'); document.getElementById('evalNotas').value = 'Prueba automática'; });
   await page.evaluate(() => App.ux.guardarYSiguiente()); await page.waitForTimeout(600);
@@ -204,7 +204,7 @@ try {
   await page.evaluate(() => App.ajustes.verComo('vm', 'NEIVIS PARRA')); await page.waitForTimeout(300);
   ok('ver como: el admin ve la app de NEIVIS PARRA (solo sus médicos, solo consulta)', await page.evaluate(() => App.state.soloLectura && App.state.PROCESSED_DATA.length === 142 && !document.getElementById('bannerVerComo').classList.contains('hidden')));
   await page.evaluate(() => App.ajustes.salirVerComo()); await page.waitForTimeout(300);
-  ok('ver como: "Salir" vuelve al administrador', await page.evaluate(() => !App.state.soloLectura && App.state.PROCESSED_DATA.length === 28712 && App.state.PANTALLA === 'ajustes'));
+  ok('ver como: "Salir" vuelve al administrador', await page.evaluate(() => !App.state.soloLectura && App.state.PROCESSED_DATA.length === 28278 && App.state.PANTALLA === 'ajustes'));
   await page.evaluate(() => App.ux.irA('equipo'));
   await page.evaluate(() => history.back()); await page.waitForTimeout(300);
   ok('botón atrás: vuelve a la pantalla anterior', await page.evaluate(() => App.state.PANTALLA === 'ajustes'));

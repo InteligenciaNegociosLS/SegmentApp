@@ -216,3 +216,35 @@ describe('Renombrar mercados ya cargados (migración 19)', () => {
         expect(window.__calls.filter(c => c.startsWith('rpc:admin_renombrar_mercados:'))).toHaveLength(0);
     });
 });
+
+describe('Fase 12J: ocultar o eliminar un mercado', () => {
+    it('ocultar: deja de verse y contar (recetas y evaluaciones); se vuelve a mostrar', async () => {
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.catalogos.cargar();
+        expect(App.state.MERCADOS_TODOS).toEqual(['DESLER MERCADO']);
+        const antes = App.state.PROCESSED_DATA.filter(d => !d.isZeroRx).length;
+        expect(antes).toBeGreaterThan(0);
+        document.querySelector('[data-mercado-oculto="DESLER MERCADO"]').checked = true;
+        await App.catalogos.guardarOcultos();
+        expect(baseSimulada(App).configuracion.find(c => c.clave === 'mercados_ocultos').valor).toEqual(['DESLER MERCADO']);
+        expect(App.state.RAW_DATA).toHaveLength(0);
+        expect(App.state.PROCESSED_DATA.filter(d => !d.isZeroRx)).toHaveLength(0);
+        expect(App.data.sinOcultos([{ mercado: 'DESLER MERCADO' }, { mercado: 'OTRO' }])).toEqual([{ mercado: 'OTRO' }]);
+        // Se vuelve a mostrar
+        document.querySelector('[data-mercado-oculto="DESLER MERCADO"]').checked = false;
+        await App.catalogos.guardarOcultos();
+        expect(App.state.PROCESSED_DATA.filter(d => !d.isZeroRx).length).toBe(antes);
+    });
+
+    it('eliminar: lo oculta y archiva sus evaluaciones (no las borra)', async () => {
+        const bd = baseSimulada(App);
+        bd.evaluaciones.push({ id: 'e-mk', mercado: 'DESLER MERCADO', medico_id: '123' });
+        await ingresar('admin@lasante.com', 'adminadmin');
+        await App.catalogos.cargar();
+        window.confirm = () => true;
+        await App.catalogos.eliminarMercado('DESLER MERCADO');
+        expect(window.__calls).toContain('rpc:admin_eliminar_evaluaciones_mercado:DESLER MERCADO');
+        expect(bd.evaluaciones.find(e => e.id === 'e-mk').eliminado_en).toBeTruthy();
+        expect(App.state.MERCADOS_OCULTOS.has('DESLER MERCADO')).toBe(true);
+    });
+});

@@ -97,7 +97,7 @@ try {
     const docId = await page.evaluate(async () => {
         const d = App.state.PROCESSED_DATA.find(x => !x.isZeroRx && !App.ux.estaEvaluado(x));
         openEvalModal(d.id, d.name);
-        document.querySelectorAll('#evalMarketSelect_chips button')[0].click();
+        { const s = document.getElementById('evalMarketSelect'); s.value = [...s.options].find(o => o.value).value; s.dispatchEvent(new Event('change')); }
         ['surveyQ1', 'surveyQ5', 'surveyQ2', 'surveyQ3'].forEach(z => document.querySelectorAll(`#${z}_chips button`)[1].click());
         selectEvalQuadrant(document.querySelector('.eval-btn'), 'A-');
         document.getElementById('evalNotas').value = 'Evaluado sin internet';

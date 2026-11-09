@@ -40,17 +40,18 @@ describe('Matriz general (todos los médicos, umbrales 33/66)', () => {
         App.matrix.aggregateAndCalculate();
     });
     it('totales de médicos y recetas', () => {
-        expect(st.PROCESSED_DATA.length).toBe(28712);
-        expect(suma(st.PROCESSED_DATA, 'totalRx')).toBe(584795);
-        expect(suma(st.PROCESSED_DATA, 'rxPhq')).toBe(24082);
-        expect(suma(st.PROCESSED_DATA, 'gap')).toBe(184143);
+        // Fase 12J: un médico = una matrícula (antes 28.712: 434 venían con el nombre escrito distinto en dos mercados)
+        expect(st.PROCESSED_DATA.length).toBe(28278);
+        expect(suma(st.PROCESSED_DATA, 'totalRx')).toBe(584375);
+        expect(suma(st.PROCESSED_DATA, 'rxPhq')).toBe(24069);
+        expect(suma(st.PROCESSED_DATA, 'gap')).toBe(183794);
     });
     it('médicos por cuadrante', () => {
-        expect(cuadrantes(st.PROCESSED_DATA)).toEqual({ AC: 595, AB: 9, BC: 2930, BB: 35, CC: 24214, CB: 686, CA: 243 });
+        expect(cuadrantes(st.PROCESSED_DATA)).toEqual({ AC: 592, AB: 9, BC: 2909, BB: 35, CC: 23822, CB: 677, CA: 234 });
     });
     it('principal competidor y simulador de impacto', () => {
-        expect(st.CURRENT_COMP_BREAKDOWN[0]).toEqual({ prod: 'DICLOFENAC SAL SAL', rx: 41203, type: 'Comp' });
-        expect(document.getElementById('simImpactRx').innerText).toBe('+2.627 Rx');
+        expect(st.CURRENT_COMP_BREAKDOWN[0]).toEqual({ prod: 'DICLOFENAC SAL SAL', rx: 41159, type: 'Comp' });
+        expect(document.getElementById('simImpactRx').innerText).toBe('+2.607 Rx');
     });
 });
 
@@ -78,10 +79,10 @@ describe('Filtro por un mercado (DESLER MERCADO)', () => {
         App.matrix.aggregateAndCalculate();
     });
     it('recalcula médicos, recetas y cuadrantes del mercado', () => {
-        expect(st.PROCESSED_DATA.length).toBe(7872);
-        expect(suma(st.PROCESSED_DATA, 'totalRx')).toBe(51386);
-        expect(suma(st.PROCESSED_DATA, 'rxPhq')).toBe(6288);
-        expect(cuadrantes(st.PROCESSED_DATA)).toEqual({ AC: 155, AB: 17, BC: 819, BB: 113, BA: 55, CC: 5450, CB: 336, CA: 927 });
+        expect(st.PROCESSED_DATA.length).toBe(7856);
+        expect(suma(st.PROCESSED_DATA, 'totalRx')).toBe(51381);
+        expect(suma(st.PROCESSED_DATA, 'rxPhq')).toBe(6285);
+        expect(cuadrantes(st.PROCESSED_DATA)).toEqual({ AC: 154, AB: 17, BC: 817, BB: 113, BA: 55, CC: 5439, CB: 339, CA: 922 });
     });
     it('la clasificación por mercado coincide con la general del mercado', () => {
         const primero = st.PROCESSED_DATA[0];
