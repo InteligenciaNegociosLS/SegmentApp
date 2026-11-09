@@ -358,6 +358,7 @@
                 <div class="barra-fina mt-2"><div id="visBarEvaluados" style="width:0%"></div></div>
                 <div class="text-xs text-slate-500 mt-1.5 truncate"><span id="visTotalCruzados">0</span> con recetas en CloseUp<span class="hidden" id="visBarCruzados"></span></div>
                 <div class="text-xs text-slate-600 mt-1 hidden" id="visPromedioDistrito"></div>
+                <div class="text-xs text-amber-800 mt-1 hidden" id="visFueraFichero"></div>
             </div>
             <button onclick="App.ux.filtroRapido('pendientes', true)" class="hidden sm:flex shrink-0 items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 text-white text-sm font-bold"><span class="material-symbols-outlined text-[18px]">checklist</span> Evaluar pendientes</button>
         </section>
@@ -483,7 +484,8 @@
                 <div class="flex items-center gap-2 flex-wrap">
                     <button class="hidden chip" id="btnVolverMatriz" onclick="App.ux.irA('matriz')" aria-pressed="false"><span class="material-symbols-outlined text-[18px]">arrow_back</span> Matriz</button>
                     <button class="hidden chip chip-cerrar" id="clearFilterBtn" onclick="clearMatrixFilter()"><span class="material-symbols-outlined text-[18px]">filter_alt_off</span> Quitar cuadrante</button>
-                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer px-2 py-1.5 rounded-full" title="Agrupa los médicos que comparten la misma dirección">
+                    <!-- "Por institución" escondido por ahora (Fase 12J): se puede volver a mostrar quitando "hidden" -->
+                    <label class="hidden items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer px-2 py-1.5 rounded-full" title="Agrupa los médicos que comparten la misma dirección">
                         Por institución
                         <span class="toggle-switch"><input type="checkbox" id="instToggle" onchange="toggleInstitutionView()"><span class="slider-toggle"></span></span>
                     </label>
@@ -1344,11 +1346,12 @@
             </div>
 
             <section>
-                <h4 class="text-sm font-bold text-slate-800 mb-2">Mercado</h4>
-                <select id="evalMarketSelect" class="sr-only" onchange="loadEvalForMarket()" aria-label="Mercado a evaluar">
-                    <option value="">Seleccione un mercado...</option>
+                <h4 class="text-sm font-bold text-slate-800 mb-2"><label for="evalMarketSelect">Mercado</label></h4>
+                <!-- Lista desplegable (Fase 12J): más fácil que los botones con desplazamiento lateral -->
+                <select id="evalMarketSelect" class="filter-select !rounded-2xl w-full !text-base !py-3" onchange="loadEvalForMarket()" aria-label="Mercado a evaluar">
+                    <option value="">Elige el mercado…</option>
                 </select>
-                <div id="evalMarketSelect_chips" class="chips-fila" role="group" aria-label="Mercado a evaluar"></div>
+                <p class="text-[11px] text-slate-500 mt-1">Arriba, los mercados donde receta este médico. ✅ = ya evaluado.</p>
             </section>
 
             <!-- Preguntas sobre el médico: valen para todos sus mercados -->

@@ -331,14 +331,23 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false, opc
         grupos = st._lastGroups;
     } else {
         const docMap = {};
-        universeRows.forEach(row => {
-            // El id no cambia entre filtros: se calcula una vez y se guarda en la fila
-            let id = row._id;
-            if (id === undefined) {
+        // El id no cambia entre filtros: se calcula una vez para TODAS las filas de la fuente.
+        // Un médico = una matrícula (Fase 12J): si CloseUp lo escribe distinto en dos mercados
+        // ("SEIJAS G FRANCYS E" / "SEIJAS FRANCYS"), es el mismo médico y queda con el primer nombre.
+        if (!filasFuente._idsListos) {
+            const idPorMatricula = new Map();
+            filasFuente.forEach(row => {
                 const cleanLicense = row.license ? String(row.license).trim().replace(/^0+/, '') : "";
-                id = row._id = cleanLicense + "_" + row.doc.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-                row._clave = d.normalizeKey(id);
-            }
+                const porNombre = cleanLicense + "_" + String(row.doc || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (!cleanLicense) { row._id = porNombre; row._clave = d.normalizeKey(porNombre); return; }
+                if (!idPorMatricula.has(cleanLicense)) idPorMatricula.set(cleanLicense, porNombre);
+                row._id = idPorMatricula.get(cleanLicense);
+                row._clave = cleanLicense;
+            });
+            try { Object.defineProperty(filasFuente, '_idsListos', { value: true, enumerable: false, configurable: true }); } catch (e) { filasFuente._idsListos = true; }
+        }
+        universeRows.forEach(row => {
+            const id = row._id;
             let g = docMap[id];
             if (!g) g = docMap[id] = { id, clave: row._clave, name: row.doc, address: row.address, spec: row.spec, rows: [], uniqueProds: {} };
             g.rows.push(row);
@@ -416,16 +425,14 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false, opc
         const conRx = new Set(doctors.map(x => x._clave));
         assignedDocsMap.forEach((rows, docId) => {
             if (!conRx.has(docId)) {
-                const baseRow = rows[0];
-                let nameKey = Object.keys(baseRow).find(k => /^(nombre|medico|médico|doctor|doc)$/i.test(k.trim().toLowerCase()));
-                if (!nameKey) nameKey = Object.keys(baseRow).find(k => /nombre|med|doc/i.test(k) && !/visit|rep|agente|promotor|asesor/i.test(k));
-                const specKey = Object.keys(baseRow).find(k => /esp|spec/i.test(k));
-                const addrKey = Object.keys(baseRow).find(k => /dir|address|inst/i.test(k));
+                // Fase 12J: nombre, especialidad y dirección salen del fichero (los mismos datos que de un médico con recetas)
+                const baseRow = rows.find(r => d.nombreEnFichero(r)) || rows[0];
+                const nombre = d.nombreEnFichero(baseRow);
                 doctors.push({
                     id: docId, _clave: docId,
-                    name: (nameKey && baseRow[nameKey]) ? String(baseRow[nameKey]).trim() : `Médico no mapeado (${docId})`,
-                    spec: (specKey && baseRow[specKey]) ? String(baseRow[specKey]).trim() : "S/E",
-                    address: (addrKey && baseRow[addrKey]) ? String(baseRow[addrKey]).trim() : "",
+                    name: nombre || `Matrícula ${docId} (sin nombre en el fichero)`,
+                    spec: d.especialidadEnFichero(baseRow) || 'Sin especialidad',
+                    address: d.direccionEnFichero(baseRow),
                     rxPhq: 0, totalRx: 0, rxTotalSum: 0, share: 0, catLoyalty: 'C', gap: 0,
                     targetLabel: "", ficheroData: rows, rows: [], isZeroRx: true
                 });
@@ -472,6 +479,11 @@ window.App.matrix.calcularMedicos = function(filasFuente, usarCache = false, opc
             : ((cumPct * 100) <= st.TH_POT_HIGH ? 'B' : 'C');
         doc.closeupLoyalty = doc.catLoyalty;
         doc.closeupLabel = doc.closeupPotency + (doc.closeupLoyalty === 'C' ? '-' : (doc.closeupLoyalty === 'A' ? '+' : ''));
+        // Fase 12J: la oportunidad sube la ADOPCIÓN (el signo), nunca el potencial (la letra), que depende del
+        // volumen del médico: A- → A (33%) → A+ (66%); C → C+. Antes decía "para ser B", que confundía.
+        if (doc.gap > 0) doc.targetLabel = doc.closeupLoyalty === 'C'
+            ? `para pasar a ${doc.closeupPotency} (${st.TH_LOY_LOW}% La Santé)`
+            : `para pasar a ${doc.closeupPotency}+ (${st.TH_LOY_HIGH}% La Santé)`;
 
         // Matriz Encuesta
         doc.surveyPotency = null; doc.surveyLoyalty = null; doc.surveyLabel = "N/A";

@@ -285,11 +285,40 @@ window.App.data.compararNombres = function(a, b) {
     if (comunes >= 2 || (comunes === 1 && Math.min(A.length, B.length) === 1)) return 'igual';
     return comunes === 1 ? 'parecido' : 'distinto';
 };
-// Nombre del médico en una fila del fichero (columna "Nombre", no "Nombre del sector")
+// Nombre del médico en una fila del fichero. Distintas versiones del CRM lo llaman distinto
+// ("Nombre", "Apellidos" + "Nombres", "Nombre completo"…). Nunca "Nombre del sector" (el visitador),
+// ni "Profesional" (trae "M"), ni valores de una o dos letras (Fase 12J).
+const sinTildesK = (k) => String(k).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+const pareceNombre = (v) => { const t = String(v == null ? '' : v).trim(); return t.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, '').length >= 3 ? t : ''; };
 window.App.data.nombreEnFichero = function(fila) {
     if (!fila) return '';
-    const k = Object.keys(fila).find(x => x.trim().toLowerCase() === 'nombre');
-    return k ? String(fila[k] || '').trim() : '';
+    const claves = Object.keys(fila);
+    const de = (...nombres) => { for (const n of nombres) { const k = claves.find(c => sinTildesK(c) === n); const v = k ? pareceNombre(fila[k]) : ''; if (v) return v; } return ''; };
+    const apellidos = de('apellidos', 'apellido'), nombres = de('nombres');
+    if (apellidos && nombres) return `${apellidos} ${nombres}`;
+    const directo = de('nombre', 'nombre y apellido', 'apellido y nombre', 'apellidos y nombres', 'nombre completo', 'nombre del medico', 'nombre_medico', 'medico', 'doctor');
+    if (directo) return apellidos && !directo.includes(apellidos) ? `${apellidos} ${directo}` : directo;
+    const otra = claves.find(c => /nombre|apellido/.test(sinTildesK(c)) && !/sector|visit|rep|gerente|ger_dis|fantasia|razon|secretaria|local|establec|inst/.test(sinTildesK(c)) && pareceNombre(fila[c]));
+    return otra ? pareceNombre(fila[otra]) : '';
+};
+// Especialidad, dirección y lugar de trabajo de una fila del fichero (para los médicos sin recetas)
+window.App.data.especialidadEnFichero = function(fila) {
+    if (!fila) return '';
+    const claves = Object.keys(fila);
+    const ok = (v) => { const t = String(v == null ? '' : v).trim(); return t && t !== '0' ? t : ''; };
+    const k = claves.find(c => /desc/.test(sinTildesK(c)) && /espec/.test(sinTildesK(c)) && ok(fila[c]))
+        || claves.find(c => /^especialidad 1/.test(sinTildesK(c)) && ok(fila[c]))
+        || claves.find(c => /espec|^esp|spec/.test(sinTildesK(c)) && ok(fila[c]));
+    return k ? ok(fila[k]) : '';
+};
+window.App.data.direccionEnFichero = function(fila) {
+    if (!fila) return '';
+    const claves = Object.keys(fila);
+    const v = (n) => { const k = claves.find(c => sinTildesK(c) === n); const t = k ? String(fila[k] || '').trim() : ''; return t && t !== '0' ? t : ''; };
+    const calle = [v('direccion'), v('numero'), v('complemento')].filter(Boolean).join(' ');
+    const lugar = v('nombre de fantasia') || v('razon social') || v('local_trabajo');
+    const zona = [v('municipiodescripcion'), v('estadodescripcion')].filter(Boolean).join(', ');
+    return [lugar, calle, zona].filter(Boolean).join(' · ');
 };
 // Médicos con recetas cuya matrícula está en el fichero pero con otro nombre (lo que la persona ve)
 window.App.data.nombresDistintos = function() {
@@ -317,9 +346,14 @@ window.App.data.cuentaEnMetricas = function(nombre) {
     const fuera = window.App.state.REPS_FUERA_METRICAS;
     return !(fuera && nombre && fuera.has(String(nombre).trim().toUpperCase()));
 };
+window.App.data.mercadoOculto = function(m) {
+    const o = window.App.state.MERCADOS_OCULTOS;
+    return !!(o && m && o.has(m));
+};
 window.App.data.sinOcultos = function(evaluaciones) {
-    if (!window.App.state.REPS_OCULTOS) return evaluaciones;
-    return (evaluaciones || []).filter(e => !window.App.data.esOculto(e.visitador));
+    const st = window.App.state;
+    if (!st.REPS_OCULTOS && !st.MERCADOS_OCULTOS) return evaluaciones;
+    return (evaluaciones || []).filter(e => !window.App.data.esOculto(e.visitador) && !window.App.data.mercadoOculto(e.mercado));
 };
 
 /* ============================================================

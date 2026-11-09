@@ -19,6 +19,14 @@ window.App.main = {};
 window.App.main.processData = async function() {
     const st = window.App.state;
     if (st.RAW_DATA.length === 0) return;
+    // Mercados ocultos por el admin (Fase 12J): no se ven ni cuentan en ninguna pantalla. Se guarda la lista
+    // completa para poder volver a mostrarlos sin descargar nada.
+    if (!st.RAW_DATA_TODO || (st.RAW_DATA !== st.RAW_DATA_VISIBLE)) st.RAW_DATA_TODO = st.RAW_DATA;
+    st.MERCADOS_TODOS = [...new Set(st.RAW_DATA_TODO.map(r => r.market))].sort();
+    st.RAW_DATA = st.MERCADOS_OCULTOS ? st.RAW_DATA_TODO.filter(r => !st.MERCADOS_OCULTOS.has(r.market)) : st.RAW_DATA_TODO;
+    st.RAW_DATA_VISIBLE = st.RAW_DATA;
+    st.MARKET_CACHE = {};
+    st._lastUniverseSignature = null;
 
     window.App.filters.populateFilters();
     window.App.matrix.aggregateAndCalculate();
@@ -41,6 +49,7 @@ window.App.main.aplicarConfiguracion = function(cfg) {
     if (Array.isArray(cfg.laboratorios_propios)) st.LABS_PROPIOS = cfg.laboratorios_propios.map(x => String(x).trim().toUpperCase()).filter(Boolean);
     if (cfg.recordatorio_cargas) st.RECORDATORIO_CARGAS = { ...st.RECORDATORIO_CARGAS, ...cfg.recordatorio_cargas };
     if (cfg.nombres_mercado && typeof cfg.nombres_mercado === 'object') st.NOMBRES_MERCADO = cfg.nombres_mercado;
+    if (Array.isArray(cfg.mercados_ocultos)) st.MERCADOS_OCULTOS = cfg.mercados_ocultos.length ? new Set(cfg.mercados_ocultos.map(String)) : null;
     if (cfg.umbrales_matriz) {
         const u = cfg.umbrales_matriz;
         ['TH_LOY_LOW', 'TH_LOY_HIGH', 'TH_POT_LOW', 'TH_POT_HIGH'].forEach(k => { if (Number.isFinite(u[k])) st[k] = u[k]; });

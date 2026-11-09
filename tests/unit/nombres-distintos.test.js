@@ -54,3 +54,16 @@ describe('Salud: evaluaciones de mercados que ya no están', () => {
         expect(t).toContain('Siguen guardadas');
     });
 });
+
+describe('Fase 12J: nombre y datos de los médicos sin recetas (solo en el fichero)', () => {
+    it('toma el nombre aunque el CRM lo llame distinto, y nunca "Profesional" = "M"', () => {
+        const n = App.data.nombreEnFichero;
+        expect(n({ Profesional: 'M', 'Nombre del sector': 'NEIVIS PARRA', Nombre: 'ABAD HÉCTOR' })).toBe('ABAD HÉCTOR');
+        expect(n({ Profesional: 'M', Apellidos: 'SANOJA', Nombres: 'HERNANDO JOSE' })).toBe('SANOJA HERNANDO JOSE');
+        expect(n({ Medico: 'M', 'Nombre completo': 'PEREZ ANA' })).toBe('PEREZ ANA');
+        expect(n({ Profesional: 'M', 'Nombre del sector': 'NEIVIS PARRA' })).toBe('');
+        expect(App.data.especialidadEnFichero({ 'Especialidad 1 (matricula personal)': 'MDI', ESPEC1_FICHERO_DESC: 'MEDICINA INTERNA' })).toBe('MEDICINA INTERNA');
+        expect(App.data.direccionEnFichero({ 'Nombre de Fantasía': 'CLINICA X', Dirección: 'AV BOLIVAR', Número: '12', MunicipioDescripcion: 'LIBERTADOR', EstadoDescripcion: 'DC' }))
+            .toBe('CLINICA X · AV BOLIVAR 12 · LIBERTADOR, DC');
+    });
+});

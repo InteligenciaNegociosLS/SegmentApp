@@ -43,11 +43,16 @@ function resumenRecetas(doc) {
     const d = window.App.data;
     const porMercado = {}, porProducto = {};
     (doc.rows || []).forEach(r => {
-        const m = porMercado[r.market] || (porMercado[r.market] = { mercado: r.market, total: 0, phq: 0 });
+        const m = porMercado[r.market] || (porMercado[r.market] = { mercado: r.market, total: 0, phq: 0, productos: [] });
         m.total += r.rx; if (d.isPhq(r.prod)) m.phq += r.rx;
-        const p = porProducto[r.prod] || (porProducto[r.prod] = { producto: r.prod, rx: 0, phq: d.isPhq(r.prod), molecula: r.molecule, lab: r.lab, mercado: r.market });
-        p.rx += r.rx;
+        m.productos.push({ producto: r.prod, rx: r.rx, phq: d.isPhq(r.prod) });
+        // Un producto puede estar en dos mercados que se comparten (ej. Mdo Esoz y Mdo Leprit): son las MISMAS
+        // recetas, así que cuenta una vez con su valor mayor (la misma regla de la matriz), no sumadas (Fase 12J)
+        const p = porProducto[r.prod] || (porProducto[r.prod] = { producto: r.prod, rx: 0, phq: d.isPhq(r.prod), molecula: r.molecule, lab: r.lab, mercados: [] });
+        p.rx = Math.max(p.rx, r.rx);
+        if (!p.mercados.includes(r.market)) p.mercados.push(r.market);
     });
+    Object.values(porMercado).forEach(m => m.productos.sort((a, b) => b.rx - a.rx));
     const mercados = Object.values(porMercado).sort((a, b) => b.total - a.total);
     const productos = Object.values(porProducto).sort((a, b) => b.rx - a.rx);
     return {
@@ -94,6 +99,7 @@ window.App.ficha.abrir = function(docId) {
     window.App.ficha.doc = doc;
     window.App.ficha.historial = null;
     window.App.ficha.pestana = 'resumen';
+    window.App.ficha.paginaProductos = 1;
     window.App.ficha.renderEncabezado();
     window.App.ficha.mostrar('resumen');
     const m = document.getElementById('fichaMedico');
@@ -216,31 +222,55 @@ function renderMercados(doc, r) {
     const st = window.App.state;
     if (!r.mercados.length) return '<p class="text-sm text-slate-500">Sin recetas en los mercados elegidos.</p>';
     const evals = evaluacionesDe(doc);
-    return `<p class="text-xs text-slate-500 mb-3">Clasificación nacional del médico en cada mercado y tu evaluación, si la hay.</p>
-        <ul class="space-y-2">${r.mercados.map(m => {
+    return `<p class="text-xs text-slate-500 mb-3">La letra es la clasificación nacional del médico en cada mercado. Toca un mercado para ver sus productos.</p>
+        <ul class="space-y-2">${r.mercados.map((m, i) => {
             const etiqueta = window.App.matrix.getDoctorMarketClassification(doc.id, m.mercado);
             const ev = evals.find(e => e.mercado === m.mercado);
             const share = m.total ? m.phq / m.total * 100 : 0;
-            return `<li class="flex items-center gap-3 rounded-2xl border border-slate-200 p-3">
-                <span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(etiqueta)} !h-10 !min-w-[44px] !rounded-xl text-sm">${escF(etiqueta || '—')}</span>
-                <div class="flex-1 min-w-0"><div class="text-sm font-semibold text-slate-800 truncate">${escF(m.mercado)}</div>
-                <div class="text-xs text-slate-500">${fmtF(m.total)} recetas · ${fmtF(m.phq)} La Santé · ${fmtF(share, 1)}%</div></div>
-                ${ev ? `<span class="text-[11px] font-semibold text-green-800 bg-green-50 rounded-full px-2 py-1 flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[14px]">check_circle</span>Evaluado ${escF(ev.cuadrante)}</span>`
-                     : (st.currentUserRole === 'visitador' ? '<span class="text-[11px] text-slate-500 shrink-0">Sin evaluar</span>' : '')}
+            const propios = m.productos.filter(p => p.phq);
+            const pct = (x) => fmtF(m.total ? x / m.total * 100 : 0, 1) + '%';
+            return `<li class="rounded-2xl border border-slate-200 overflow-hidden">
+                <button type="button" class="w-full text-left flex items-center gap-3 p-3" aria-expanded="false" aria-controls="fichaMercado_${i}"
+                    onclick="const d=document.getElementById('fichaMercado_${i}'); d.classList.toggle('hidden'); this.setAttribute('aria-expanded', String(!d.classList.contains('hidden'))); this.querySelector('[data-flecha]').style.transform = d.classList.contains('hidden') ? '' : 'rotate(180deg)'">
+                    <span class="eval-cuadrante ${window.App.ux.claseDeEtiqueta(etiqueta)} !h-10 !min-w-[44px] !rounded-xl text-sm">${escF(etiqueta || '—')}</span>
+                    <div class="flex-1 min-w-0"><div class="text-sm font-semibold text-slate-800 truncate">${escF(m.mercado)}</div>
+                        <div class="text-xs text-slate-500">${fmtF(m.total)} recetas del mercado · <span class="text-blue-800 font-semibold">La Santé ${fmtF(m.phq)} (${fmtF(share, 1)}%)</span></div>
+                        ${propios.length ? `<div class="text-[11px] text-blue-800 mt-0.5 truncate">${propios.map(p => `${escF(p.producto)} ${pct(p.rx)}`).join(' · ')}</div>` : '<div class="text-[11px] text-slate-500 mt-0.5">Sin productos de La Santé en este mercado</div>'}</div>
+                    ${ev ? `<span class="text-[11px] font-semibold text-green-800 bg-green-50 rounded-full px-2 py-1 flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[14px]">check_circle</span>${escF(ev.cuadrante)}</span>`
+                         : (st.currentUserRole === 'visitador' ? '<span class="text-[11px] text-slate-500 shrink-0">Sin evaluar</span>' : '')}
+                    <span class="material-symbols-outlined text-slate-500 transition shrink-0" data-flecha>expand_more</span>
+                </button>
+                <div id="fichaMercado_${i}" class="hidden border-t border-slate-100 px-3 py-2">
+                    <div class="text-[11px] font-semibold text-slate-500 mb-1">${fmtF(m.productos.length)} productos en este mercado</div>
+                    <ul class="space-y-1">${m.productos.map(p => `<li class="flex items-center justify-between gap-2 text-xs">
+                        <span class="truncate ${p.phq ? 'font-bold text-blue-800' : 'text-slate-700'}">${escF(p.producto)}${p.phq ? ' · La Santé' : ''}</span>
+                        <span class="shrink-0 font-mono ${p.phq ? 'text-blue-800 font-bold' : 'text-slate-700'}">${fmtF(p.rx)} <span class="text-slate-500 font-sans">(${pct(p.rx)})</span></span></li>`).join('')}</ul>
+                </div>
             </li>`;
         }).join('')}</ul>`;
 }
 
+// Productos: todos, de 10 en 10 (Fase 12J)
+window.App.ficha.paginaProductos = 1;
+window.App.ficha.irAPaginaProductos = function(p) {
+    window.App.ficha.paginaProductos = p;
+    window.App.ficha.mostrar('productos');
+};
 function renderProductos(doc, r) {
     if (!r.productos.length) return '<p class="text-sm text-slate-500">Sin recetas en los mercados elegidos.</p>';
     const max = r.productos[0].rx || 1;
-    return `<div class="flex gap-3 text-xs text-slate-600 mb-3"><span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-600"></span>La Santé</span><span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-400"></span>Competencia</span></div>
-        <ul class="space-y-3">${r.productos.slice(0, 12).map(p => `<li>
-            <div class="flex items-baseline justify-between gap-3 text-sm"><span class="font-semibold text-slate-800 truncate">${escF(p.producto)}</span><span class="font-mono font-bold ${p.phq ? 'text-blue-700' : 'text-slate-700'} shrink-0">${fmtF(p.rx)}</span></div>
+    const pag = window.App.ui.paginar(r.productos, window.App.ficha.paginaProductos);
+    window.App.ficha.paginaProductos = pag.pagina;
+    const propios = r.productos.filter(p => p.phq).length;
+    return `<div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="text-sm font-bold text-slate-800">${fmtF(r.productos.length)} productos recetados <span class="text-xs font-medium text-slate-500">· ${fmtF(propios)} de La Santé</span></div>
+            <div class="flex gap-3 text-xs text-slate-600"><span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-600"></span>La Santé</span><span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-400"></span>Competencia</span></div></div>
+        <ul class="space-y-3">${pag.items.map((p, j) => `<li>
+            <div class="flex items-baseline justify-between gap-3 text-sm"><span class="font-semibold text-slate-800 truncate"><span class="text-slate-400 font-normal">${pag.desde + j + 1}.</span> ${escF(p.producto)}</span><span class="font-mono font-bold ${p.phq ? 'text-blue-700' : 'text-slate-700'} shrink-0">${fmtF(p.rx)}</span></div>
             <div class="h-2 rounded-full bg-slate-100 mt-1 overflow-hidden"><div class="h-full rounded-full ${p.phq ? 'bg-blue-600' : 'bg-slate-400'}" style="width:${(p.rx / max * 100).toFixed(1)}%"></div></div>
-            <div class="text-[11px] text-slate-500 mt-0.5">${escF([p.molecula, p.lab, p.mercado].filter(Boolean).join(' · '))}</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">${escF([p.molecula, p.lab, (p.mercados || []).join(', ')].filter(Boolean).join(' · '))}</div>
         </li>`).join('')}</ul>
-        ${r.productos.length > 12 ? `<p class="text-xs text-slate-500 mt-3">Y ${r.productos.length - 12} productos más con menos recetas.</p>` : ''}`;
+        ${window.App.ui.paginacion({ pagina: pag.pagina, paginas: pag.paginas, total: r.productos.length, accion: 'App.ficha.irAPaginaProductos' })}`;
 }
 
 function renderHistorial(doc) {
